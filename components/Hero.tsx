@@ -203,7 +203,7 @@ export default function Hero() {
       {/* ── Full-screen hero canvas ── */}
       <div
         ref={containerRef}
-        className="relative h-screen min-h-[700px] overflow-hidden flex items-center justify-center noise-overlay"
+        className="relative h-screen min-h-[700px] overflow-hidden flex items-center justify-center noise-overlay bg-brand-black"
       >
         {/* Background image with parallax */}
         <motion.div
