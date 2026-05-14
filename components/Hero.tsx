@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   motion,
@@ -205,26 +204,24 @@ export default function Hero() {
         ref={containerRef}
         className="relative h-screen min-h-[700px] overflow-hidden flex items-center justify-center noise-overlay bg-brand-black"
       >
-        {/* Background image with parallax */}
+        {/* Background — CSS gradient (no external image dependency) */}
         <motion.div
           style={{ y: bgY, scale }}
           className="absolute inset-0 will-change-transform"
         >
-          <Image
-            src="/asset/hero-bg.jpg"
-            alt="Vintage Gallery hero"
-            fill
-            priority
-            quality={90}
-            className="object-cover object-center"
-            // Fallback: dark gradient when image is missing
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
+          {/* Rich dark gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#0d0c0e] to-[#080808]" />
+          {/* Subtle gold diagonal sweep */}
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(201,168,76,0.04)_0%,transparent_50%,rgba(27,20,100,0.05)_100%)]" />
+          {/* Grid texture */}
+          <div className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: `linear-gradient(rgba(201,168,76,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.5) 1px, transparent 1px)`,
+              backgroundSize: "80px 80px",
             }}
           />
-          {/* Dark vignette */}
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-black/40 via-transparent to-brand-black" />
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-black/50 via-transparent to-brand-black/50" />
+          {/* Bottom fade to black */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-brand-black" />
         </motion.div>
 
         {/* Ambient glow orbs */}

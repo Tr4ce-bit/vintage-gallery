@@ -24,7 +24,7 @@ export default function RootLayout({
       <html lang="en">
         <body className="bg-brand-black text-brand-cream antialiased">
           <Navbar />
-          <main>{children}</main>
+          <main className="min-h-screen">{children}</main>
         </body>
       </html>
     </ConditionalClerkProvider>
