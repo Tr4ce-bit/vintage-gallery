@@ -1,0 +1,169 @@
+// Vintage Gallery Store – Prisma Schema
+// Database: PostgreSQL (AWS RDS Free Tier / Neon serverless)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// USER PROFILE  (extends Clerk auth)
+// ─────────────────────────────────────────────
+model UserProfile {
+  id                  String   @id @default(cuid())
+  clerkId             String   @unique          // Clerk user ID
+  fullName            String
+  email               String   @unique
+  phoneNumber         String?
+  ghanaPostAddress    String?                   // Ghana Post Digital Address e.g. GA-123-4567
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  orders              Order[]
+  savedDesigns        SavedDesign[]
+
+  @@map("user_profiles")
+}
+
+// ─────────────────────────────────────────────
+// PRODUCTS  (T-shirt variants)
+// ─────────────────────────────────────────────
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  basePrice   Float                           // price in GHS (Ghanaian Cedis)
+  imageUrl    String                          // points to /public/asset/
+  stock       Int      @default(100)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  variants    ProductVariant[]
+  orderItems  OrderItem[]
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  size      Size
+  color     String
+  stock     Int     @default(50)
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, size, color])
+  @@map("product_variants")
+}
+
+enum Size {
+  XS
+  S
+  M
+  L
+  XL
+  XXL
+}
+
+// ─────────────────────────────────────────────
+// DESIGNS  (overlays for the Product Customizer)
+// ─────────────────────────────────────────────
+model Design {
+  id          String   @id @default(cuid())
+  name        String
+  imageUrl    String                          // points to /public/asset/designs/
+  category    String?                         // e.g. "vintage", "graphic", "text"
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  savedDesigns SavedDesign[]
+
+  @@map("designs")
+}
+
+model SavedDesign {
+  id          String   @id @default(cuid())
+  userId      String
+  designId    String
+  shirtColor  String   @default("#FFFFFF")
+  shirtSize   Size     @default(M)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  design      Design      @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@map("saved_designs")
+}
+
+// ─────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────
+model Order {
+  id                  String      @id @default(cuid())
+  userId              String
+  paystackReference   String      @unique      // Paystack transaction reference
+  paystackAccessCode  String?                  // for re-querying status
+  status              OrderStatus @default(PENDING)
+  totalAmount         Float                    // in GHS
+  currency            String      @default("GHS")
+
+  // Delivery info (copied at order time so changes to profile don't affect history)
+  deliveryFullName    String
+  deliveryPhone       String
+  deliveryAddress     String                   // Ghana Post Digital Address
+  deliveryNotes       String?
+
+  // Mobile Money details (non-sensitive — just network & masked number)
+  momoNetwork         MomoNetwork?
+  momoNumberMasked    String?                  // e.g. "024****890"
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                UserProfile @relation(fields: [userId], references: [id])
+  items               OrderItem[]
+
+  @@index([userId])
+  @@index([paystackReference])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  designId    String?                          // nullable – plain shirt (no custom design)
+  size        Size
+  color       String
+  quantity    Int
+  unitPrice   Float                            // price locked at time of purchase
+  subtotal    Float
+
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  PENDING       // awaiting payment
+  PAID          // Paystack webhook confirmed
+  PROCESSING    // being prepared
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum MomoNetwork {
+  MTN
+  TELECEL
+  AIRTELTIGO
+}
