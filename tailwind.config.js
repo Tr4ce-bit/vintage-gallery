@@ -8,18 +8,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Vintage Gallery Brand Palette
         brand: {
-          black:   "#080808",   // near-black canvas
-          cream:   "#F2EFE6",   // warm ivory text
-          gold:    "#C9A84C",   // primary accent
-          "gold-light": "#E8C96A",
-          "gold-dark":  "#8B6914",
-          indigo:  "#1B1464",   // royal indigo
-          "indigo-light": "#2D2196",
-          muted:   "#4A4A4A",   // secondary text
-          "surface": "#111111", // card / section bg
-          "border": "#2A2A2A",  // subtle dividers
+          black:   "#080808",
+          white:   "#FFFFFF",
+          off:     "#F0F0F0",   // slightly off-white for body text
+          gray:    "#888888",   // mid gray
+          "gray-light": "#CCCCCC",
+          "gray-dark":  "#333333",
+          surface: "#111111",   // card / section bg
+          border:  "#222222",   // subtle dividers
+          "border-light": "#E0E0E0", // borders on white sections
         },
       },
       fontFamily: {
@@ -28,14 +26,11 @@ module.exports = {
         body:    ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
       },
       backgroundImage: {
-        "gold-gradient": "linear-gradient(135deg, #C9A84C 0%, #E8C96A 50%, #8B6914 100%)",
         "dark-gradient": "linear-gradient(180deg, #080808 0%, #111111 100%)",
-        "hero-gradient": "linear-gradient(to bottom, rgba(8,8,8,0) 0%, rgba(8,8,8,0.6) 60%, rgba(8,8,8,1) 100%)",
       },
       animation: {
         "shimmer": "shimmer 2.5s linear infinite",
         "float":   "float 6s ease-in-out infinite",
-        "pulse-gold": "pulseGold 3s ease-in-out infinite",
       },
       keyframes: {
         shimmer: {
@@ -45,10 +40,6 @@ module.exports = {
         float: {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%":      { transform: "translateY(-12px)" },
-        },
-        pulseGold: {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(201,168,76,0.4)" },
-          "50%":      { boxShadow: "0 0 0 12px rgba(201,168,76,0)" },
         },
       },
       screens: {
