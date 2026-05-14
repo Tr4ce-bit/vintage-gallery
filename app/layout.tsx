@@ -1,12 +1,25 @@
 import type { Metadata } from "next";
+import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import ConditionalClerkProvider from "@/components/ConditionalClerkProvider";
 
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+});
+
 export const metadata: Metadata = {
-  title: "Vintage Gallery Store | Premium Streetwear",
-  description:
-    "Curated vintage streetwear. Limited drops. Delivered across Ghana.",
+  title: "Vintage Gallery | Premium Streetwear",
+  description: "Curated vintage streetwear. Limited drops. Delivered across Ghana.",
   openGraph: {
     title: "Vintage Gallery Store",
     description: "Premium vintage streetwear — Ghana's finest.",
@@ -14,17 +27,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ConditionalClerkProvider>
-      <html lang="en">
-        <body className="bg-brand-black text-brand-cream antialiased">
+      <html lang="en" className={`${cormorant.variable} ${inter.variable}`}>
+        <body className="bg-vg-black text-vg-cream antialiased">
           <Navbar />
-          <main className="min-h-screen">{children}</main>
+          <main>{children}</main>
         </body>
       </html>
     </ConditionalClerkProvider>

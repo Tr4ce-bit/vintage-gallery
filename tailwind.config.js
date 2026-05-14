@@ -8,43 +8,40 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          black:   "#080808",
-          white:   "#FFFFFF",
-          off:     "#F0F0F0",   // slightly off-white for body text
-          gray:    "#888888",   // mid gray
+        vg: {
+          black:    "#080808",   // near-pure black
+          white:    "#FFFFFF",
+          cream:    "#F5F4F1",   // warm off-white (like Majlis cream)
+          "cream-dark": "#E8E6E1",
+          gray:     "#888888",
           "gray-light": "#CCCCCC",
           "gray-dark":  "#333333",
-          surface: "#111111",   // card / section bg
-          border:  "#222222",   // subtle dividers
-          "border-light": "#E0E0E0", // borders on white sections
+          ink:      "#0F0F0E",
+          "ink-muted":  "#3A3A38",
+          surface:  "#111111",
+          border:   "#1E1E1E",
+          "border-light": "#DDDBD5",
         },
       },
       fontFamily: {
-        display: ["var(--font-bebas)", "Bebas Neue", "Impact", "sans-serif"],
-        heading: ["var(--font-playfair)", "Playfair Display", "Georgia", "serif"],
-        body:    ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
-      },
-      backgroundImage: {
-        "dark-gradient": "linear-gradient(180deg, #080808 0%, #111111 100%)",
+        serif: ["var(--font-cormorant)", "Cormorant Garamond", "Georgia", "serif"],
+        sans:  ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
       },
       animation: {
-        "shimmer": "shimmer 2.5s linear infinite",
-        "float":   "float 6s ease-in-out infinite",
+        float:   "float 6s ease-in-out infinite",
+        marquee: "marquee 28s linear infinite",
       },
       keyframes: {
-        shimmer: {
-          "0%":   { backgroundPosition: "-200% center" },
-          "100%": { backgroundPosition: "200% center" },
-        },
         float: {
           "0%, 100%": { transform: "translateY(0px)" },
-          "50%":      { transform: "translateY(-12px)" },
+          "50%":      { transform: "translateY(-14px)" },
+        },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to:   { transform: "translateX(-50%)" },
         },
       },
-      screens: {
-        xs: "375px",
-      },
+      screens: { xs: "375px" },
     },
   },
   plugins: [],
