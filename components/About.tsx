@@ -1,43 +1,26 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useInView, useScroll, useTransform } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import Image from "next/image";
 
-// Brand pillars — numbered like Majlis
 const PILLARS = [
-  {
-    number: "01",
-    title: "Heritage Materials",
-    body: "We source only the finest fabrics — every piece hand-selected for weight, drape, and durability. No shortcuts. No compromise.",
-  },
-  {
-    number: "02",
-    title: "Limited Production",
-    body: "Each VG drop is made in controlled quantities. Rarity is not a marketing tactic — it is respect for the culture.",
-  },
-  {
-    number: "03",
-    title: "Ghana-Born",
-    body: "Rooted in Accra's energy. Every design decision reflects our landscape, our people, our ambition.",
-  },
+  { number: "01", title: "Premium Quality",  desc: "Every piece handpicked for weight, drape, and durability. No shortcuts." },
+  { number: "02", title: "Ghana-Born",        desc: "Rooted in Accra's energy. Every design reflects our culture and ambition." },
+  { number: "03", title: "Limited Drops",     desc: "Controlled quantities. Rarity is respect for the culture — not a gimmick." },
+  { number: "04", title: "100% Authentic",    desc: "Every item verified. Every tag traceable. Your trust is everything to us." },
 ];
 
-// Process steps — Roman numerals like Majlis
 const PROCESS = [
-  { step: "I",   title: "Source",  desc: "Fabrics selected by hand — premium mills and trusted suppliers chosen for quality above all." },
-  { step: "II",  title: "Design",  desc: "Every silhouette is drafted to honour the body while making a statement on the street." },
-  { step: "III", title: "Produce", desc: "Limited runs, quality-checked at every stage before a single piece leaves the floor." },
-  { step: "IV",  title: "Drop",    desc: "Timed releases to members first. The right piece to the right person — never oversaturated." },
+  { step: "I",   title: "Source",  desc: "Premium fabrics selected by hand from trusted mills and suppliers." },
+  { step: "II",  title: "Design",  desc: "Graphics and silhouettes crafted to make a statement on the street." },
+  { step: "III", title: "Produce", desc: "Limited runs, quality-checked at every stage before shipping." },
+  { step: "IV",  title: "Drop",    desc: "Members get first access. Right piece, right person, never oversaturated." },
 ];
 
 export default function About() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start end", "end start"] });
-  const imgY = useTransform(scrollYProgress, [0, 1], ["4%", "-4%"]);
-
-  const textRef    = useRef(null);
-  const textInView = useInView(textRef, { once: true, margin: "-10%" });
+  const storyRef    = useRef(null);
+  const storyInView = useInView(storyRef, { once: true, margin: "-10%" });
 
   const pillarsRef    = useRef(null);
   const pillarsInView = useInView(pillarsRef, { once: true, margin: "-5%" });
@@ -46,50 +29,41 @@ export default function About() {
   const processInView = useInView(processRef, { once: true, margin: "-5%" });
 
   return (
-    <section id="about" ref={sectionRef} className="relative overflow-hidden">
+    <section id="about">
 
-      {/* ── 1. Cream story block (like Majlis cream-dark heritage section) ── */}
-      <div className="bg-vg-cream-dark py-28 md:py-36 px-6">
+      {/* ── Story ── */}
+      <div className="bg-vg-cream py-24 md:py-32 px-6">
         <div className="max-w-7xl mx-auto">
-          <div ref={textRef} className="grid lg:grid-cols-2 gap-20 items-center">
+          <div ref={storyRef} className="grid lg:grid-cols-2 gap-16 md:gap-24 items-center">
 
-            {/* Text column */}
+            {/* Text */}
             <div>
               <motion.p
                 initial={{ opacity: 0 }}
-                animate={textInView ? { opacity: 1 } : {}}
-                transition={{ duration: 0.6 }}
-                className="font-sans text-[10px] tracking-[0.45em] uppercase text-vg-ink/40 font-light mb-6"
+                animate={storyInView ? { opacity: 1 } : {}}
+                className="font-sans text-[10px] tracking-[0.45em] uppercase text-vg-ink-muted/40 font-light mb-6"
               >
-                Our Heritage
+                Our Story
               </motion.p>
-
               <motion.h2
-                initial={{ opacity: 0, y: 24 }}
-                animate={textInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.75, delay: 0.1 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={storyInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.1 }}
                 className="font-serif text-[clamp(2.8rem,5vw,4.5rem)] text-vg-ink leading-[1.05] mb-8"
-                style={{ fontWeight: 400 }}
+                style={{ fontWeight: 300 }}
               >
-                Woven from
+                Woven from the
                 <br />
-                the streets of
+                streets of
                 <br />
-                <em style={{ fontStyle: "italic" }}>Accra.</em>
+                <em style={{ fontStyle: "italic", fontWeight: 400 }}>Accra.</em>
               </motion.h2>
 
               <motion.div
-                initial={{ scaleX: 0 }}
-                animate={textInView ? { scaleX: 1 } : {}}
-                transition={{ duration: 0.9, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                className="w-16 h-px bg-vg-ink mb-8 origin-left"
-              />
-
-              <motion.div
                 initial={{ opacity: 0, y: 16 }}
-                animate={textInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.7, delay: 0.45 }}
-                className="space-y-5 text-vg-ink-muted font-sans text-[15px] leading-[1.85] font-light max-w-md"
+                animate={storyInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.3 }}
+                className="space-y-5 font-sans text-[15px] text-vg-ink-muted/60 font-light leading-[1.85] max-w-md mb-10"
               >
                 <p>
                   Vintage Gallery was born from a simple belief: Ghanaian streetwear should carry the weight of our culture — the noise of Accra, the elegance of our heritage, the ambition of our generation.
@@ -99,154 +73,160 @@ export default function About() {
                 </p>
               </motion.div>
 
-              {/* Quote — like Majlis founder quote */}
               <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={textInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.7, delay: 0.6 }}
-                className="mt-12"
+                initial={{ opacity: 0, y: 12 }}
+                animate={storyInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.45 }}
               >
-                <div className="w-16 h-px bg-vg-ink/20 mb-6" />
-                <p className="font-serif text-2xl text-vg-ink italic leading-snug" style={{ fontWeight: 400 }}>
+                <div className="w-12 h-px bg-vg-ink/20 mb-5" />
+                <p className="font-serif text-2xl text-vg-ink italic" style={{ fontWeight: 400 }}>
                   &ldquo;Wear less. Mean more.&rdquo;
                 </p>
-                <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-vg-ink/40 mt-3 font-light">
-                  — Vintage Gallery, Accra
+                <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-vg-ink-muted/40 mt-3 font-light">
+                  — Vintage Gallery, Accra · Est. 2022
                 </p>
               </motion.div>
             </div>
 
-            {/* Right column — pillars numbered like Majlis */}
+            {/* Visual — rounded card with logo */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
-              animate={textInView ? { opacity: 1, x: 0 } : {}}
+              animate={storyInView ? { opacity: 1, x: 0 } : {}}
               transition={{ duration: 0.85, delay: 0.2 }}
-              ref={pillarsRef}
-              className="space-y-10"
+              className="relative"
             >
-              {PILLARS.map((v, i) => (
-                <motion.div
-                  key={v.number}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={pillarsInView ? { opacity: 1, y: 0 } : {}}
-                  transition={{ duration: 0.6, delay: i * 0.12 }}
-                  className="flex gap-6 pb-10 border-b border-vg-ink/10 last:border-0 last:pb-0 group"
-                >
-                  <span
-                    className="font-serif text-5xl text-vg-ink opacity-[0.12] leading-none shrink-0 group-hover:opacity-25 transition-opacity duration-300"
-                    style={{ fontWeight: 300 }}
-                  >
-                    {v.number}
-                  </span>
-                  <div>
-                    <h3 className="font-serif text-xl text-vg-ink mb-3 leading-snug" style={{ fontWeight: 500 }}>
-                      {v.title}
-                    </h3>
-                    <p className="font-sans text-[15px] text-vg-ink-muted leading-[1.8] font-light">
-                      {v.body}
-                    </p>
+              <div className="relative rounded-3xl overflow-hidden bg-vg-ink aspect-[4/5] card-float">
+                {/* Logo centrepiece */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative w-48 h-48 opacity-15">
+                    <Image src="/asset/logo.png" alt="VG" fill className="object-contain brightness-0 invert" />
                   </div>
-                </motion.div>
-              ))}
+                </div>
+
+                {/* Decorative corner brackets */}
+                <div className="absolute top-8 left-8 w-8 h-8 border-t border-l border-white/15 rounded-tl-sm" />
+                <div className="absolute top-8 right-8 w-8 h-8 border-t border-r border-white/15 rounded-tr-sm" />
+                <div className="absolute bottom-8 left-8 w-8 h-8 border-b border-l border-white/15 rounded-bl-sm" />
+                <div className="absolute bottom-8 right-8 w-8 h-8 border-b border-r border-white/15 rounded-br-sm" />
+
+                {/* Bottom info */}
+                <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/50 to-transparent">
+                  <p className="font-sans text-[8px] tracking-[0.4em] uppercase text-white/35 mb-1.5">Premium Streetwear</p>
+                  <p className="font-serif text-2xl text-white font-light">Ghana&apos;s Finest.</p>
+                </div>
+              </div>
+
+              {/* Floating stat cards — rounded */}
+              <motion.div
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -bottom-6 -left-6 bg-white rounded-2xl p-5 card shadow-card"
+              >
+                <p className="font-serif text-3xl text-vg-ink font-light">500+</p>
+                <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-vg-ink-muted/40 mt-1 font-light">Pieces Delivered</p>
+              </motion.div>
+
+              <motion.div
+                animate={{ y: [0, 6, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute -top-5 -right-5 bg-vg-ink rounded-2xl p-4 shadow-card"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  <p className="font-sans text-[9px] tracking-[0.25em] uppercase text-white/60 font-light">Drop Live</p>
+                </div>
+              </motion.div>
             </motion.div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-0 mt-24 border border-vg-ink/10">
+          {/* Stats — rounded cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-20">
             {[
               { value: "500+", label: "Pieces Sold" },
               { value: "100%", label: "Authentic"   },
               { value: "48h",  label: "Delivery"    },
               { value: "GH",   label: "Based"       },
             ].map((s, i) => (
-              <div
+              <motion.div
                 key={s.label}
-                className="flex flex-col items-center justify-center py-10 px-4 gap-2 border-r border-vg-ink/10 last:border-r-0"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white rounded-2xl p-6 text-center shadow-card"
               >
-                <span className="font-serif text-5xl text-vg-ink" style={{ fontWeight: 300 }}>{s.value}</span>
-                <span className="font-sans text-[9px] tracking-[0.35em] uppercase text-vg-ink/30 font-light">{s.label}</span>
-              </div>
+                <span className="font-serif text-4xl text-vg-ink block mb-1" style={{ fontWeight: 300 }}>{s.value}</span>
+                <span className="font-sans text-[9px] tracking-[0.3em] uppercase text-vg-ink-muted/40 font-light">{s.label}</span>
+              </motion.div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── 2. Dark editorial banner (like Majlis emerald atelier section) ── */}
-      <div className="relative bg-vg-black py-36 px-6 overflow-hidden">
-        {/* Dot pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Ccircle cx='40' cy='40' r='1'/%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
-        {/* Vertical accent lines */}
-        <div className="absolute left-1/4 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white to-transparent opacity-[0.05]" />
-        <div className="absolute left-3/4 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white to-transparent opacity-[0.05]" />
+      {/* ── Pillars — dark section ── */}
+      <div className="bg-vg-ink py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div ref={pillarsRef} className="mb-12">
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={pillarsInView ? { opacity: 1 } : {}}
+              className="font-sans text-[10px] tracking-[0.45em] uppercase text-white/25 font-light mb-4"
+            >
+              Why VG
+            </motion.p>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={pillarsInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.1 }}
+              className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] text-white"
+              style={{ fontWeight: 300 }}
+            >
+              Built on Principles.
+            </motion.h2>
+          </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <p className="font-sans text-[10px] tracking-[0.5em] uppercase text-white/30 font-light mb-8">
-            Custom Studio
-          </p>
-          <h2
-            className="font-serif text-[clamp(2.5rem,6vw,5rem)] text-white leading-[1.0] mb-10"
-            style={{ fontWeight: 300 }}
-          >
-            A piece made
-            <br />
-            for <em style={{ fontStyle: "italic", fontWeight: 400 }}>you alone.</em>
-          </h2>
-          <p className="font-sans text-[15px] text-white/40 font-light leading-[1.85] max-w-lg mx-auto mb-12">
-            Our custom studio lets you design your own VG piece from scratch — choose your cut, colour, and graphic. Every custom order is one-of-one.
-          </p>
-          <a
-            href="/customize"
-            className="btn-outline"
-          >
-            Open the Studio
-          </a>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {PILLARS.map((pillar, i) => (
+              <motion.div
+                key={pillar.number}
+                initial={{ opacity: 0, y: 24 }}
+                animate={pillarsInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white/5 rounded-2xl p-7 hover:bg-white/8 transition-colors duration-300 group"
+              >
+                <span className="font-serif text-5xl text-white/10 font-light group-hover:text-white/15 transition-colors duration-300 block mb-6" style={{ fontWeight: 300 }}>
+                  {pillar.number}
+                </span>
+                <h3 className="font-serif text-white text-xl mb-3" style={{ fontWeight: 400 }}>{pillar.title}</h3>
+                <p className="font-sans text-white/30 text-[14px] font-light leading-[1.8]">{pillar.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── 3. Light process section (like Majlis cream process section) ── */}
-      <div className="bg-vg-cream py-24 px-6">
+      {/* ── Process — cream section ── */}
+      <div className="bg-vg-cream-dark py-24 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="font-sans text-[10px] tracking-[0.45em] uppercase text-vg-ink/35 font-light mb-4">
-              The Process
-            </p>
-            <h2
-              className="font-serif text-[clamp(2rem,4vw,3.5rem)] text-vg-ink leading-[1.05]"
-              style={{ fontWeight: 400 }}
-            >
+          <div className="text-center mb-14">
+            <p className="font-sans text-[10px] tracking-[0.45em] uppercase text-vg-ink-muted/40 font-light mb-4">The Process</p>
+            <h2 className="font-serif text-[clamp(2rem,4vw,3.5rem)] text-vg-ink" style={{ fontWeight: 300 }}>
               How a VG piece is born
             </h2>
           </div>
 
-          <div ref={processRef} className="grid grid-cols-1 md:grid-cols-4 gap-0 border-t border-vg-ink/10">
+          <div ref={processRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {PROCESS.map((p, i) => (
               <motion.div
                 key={p.step}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 24 }}
                 animate={processInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.65, delay: i * 0.1, ease: [0.22, 0.61, 0.36, 1] }}
-                className={`p-8 text-center md:text-left ${i < 3 ? "md:border-r border-vg-ink/10" : ""}`}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white rounded-2xl p-7 shadow-card"
               >
-                <p
-                  className="font-serif text-6xl text-vg-ink/[0.08] mb-4 leading-none"
-                  style={{ fontWeight: 300 }}
-                >
-                  {p.step}
-                </p>
-                <h3
-                  className="font-serif text-2xl text-vg-ink mb-4 leading-snug"
-                  style={{ fontWeight: 500 }}
-                >
-                  {p.title}
-                </h3>
-                <p className="font-sans text-[14px] text-vg-ink-muted font-light leading-[1.8]">
-                  {p.desc}
-                </p>
+                <p className="font-serif text-5xl text-vg-ink/10 mb-5 font-light" style={{ fontWeight: 300 }}>{p.step}</p>
+                <h3 className="font-serif text-vg-ink text-2xl mb-3" style={{ fontWeight: 400 }}>{p.title}</h3>
+                <p className="font-sans text-vg-ink-muted/50 text-[14px] font-light leading-[1.8]">{p.desc}</p>
               </motion.div>
             ))}
           </div>

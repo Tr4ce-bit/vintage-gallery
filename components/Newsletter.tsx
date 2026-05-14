@@ -20,86 +20,78 @@ export default function Newsletter() {
   };
 
   return (
-    /* Cream section — light, airy */
-    <section className="bg-vg-cream-dark border-t border-vg-border-light py-24 md:py-32 px-6">
-      <div ref={ref} className="max-w-3xl mx-auto text-center">
-
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6 }}
-          className="font-sans text-[10px] tracking-[0.5em] uppercase text-vg-ink/30 font-light mb-6"
-        >
-          Inner Circle
-        </motion.p>
-
-        <motion.h2
+    <section className="bg-white py-24 px-6">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          ref={ref}
           initial={{ opacity: 0, y: 24 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.75, delay: 0.1 }}
-          className="font-serif text-[clamp(3rem,6vw,5rem)] text-vg-ink leading-[1.0] mb-8"
-          style={{ fontWeight: 300 }}
+          transition={{ duration: 0.7 }}
+          className="bg-vg-ink rounded-3xl px-10 py-16 md:py-20 text-center relative overflow-hidden"
         >
-          First Access.
-          <br />
-          <em style={{ fontStyle: "italic", fontWeight: 400 }}>Every Drop.</em>
-        </motion.h2>
+          {/* Subtle texture */}
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,
+            }}
+          />
 
-        <motion.div
-          initial={{ scaleX: 0 }}
-          animate={inView ? { scaleX: 1 } : {}}
-          transition={{ duration: 0.9, delay: 0.3 }}
-          className="w-12 h-px bg-vg-ink/25 mx-auto mb-8 origin-left"
-        />
+          <div className="relative z-10">
+            <span className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 font-sans text-[9px] tracking-[0.3em] uppercase text-white/50 font-light mb-8">
+              <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse" />
+              Inner Circle
+            </span>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.7, delay: 0.4 }}
-          className="font-sans text-[15px] text-vg-ink-muted/50 font-light leading-[1.85] max-w-sm mx-auto mb-12"
-        >
-          Get exclusive early access to limited drops, insider previews, and members-only pricing.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.65, delay: 0.5 }}
-        >
-          {submitted ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-3 text-vg-ink"
+            <h2
+              className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] text-white leading-[1.0] mb-6"
+              style={{ fontWeight: 300 }}
             >
-              <CheckCircle size={16} />
-              <span className="font-sans text-sm tracking-[0.2em] uppercase font-light">You&apos;re on the list.</span>
-            </motion.div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-0 max-w-lg mx-auto">
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                className="flex-1 bg-white border border-vg-border-light px-5 py-4 font-sans text-sm text-vg-ink placeholder-vg-ink/20 focus:outline-none focus:border-vg-ink/30 transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary-dark !rounded-none min-w-[140px] disabled:opacity-50"
+              First Access.
+              <br />
+              <em style={{ fontStyle: "italic", fontWeight: 400 }}>Every Drop.</em>
+            </h2>
+
+            <p className="font-sans text-[15px] text-white/35 font-light leading-[1.85] max-w-md mx-auto mb-10">
+              Get early access to limited drops, insider previews, and members-only pricing.
+            </p>
+
+            {submitted ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="inline-flex items-center gap-3 text-white"
               >
-                {loading
-                  ? <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  : <><span>Subscribe</span><ArrowRight size={13} /></>
-                }
-              </button>
-            </form>
-          )}
-          <p className="font-sans text-[9px] tracking-wider text-vg-ink/20 mt-5 uppercase font-light">
-            Unsubscribe anytime · No spam · Members only
-          </p>
+                <CheckCircle size={18} />
+                <span className="font-sans text-sm tracking-[0.2em] uppercase font-light">You&apos;re on the list.</span>
+              </motion.div>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                  className="flex-1 bg-white/10 border border-white/15 rounded-full px-6 py-3.5 font-sans text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/35 transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-pill-white disabled:opacity-50 shrink-0"
+                >
+                  {loading
+                    ? <span className="w-4 h-4 border-2 border-vg-ink/20 border-t-vg-ink rounded-full animate-spin" />
+                    : <><span>Subscribe</span><ArrowRight size={13} /></>
+                  }
+                </button>
+              </form>
+            )}
+
+            <p className="font-sans text-[9px] tracking-wider text-white/15 mt-5 uppercase font-light">
+              Unsubscribe anytime · No spam · Members only
+            </p>
+          </div>
         </motion.div>
       </div>
     </section>

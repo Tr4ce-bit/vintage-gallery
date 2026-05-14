@@ -29,10 +29,10 @@ export default function Navbar() {
       <motion.header
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: [0.22, 0.61, 0.36, 1] }}
+        transition={{ duration: 0.7, ease: [0.22, 0.61, 0.36, 1] }}
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
           scrolled
-            ? "bg-vg-black/95 backdrop-blur-md border-b border-vg-border"
+            ? "bg-white/90 backdrop-blur-xl shadow-sm border-b border-vg-border"
             : "bg-transparent"
         }`}
       >
@@ -46,10 +46,10 @@ export default function Navbar() {
                 alt="Vintage Gallery"
                 fill
                 priority
-                className="object-contain brightness-0 invert opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                className={`object-contain transition-all duration-300 ${scrolled ? "" : "brightness-0 invert"}`}
               />
             </div>
-            <span className="hidden sm:block font-serif text-white text-base tracking-wide font-light group-hover:text-vg-cream transition-colors duration-200" style={{ letterSpacing: "0.1em" }}>
+            <span className={`hidden sm:block font-serif text-base font-light tracking-wider transition-colors duration-300 ${scrolled ? "text-vg-ink" : "text-white"}`}>
               Vintage Gallery
             </span>
           </Link>
@@ -60,7 +60,9 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="font-sans text-[10px] tracking-[0.28em] uppercase text-white/35 hover:text-white transition-colors duration-200 font-light white-underline"
+                className={`font-sans text-[10px] tracking-[0.25em] uppercase font-light transition-colors duration-200 ${
+                  scrolled ? "text-vg-ink/40 hover:text-vg-ink" : "text-white/50 hover:text-white"
+                }`}
               >
                 {link.label}
               </Link>
@@ -68,18 +70,20 @@ export default function Navbar() {
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-5">
-            <NavbarAuth />
+          <div className="flex items-center gap-4">
+            <NavbarAuth scrolled={scrolled} />
 
-            <button className="relative text-white/35 hover:text-white transition-colors duration-200">
-              <ShoppingBag size={18} strokeWidth={1.5} />
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white rounded-full font-sans text-[8px] text-vg-ink font-medium flex items-center justify-center">
+            {/* Cart */}
+            <button className={`relative transition-colors duration-200 ${scrolled ? "text-vg-ink/40 hover:text-vg-ink" : "text-white/50 hover:text-white"}`}>
+              <ShoppingBag size={19} strokeWidth={1.5} />
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-vg-ink rounded-full font-sans text-[8px] text-white font-medium flex items-center justify-center">
                 0
               </span>
             </button>
 
+            {/* Mobile */}
             <button
-              className="md:hidden text-white/35 hover:text-white transition-colors"
+              className={`md:hidden transition-colors ${scrolled ? "text-vg-ink/50 hover:text-vg-ink" : "text-white/50 hover:text-white"}`}
               onClick={() => setMenuOpen(o => !o)}
             >
               {menuOpen ? <X size={20} strokeWidth={1.5} /> : <Menu size={20} strokeWidth={1.5} />}
@@ -92,25 +96,25 @@ export default function Navbar() {
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -12 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.22 }}
-            className="fixed inset-x-0 top-16 z-40 bg-vg-black border-b border-vg-border md:hidden"
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-x-0 top-16 z-40 bg-white/95 backdrop-blur-xl border-b border-vg-border shadow-lg md:hidden"
           >
-            <nav className="flex flex-col py-8 px-6 gap-7">
+            <nav className="flex flex-col py-8 px-6 gap-6">
               {NAV_LINKS.map(link => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
-                  className="font-sans text-sm tracking-[0.25em] uppercase text-white/45 hover:text-white transition-colors font-light"
+                  className="font-sans text-sm tracking-[0.2em] uppercase text-vg-ink/50 hover:text-vg-ink transition-colors font-light"
                 >
                   {link.label}
                 </Link>
               ))}
               <div className="flex gap-4 pt-4 border-t border-vg-border">
-                <NavbarAuth mobile />
+                <NavbarAuth mobile scrolled />
               </div>
             </nav>
           </motion.div>

@@ -9,37 +9,28 @@ module.exports = {
     extend: {
       colors: {
         vg: {
-          black:    "#080808",   // near-pure black
-          white:    "#FFFFFF",
-          cream:    "#F5F4F1",   // warm off-white (like Majlis cream)
-          "cream-dark": "#E8E6E1",
-          gray:     "#888888",
-          "gray-light": "#CCCCCC",
-          "gray-dark":  "#333333",
-          ink:      "#0F0F0E",
-          "ink-muted":  "#3A3A38",
-          surface:  "#111111",
-          border:   "#1E1E1E",
-          "border-light": "#DDDBD5",
+          black:        "#080808",
+          white:        "#FFFFFF",
+          cream:        "#F5F4F1",
+          "cream-dark": "#EDEAE3",
+          ink:          "#0F0F0E",
+          "ink-muted":  "#5A5A58",
+          surface:      "#F9F9F8",
+          border:       "#E8E6E0",
         },
       },
       fontFamily: {
         serif: ["var(--font-cormorant)", "Cormorant Garamond", "Georgia", "serif"],
         sans:  ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
       },
-      animation: {
-        float:   "float 6s ease-in-out infinite",
-        marquee: "marquee 28s linear infinite",
+      borderRadius: {
+        "4xl": "2rem",
+        "5xl": "2.5rem",
       },
-      keyframes: {
-        float: {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%":      { transform: "translateY(-14px)" },
-        },
-        marquee: {
-          from: { transform: "translateX(0)" },
-          to:   { transform: "translateX(-50%)" },
-        },
+      boxShadow: {
+        "card":   "0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06)",
+        "card-lg":"0 8px 24px rgba(0,0,0,0.1), 0 24px 60px rgba(0,0,0,0.1)",
+        "inner-sm": "inset 0 1px 3px rgba(0,0,0,0.08)",
       },
       screens: { xs: "375px" },
     },

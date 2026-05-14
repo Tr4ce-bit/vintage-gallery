@@ -4,26 +4,26 @@ import { useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowDown } from "lucide-react";
 
-// ─── Marquee — light version ──────────────────────────────────────────────────
+// ─── Marquee ──────────────────────────────────────────────────────────────────
 
 const MARQUEE = [
-  "Vintage Gallery", "·", "Premium Streetwear", "·",
-  "Ghana's Finest",  "·", "Limited Drops",       "·",
-  "Curated Pieces",  "·", "SS '25",              "·",
+  "Vintage Gallery", "★", "Premium Streetwear", "★",
+  "Ghana's Finest",  "★", "Limited Drops",       "★",
+  "Curated Pieces",  "★", "SS '25",              "★",
 ];
 
 function MarqueeStrip() {
   const doubled = [...MARQUEE, ...MARQUEE];
   return (
-    <div className="overflow-hidden border-y border-vg-border-light bg-vg-cream py-4">
-      <div className="animate-marquee whitespace-nowrap flex gap-14">
+    <div className="overflow-hidden bg-vg-ink py-4">
+      <div className="animate-marquee whitespace-nowrap flex gap-10">
         {doubled.map((item, i) => (
           <span
             key={i}
-            className={`font-sans text-[10px] tracking-[0.4em] uppercase font-light ${
-              item === "·" ? "text-vg-ink/15" : "text-vg-ink/35"
+            className={`font-sans text-[10px] tracking-[0.4em] uppercase font-medium ${
+              item === "★" ? "text-white/20" : "text-white/50"
             }`}
           >
             {item}
@@ -34,7 +34,7 @@ function MarqueeStrip() {
   );
 }
 
-// ─── Stats — light bg ─────────────────────────────────────────────────────────
+// ─── Stats ────────────────────────────────────────────────────────────────────
 
 const STATS = [
   { value: "500+", label: "Pieces Sold" },
@@ -47,24 +47,24 @@ function StatsBar() {
   const ref    = useRef(null);
   const inView = useInView(ref, { once: true });
   return (
-    <div ref={ref} className="grid grid-cols-2 md:grid-cols-4 divide-x divide-vg-border-light border-b border-vg-border-light bg-white">
+    <div ref={ref} className="grid grid-cols-2 md:grid-cols-4 bg-white border-b border-vg-border">
       {STATS.map((s, i) => (
         <motion.div
           key={s.label}
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: i * 0.1, duration: 0.7, ease: [0.22, 0.61, 0.36, 1] }}
-          className="flex flex-col items-center justify-center py-10 px-4 gap-2"
+          transition={{ delay: i * 0.1, duration: 0.6 }}
+          className={`flex flex-col items-center justify-center py-8 gap-1.5 ${i < 3 ? "border-r border-vg-border" : ""}`}
         >
-          <span className="font-serif text-4xl text-vg-ink" style={{ fontWeight: 300 }}>{s.value}</span>
-          <span className="font-sans text-[9px] tracking-[0.35em] uppercase text-vg-ink/30 font-light">{s.label}</span>
+          <span className="font-serif text-3xl text-vg-ink" style={{ fontWeight: 300 }}>{s.value}</span>
+          <span className="font-sans text-[9px] tracking-[0.35em] uppercase text-vg-ink-muted/50 font-light">{s.label}</span>
         </motion.div>
       ))}
     </div>
   );
 }
 
-// ─── Main Hero — stays dark for dramatic contrast ─────────────────────────────
+// ─── Hero ─────────────────────────────────────────────────────────────────────
 
 export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,130 +72,173 @@ export default function Hero() {
     target: containerRef,
     offset: ["start start", "end start"],
   });
-  const bgY     = useTransform(scrollYProgress, [0, 1], ["0%", "18%"]);
-  const opacity = useTransform(scrollYProgress, [0, 0.65], [1, 0]);
+  const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
+  const y       = useTransform(scrollYProgress, [0, 1], ["0%", "12%"]);
 
   return (
     <section className="relative">
+      {/* ── Full-screen hero ── */}
       <div
         ref={containerRef}
-        className="relative min-h-screen overflow-hidden flex items-center bg-vg-black noise-overlay"
+        className="relative min-h-screen overflow-hidden bg-vg-ink flex items-center"
       >
-        {/* Background texture */}
-        <motion.div style={{ y: bgY }} className="absolute inset-0 will-change-transform">
-          <div
-            className="absolute inset-0 opacity-[0.025]"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-            }}
-          />
-          <div className="absolute right-[15%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white to-transparent opacity-[0.06]" />
-          <div className="absolute left-[15%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white to-transparent opacity-[0.04]" />
-          <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-vg-black to-transparent" />
-        </motion.div>
+        {/* Subtle noise grain */}
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          }}
+        />
 
-        {/* Content */}
-        <motion.div
-          style={{ opacity }}
-          className="relative z-10 w-full max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center py-32 pt-36"
-        >
-          {/* Left */}
-          <div>
-            <p
-              className="animate-fade-up font-sans text-[10px] tracking-[0.5em] uppercase text-white/40 font-light mb-8"
-              style={{ animationDelay: "0.1s" }}
-            >
-              New Collection — SS&apos;25
-            </p>
+        <motion.div style={{ opacity }} className="relative z-10 w-full max-w-7xl mx-auto px-6 pt-24 pb-20">
+          <div className="grid lg:grid-cols-2 gap-8 items-center min-h-[calc(100vh-160px)]">
 
-            <h1
-              className="animate-fade-up font-serif text-[clamp(3.8rem,8vw,7rem)] leading-[1.0] text-white mb-8"
-              style={{ fontWeight: 300, animationDelay: "0.25s" }}
-            >
-              Dressed in
-              <br />
-              <em style={{ fontStyle: "italic", fontWeight: 400 }}>Streetwear.</em>
-              <br />
-              Worn with
-              <br />
-              Intention.
-            </h1>
+            {/* ── Left: text ── */}
+            <div className="flex flex-col justify-center">
+              {/* Pill badge */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 w-fit mb-8"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                <span className="font-sans text-[10px] tracking-[0.3em] uppercase text-white/60 font-light">
+                  New Drop — SS&apos;25
+                </span>
+              </motion.div>
 
-            <p
-              className="animate-fade-up font-sans text-[15px] leading-[1.85] text-white/40 font-light max-w-sm mb-12"
-              style={{ animationDelay: "0.4s" }}
-            >
-              Vintage Gallery curates premium streetwear for the modern Ghanaian — each piece a statement between heritage and street culture. Limited runs. Built to last.
-            </p>
+              {/* Headline */}
+              <motion.h1
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="font-serif text-[clamp(4rem,8vw,7rem)] leading-[0.95] text-white mb-8"
+                style={{ fontWeight: 300 }}
+              >
+                Dressed in
+                <br />
+                <em style={{ fontStyle: "italic", fontWeight: 400 }}>Streetwear.</em>
+                <br />
+                Worn with
+                <br />
+                Intention.
+              </motion.h1>
 
-            <div
-              className="animate-fade-up flex flex-wrap gap-4"
-              style={{ animationDelay: "0.55s" }}
-            >
-              <Link href="#collection" className="btn-primary">
-                Shop the Drop
-                <ArrowRight size={14} />
-              </Link>
-              <Link href="/customize" className="btn-outline">
-                Design Your Piece
-              </Link>
+              <motion.p
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.38 }}
+                className="font-sans text-[15px] text-white/40 font-light leading-[1.8] max-w-sm mb-10"
+              >
+                Premium streetwear curated for the modern Ghanaian. Limited drops. No compromises.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.52 }}
+                className="flex flex-wrap gap-3"
+              >
+                <Link href="#collection" className="btn-pill-white">
+                  Shop the Drop <ArrowRight size={14} />
+                </Link>
+                <Link href="/customize" className="btn-pill-outline-white">
+                  Design Your Piece
+                </Link>
+              </motion.div>
             </div>
-          </div>
 
-          {/* Right — floating product frame with real tee preview */}
-          <div className="hidden lg:flex justify-end">
-            <div
-              className="relative w-[380px] h-[520px] animate-fade-up animate-float"
-              style={{ animationDelay: "0.35s" }}
+            {/* ── Right: product showcase (bento cards) ── */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.9, delay: 0.3 }}
+              className="hidden lg:grid grid-cols-2 gap-4 items-start"
             >
-              {/* Nested border frames */}
-              <div className="absolute inset-0 border border-white/[0.12]" />
-              <div className="absolute inset-4 border border-white/[0.05]" />
-
-              {/* Inner — shows first product image */}
-              <div className="absolute inset-8 overflow-hidden bg-vg-surface">
+              {/* Card 1 — HOPE tee, tall */}
+              <motion.div
+                style={{ y }}
+                className="relative rounded-3xl overflow-hidden bg-zinc-900 aspect-[3/4]"
+              >
                 <Image
                   src="/asset/product-hope.jpg"
                   alt="Light in Darkness Tee"
                   fill
+                  priority
                   className="object-cover object-center"
                   onError={() => {}}
                 />
-                {/* Fallback overlay if no image */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="relative w-32 h-32 opacity-10">
-                    <Image src="/asset/logo.png" alt="VG" fill className="object-contain brightness-0 invert" />
-                  </div>
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                {/* Label */}
+                <div className="absolute bottom-5 left-5 right-5">
+                  <span className="inline-block bg-white/15 backdrop-blur-sm rounded-full px-3 py-1 font-sans text-[9px] tracking-[0.25em] uppercase text-white/80 mb-2">HOPE Collection</span>
+                  <p className="font-serif text-white text-lg font-light">Light in Darkness</p>
+                  <p className="font-sans text-white/50 text-[11px] font-light mt-0.5">GH₵ 320</p>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-vg-black/40 to-transparent" />
-              </div>
+              </motion.div>
 
-              {/* Label chip */}
-              <div className="absolute -bottom-4 left-8 bg-white px-4 py-2">
-                <span className="font-sans text-[9px] tracking-[0.4em] uppercase text-vg-ink font-medium">
-                  SS 2025 — No. 01
-                </span>
+              {/* Right column — 2 stacked cards */}
+              <div className="flex flex-col gap-4 pt-8">
+                {/* Card 2 — Be Yourself */}
+                <motion.div
+                  style={{ y: useTransform(scrollYProgress, [0, 1], ["0%", "8%"]) }}
+                  className="relative rounded-3xl overflow-hidden bg-zinc-900 aspect-square"
+                >
+                  <Image
+                    src="/asset/product-beyourself.jpg"
+                    alt="Be Yourself Tee"
+                    fill
+                    className="object-cover object-center"
+                    onError={() => {}}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <p className="font-serif text-white text-base font-light">Be Yourself</p>
+                    <p className="font-sans text-white/50 text-[11px] font-light">GH₵ 280</p>
+                  </div>
+                </motion.div>
+
+                {/* Card 3 — Tupac */}
+                <motion.div
+                  style={{ y: useTransform(scrollYProgress, [0, 1], ["0%", "5%"]) }}
+                  className="relative rounded-3xl overflow-hidden bg-zinc-900 aspect-square"
+                >
+                  <Image
+                    src="/asset/product-tupac.jpg"
+                    alt="All Eyez On Me Tee"
+                    fill
+                    className="object-cover object-center"
+                    onError={() => {}}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <span className="inline-block bg-white text-vg-ink rounded-full px-2.5 py-0.5 font-sans text-[8px] tracking-[0.2em] uppercase font-medium mb-1.5">Limited</span>
+                    <p className="font-serif text-white text-base font-light">All Eyez On Me</p>
+                    <p className="font-sans text-white/50 text-[11px] font-light">GH₵ 300</p>
+                  </div>
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </motion.div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
-          <span
-            className="animate-fade-in font-sans text-[9px] tracking-[0.4em] uppercase text-white/25 font-light"
-            style={{ animationDelay: "1.4s" }}
+        {/* Scroll cue */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+          <motion.div
+            animate={{ y: [0, 6, 0] }}
+            transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
           >
-            Scroll
-          </span>
-          <div className="w-px h-12 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-white to-transparent animate-scroll-line" />
-          </div>
+            <ArrowDown size={16} className="text-white/25" />
+          </motion.div>
         </div>
       </div>
 
-      {/* Light marquee + stats below dark hero */}
+      {/* Marquee — dark strip */}
       <MarqueeStrip />
+
+      {/* Stats — white strip */}
       <StatsBar />
     </section>
   );
