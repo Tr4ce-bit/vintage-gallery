@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import ConditionalClerkProvider from "@/components/ConditionalClerkProvider";
 
 export const metadata: Metadata = {
   title: "Vintage Gallery Store | Premium Streetwear",
@@ -20,13 +20,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    <ConditionalClerkProvider>
       <html lang="en">
         <body className="bg-brand-black text-brand-cream antialiased">
           <Navbar />
           <main>{children}</main>
         </body>
       </html>
-    </ClerkProvider>
+    </ConditionalClerkProvider>
   );
 }

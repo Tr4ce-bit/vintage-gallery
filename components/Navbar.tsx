@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Menu, X } from "lucide-react";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import Logo from "@/components/Logo";
+import NavbarAuth from "@/components/NavbarAuth";
 
 const NAV_LINKS = [
   { label: "Collection", href: "/#collection" },
@@ -15,7 +15,6 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
-  const { isSignedIn } = useUser();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -64,28 +63,8 @@ export default function Navbar() {
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            {isSignedIn ? (
-              <UserButton
-                appearance={{
-                  elements: {
-                    userButtonAvatarBox: "w-8 h-8",
-                  },
-                }}
-              />
-            ) : (
-              <div className="hidden md:flex items-center gap-3">
-                <SignInButton mode="modal">
-                  <button className="text-xs tracking-widest uppercase text-brand-cream/50 hover:text-brand-gold transition-colors">
-                    Sign In
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="btn-outline-gold !px-4 !py-2 text-xs">
-                    Join
-                  </button>
-                </SignUpButton>
-              </div>
-            )}
+            {/* Auth buttons — safe whether Clerk is configured or not */}
+            <NavbarAuth />
 
             <button className="relative text-brand-cream/60 hover:text-brand-gold transition-colors">
               <ShoppingBag size={20} />
@@ -126,16 +105,9 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              {!isSignedIn && (
-                <div className="flex gap-4 pt-2 border-t border-brand-border">
-                  <SignInButton mode="modal">
-                    <button className="text-sm text-brand-cream/50">Sign In</button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <button className="btn-gold !px-6 !py-2 text-xs">Join</button>
-                  </SignUpButton>
-                </div>
-              )}
+              <div className="flex gap-4 pt-2 border-t border-brand-border">
+                <NavbarAuth mobile />
+              </div>
             </nav>
           </motion.div>
         )}
