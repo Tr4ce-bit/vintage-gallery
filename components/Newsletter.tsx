@@ -5,13 +5,13 @@ import { motion, useInView } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
 
 export default function Newsletter() {
-  const ref     = useRef(null);
-  const inView  = useInView(ref, { once: true, margin: "-10%" });
+  const ref    = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-10%" });
   const [email, setEmail]         = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading]     = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     await new Promise(r => setTimeout(r, 900));
@@ -20,77 +20,76 @@ export default function Newsletter() {
   };
 
   return (
-    <section className="bg-white py-24 px-6">
-      <div className="max-w-4xl mx-auto">
+    <section className="bg-white py-16 px-5 md:px-8">
+      <div className="max-w-7xl mx-auto">
         <motion.div
           ref={ref}
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7 }}
-          className="bg-vg-ink rounded-3xl px-10 py-16 md:py-20 text-center relative overflow-hidden"
+          transition={{ duration: 0.65 }}
+          className="rounded-3xl bg-zinc-950 px-8 md:px-16 py-16 md:py-20 relative overflow-hidden"
         >
-          {/* Subtle texture */}
-          <div
-            className="absolute inset-0 opacity-[0.03]"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,
-            }}
-          />
+          {/* Decorative product image blurred in background */}
+          <div className="absolute right-0 top-0 bottom-0 w-[45%] opacity-[0.06] overflow-hidden rounded-r-3xl hidden lg:block">
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0"
+            >
+              <img src="/asset/product-hope.jpg" alt="" className="w-full h-full object-cover" />
+            </motion.div>
+          </div>
 
-          <div className="relative z-10">
-            <span className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 font-sans text-[9px] tracking-[0.3em] uppercase text-white/50 font-light mb-8">
-              <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse" />
+          <div className="relative z-10 max-w-xl">
+            <span className="inline-flex items-center gap-2 bg-white/8 rounded-full px-4 py-2 font-sans text-[9px] tracking-[0.3em] uppercase text-white/40 font-light mb-8">
+              <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-pulse" />
               Inner Circle
             </span>
 
             <h2
-              className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] text-white leading-[1.0] mb-6"
-              style={{ fontWeight: 300 }}
+              className="font-serif text-white leading-[1.0] mb-6"
+              style={{ fontSize: "clamp(2.2rem, 5vw, 4rem)", fontWeight: 300 }}
             >
               First Access.
               <br />
               <em style={{ fontStyle: "italic", fontWeight: 400 }}>Every Drop.</em>
             </h2>
 
-            <p className="font-sans text-[15px] text-white/35 font-light leading-[1.85] max-w-md mx-auto mb-10">
-              Get early access to limited drops, insider previews, and members-only pricing.
+            <p className="font-sans text-base text-zinc-400 font-light leading-relaxed mb-10 max-w-sm">
+              Get early access to drops, members-only pricing, and behind-the-scenes previews before anyone else.
             </p>
 
             {submitted ? (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="inline-flex items-center gap-3 text-white"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-3 text-white"
               >
                 <CheckCircle size={18} />
-                <span className="font-sans text-sm tracking-[0.2em] uppercase font-light">You&apos;re on the list.</span>
+                <span className="font-sans text-sm tracking-[0.15em] uppercase font-light">You&apos;re on the list.</span>
               </motion.div>
             ) : (
-              <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+              <form onSubmit={submit} className="flex gap-2.5 max-w-md">
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com"
                   required
-                  className="flex-1 bg-white/10 border border-white/15 rounded-full px-6 py-3.5 font-sans text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/35 transition-colors"
+                  className="flex-1 bg-white/8 border border-white/10 rounded-full px-5 py-3.5 font-sans text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn-pill-white disabled:opacity-50 shrink-0"
+                  className="bg-white text-zinc-900 font-sans font-medium text-[10px] tracking-[0.15em] uppercase px-6 py-3.5 rounded-full hover:bg-zinc-100 transition-colors disabled:opacity-50 shrink-0 flex items-center gap-2"
                 >
                   {loading
-                    ? <span className="w-4 h-4 border-2 border-vg-ink/20 border-t-vg-ink rounded-full animate-spin" />
-                    : <><span>Subscribe</span><ArrowRight size={13} /></>
+                    ? <span className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-900 rounded-full animate-spin" />
+                    : <><span>Subscribe</span><ArrowRight size={12} /></>
                   }
                 </button>
               </form>
             )}
-
-            <p className="font-sans text-[9px] tracking-wider text-white/15 mt-5 uppercase font-light">
-              Unsubscribe anytime · No spam · Members only
-            </p>
           </div>
         </motion.div>
       </div>

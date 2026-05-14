@@ -7,31 +7,28 @@ import ConditionalClerkProvider from "@/components/ConditionalClerkProvider";
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600"],
   style: ["normal", "italic"],
+  display: "swap",
 });
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Vintage Gallery | Premium Streetwear",
+  title: "Vintage Gallery | Premium Streetwear · Accra",
   description: "Curated vintage streetwear. Limited drops. Delivered across Ghana.",
-  openGraph: {
-    title: "Vintage Gallery Store",
-    description: "Premium vintage streetwear — Ghana's finest.",
-    images: ["/asset/og-image.jpg"],
-  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ConditionalClerkProvider>
       <html lang="en" className={`${cormorant.variable} ${inter.variable}`}>
-        <body className="bg-vg-black text-vg-cream antialiased">
+        <body className="bg-white text-zinc-900 antialiased">
           <Navbar />
           <main>{children}</main>
         </body>

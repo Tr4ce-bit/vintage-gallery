@@ -2,36 +2,35 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion, useInView } from "framer-motion";
-import { Instagram, Twitter, Youtube, MessageCircle, MapPin, Phone, Mail, ArrowUpRight } from "lucide-react";
+import { Instagram, Twitter, Youtube, MessageCircle, ArrowUpRight } from "lucide-react";
 
 const LINKS = {
   Shop: [
-    { label: "New Arrivals",       href: "#collection" },
-    { label: "Icons Series",       href: "#collection" },
-    { label: "Urban Series",       href: "#collection" },
-    { label: "Limited Drops",      href: "#collection" },
-    { label: "Custom Studio",      href: "/customize"  },
+    { label: "New Arrivals",   href: "#collection" },
+    { label: "HOPE Collection",href: "#collection" },
+    { label: "Icons Series",   href: "#collection" },
+    { label: "Limited Drops",  href: "#collection" },
+    { label: "Custom Studio",  href: "/customize"  },
   ],
   Brand: [
-    { label: "Our Story",          href: "#about"  },
-    { label: "Drop Schedule",      href: "#"       },
-    { label: "Lookbook",           href: "#"       },
-    { label: "Collabs",            href: "#"       },
+    { label: "Our Story",      href: "#about" },
+    { label: "Drop Schedule",  href: "#"      },
+    { label: "Lookbook",       href: "#"      },
+    { label: "Collabs",        href: "#"      },
   ],
   Help: [
-    { label: "Sizing Guide",       href: "#" },
-    { label: "Shipping & GH Post", href: "#" },
-    { label: "Returns",            href: "#" },
-    { label: "Contact Us",         href: "#contact" },
-    { label: "FAQs",               href: "#" },
+    { label: "Sizing Guide",   href: "#" },
+    { label: "Shipping",       href: "#" },
+    { label: "Returns",        href: "#" },
+    { label: "Contact",        href: "#contact" },
+    { label: "FAQs",           href: "#" },
   ],
 };
 
 const SOCIALS = [
   { icon: Instagram,     href: "#", label: "Instagram" },
-  { icon: Twitter,       href: "#", label: "X / Twitter" },
+  { icon: Twitter,       href: "#", label: "Twitter" },
   { icon: Youtube,       href: "#", label: "YouTube" },
   { icon: MessageCircle, href: "#", label: "WhatsApp" },
 ];
@@ -42,74 +41,65 @@ export default function Footer() {
   const year   = new Date().getFullYear();
 
   return (
-    /* Light footer — white with black text */
-    <footer id="contact" className="bg-white border-t border-vg-border-light">
-      <div ref={ref} className="max-w-7xl mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-8 mb-16">
+    <footer id="contact" className="bg-white border-t border-zinc-100">
+      <div ref={ref} className="max-w-7xl mx-auto px-5 md:px-8 pt-16 pb-10">
+
+        {/* Top row */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-8 mb-14">
 
           {/* Brand */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.7 }}
+            transition={{ duration: 0.6 }}
             className="lg:col-span-2"
           >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="relative w-9 h-9 shrink-0">
-                <Image src="/asset/logo.png" alt="VG" fill className="object-contain" />
-              </div>
-              <div>
-                <p className="font-serif text-vg-ink text-lg leading-none" style={{ fontWeight: 400 }}>Vintage Gallery</p>
-                <p className="font-sans text-[8px] tracking-[0.35em] uppercase text-vg-ink/30 font-light mt-0.5">Premium Streetwear</p>
-              </div>
+            <div className="mb-5">
+              <p className="font-serif text-zinc-900 text-2xl" style={{ fontWeight: 300, letterSpacing: "0.08em" }}>VG</p>
+              <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-zinc-300 font-light mt-0.5">Vintage Gallery Store</p>
             </div>
 
-            <p className="font-sans text-[14px] text-vg-ink-muted/50 leading-[1.8] font-light mb-8 max-w-xs">
+            <p className="font-sans text-sm text-zinc-400 font-light leading-[1.75] max-w-xs mb-7">
               Ghana&apos;s premier streetwear destination. Curated drops, premium quality, delivered across Accra and beyond.
             </p>
 
-            <div className="space-y-3 mb-8">
-              {[
-                { icon: MapPin, text: "Accra, Ghana" },
-                { icon: Phone,  text: "+233 000 000 000" },
-                { icon: Mail,   text: "hello@vintagegallery.gh" },
-              ].map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <Icon size={12} className="text-vg-ink/20 shrink-0" />
-                  <span className="font-sans text-[12px] text-vg-ink/30 font-light">{text}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-8">
               {SOCIALS.map(({ icon: Icon, href, label }) => (
                 <a
                   key={label}
                   href={href}
                   aria-label={label}
-                  className="w-9 h-9 border border-vg-border-light flex items-center justify-center text-vg-ink/20 hover:text-vg-ink hover:border-vg-ink/25 transition-all duration-200"
+                  className="w-9 h-9 rounded-full border border-zinc-100 flex items-center justify-center text-zinc-300 hover:text-zinc-900 hover:border-zinc-200 transition-all duration-200"
                 >
-                  <Icon size={13} />
+                  <Icon size={14} strokeWidth={1.5} />
                 </a>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {["MTN MoMo", "Telecel", "AirtelTigo", "Paystack"].map(m => (
+                <span key={m} className="font-sans text-[8px] tracking-[0.2em] uppercase text-zinc-300 border border-zinc-100 px-2.5 py-1.5 rounded-full font-light">
+                  {m}
+                </span>
               ))}
             </div>
           </motion.div>
 
-          {/* Link columns */}
-          {Object.entries(LINKS).map(([section, links], colIdx) => (
+          {/* Links */}
+          {Object.entries(LINKS).map(([section, links], col) => (
             <motion.div
               key={section}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: 0.1 + colIdx * 0.08 }}
+              transition={{ duration: 0.6, delay: 0.08 + col * 0.07 }}
             >
-              <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-vg-ink/30 font-medium mb-6">{section}</p>
-              <ul className="space-y-3.5">
+              <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-zinc-300 font-medium mb-5">{section}</p>
+              <ul className="space-y-3">
                 {links.map(link => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="group font-sans text-[13px] text-vg-ink/30 font-light hover:text-vg-ink transition-colors duration-200 flex items-center gap-1"
+                      className="group font-sans text-[13px] text-zinc-400 font-light hover:text-zinc-900 transition-colors duration-150 flex items-center gap-1"
                     >
                       {link.label}
                       <ArrowUpRight size={9} className="opacity-0 group-hover:opacity-40 transition-opacity" />
@@ -121,41 +111,19 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Payments */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="border-t border-vg-border-light pt-10 mb-10"
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="font-sans text-[8px] tracking-[0.35em] uppercase text-vg-ink/20 font-light mr-2">Accepted Payments</span>
-            {["MTN MoMo", "Telecel Cash", "AirtelTigo", "Paystack"].map(m => (
-              <div key={m} className="px-3 py-1.5 border border-vg-border-light font-sans text-[8px] tracking-[0.2em] uppercase text-vg-ink/25 font-light">
-                {m}
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Bottom */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-vg-border-light pt-8"
-        >
-          <p className="font-sans text-[10px] text-vg-ink/20 font-light tracking-wider">
+        {/* Bottom bar */}
+        <div className="border-t border-zinc-100 pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="font-sans text-[11px] text-zinc-300 font-light">
             © {year} Vintage Gallery Store. All rights reserved.
           </p>
-          <div className="flex items-center gap-6">
-            {["Privacy Policy", "Terms of Service", "Cookie Policy"].map(item => (
-              <a key={item} href="#" className="font-sans text-[9px] tracking-[0.2em] uppercase text-vg-ink/20 hover:text-vg-ink/50 transition-colors font-light">
+          <div className="flex items-center gap-5">
+            {["Privacy", "Terms", "Cookies"].map(item => (
+              <a key={item} href="#" className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-300 hover:text-zinc-600 transition-colors font-light">
                 {item}
               </a>
             ))}
           </div>
-        </motion.div>
+        </div>
       </div>
     </footer>
   );
