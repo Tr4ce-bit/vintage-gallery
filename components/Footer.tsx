@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion, useInView } from "framer-motion";
 import { Instagram, Twitter, Youtube, MessageCircle, ArrowUpRight } from "lucide-react";
 
@@ -55,14 +54,19 @@ export default function Footer() {
             transition={{ duration: 0.6 }}
             className="lg:col-span-2"
           >
-            <div className="mb-5">
-              <Image
-                src="/asset/logo.png"
-                alt="Vintage Gallery"
-                width={140}
-                height={56}
-                className="object-contain"
-              />
+            <div className="mb-5 flex flex-col items-start leading-none">
+              <span
+                className="font-serif text-zinc-900"
+                style={{ fontSize: "1.6rem", fontWeight: 700, letterSpacing: "0.08em" }}
+              >
+                VG
+              </span>
+              <span
+                className="font-serif text-zinc-400"
+                style={{ fontSize: "0.46rem", fontWeight: 600, letterSpacing: "0.38em", textTransform: "uppercase", marginTop: "2px" }}
+              >
+                Vintage Gallery
+              </span>
             </div>
 
             <p className="font-sans text-sm text-zinc-400 font-light leading-[1.75] max-w-xs mb-7">
