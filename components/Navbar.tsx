@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Menu, X } from "lucide-react";
@@ -48,15 +49,17 @@ export default function Navbar() {
       >
         <div className="max-w-7xl mx-auto px-5 md:px-8 h-[60px] flex items-center justify-between">
 
-          {/* Wordmark — always legible regardless of bg */}
-          <Link href="/" className="group flex items-center gap-1.5">
-            <span className={`font-serif text-xl tracking-[0.12em] transition-colors duration-300 ${onDark ? "text-white" : "text-zinc-900"}`}
-              style={{ fontWeight: 400 }}>
-              VG
-            </span>
-            <span className={`hidden sm:block font-sans text-[10px] tracking-[0.35em] uppercase transition-colors duration-300 font-light ${onDark ? "text-white/50" : "text-zinc-400"}`}>
-              Vintage Gallery
-            </span>
+          {/* Logo */}
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/asset/logo.png"
+              alt="Vintage Gallery"
+              width={110}
+              height={44}
+              className={`object-contain transition-all duration-300 ${onDark ? "invert" : ""}`}
+              style={onDark ? { mixBlendMode: "screen" } : {}}
+              priority
+            />
           </Link>
 
           {/* Desktop nav */}
