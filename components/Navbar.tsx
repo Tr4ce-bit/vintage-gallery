@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Menu, X } from "lucide-react";
 import NavbarAuth from "@/components/NavbarAuth";
@@ -18,14 +19,20 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const totalItems = useCartStore((s) => s.totalItems);
+  const pathname   = usePathname();
+
+  // Only use transparent/dark-mode navbar on the homepage hero
+  const isHomepage = pathname === "/";
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 60);
+    // On non-home pages start as scrolled (white navbar immediately)
+    if (!isHomepage) setScrolled(true);
     window.addEventListener("scroll", h, { passive: true });
     return () => window.removeEventListener("scroll", h);
-  }, []);
+  }, [isHomepage]);
 
-  const onDark = !scrolled;
+  const onDark = isHomepage && !scrolled;
 
   return (
     <>
