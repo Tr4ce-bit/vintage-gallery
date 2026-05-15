@@ -5,17 +5,19 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Menu, X } from "lucide-react";
 import NavbarAuth from "@/components/NavbarAuth";
+import { useCartStore } from "@/lib/store";
 
 const NAV_LINKS = [
-  { label: "Collection", href: "/#collection" },
-  { label: "Studio",     href: "/customize"   },
-  { label: "About",      href: "/#about"      },
-  { label: "Contact",    href: "/#contact"    },
+  { label: "Shop",    href: "/shop"      },
+  { label: "Studio",  href: "/customize" },
+  { label: "About",   href: "/#about"   },
+  { label: "Contact", href: "/#contact" },
 ];
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const totalItems = useCartStore((s) => s.totalItems);
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 60);
@@ -71,12 +73,14 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             <NavbarAuth onDark={onDark} />
 
-            <button className={`relative transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}>
+            <Link href="/cart" className={`relative transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}>
               <ShoppingBag size={18} strokeWidth={1.5} />
-              <span className="absolute -top-1 -right-1.5 w-[14px] h-[14px] bg-zinc-900 rounded-full text-[7px] text-white font-medium flex items-center justify-center">
-                0
-              </span>
-            </button>
+              {totalItems() > 0 && (
+                <span className={`absolute -top-1 -right-1.5 w-[15px] h-[15px] rounded-full text-[7px] font-medium flex items-center justify-center ${onDark ? "bg-white text-zinc-900" : "bg-zinc-900 text-white"}`}>
+                  {totalItems()}
+                </span>
+              )}
+            </Link>
 
             <button
               className={`md:hidden transition-colors ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}

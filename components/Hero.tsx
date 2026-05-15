@@ -140,7 +140,7 @@ export default function Hero() {
               className="flex flex-wrap items-center gap-3"
             >
               <Link
-                href="#collection"
+                href="/shop"
                 className="inline-flex items-center gap-2.5 bg-white text-zinc-900 font-sans font-medium text-[11px] tracking-[0.18em] uppercase px-7 py-3.5 rounded-full hover:bg-zinc-100 transition-colors duration-200 group"
               >
                 Shop the Drop
