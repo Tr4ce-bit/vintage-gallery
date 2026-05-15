@@ -45,3 +45,10 @@ body {
   100% { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
 }
 .animate-scroll-line { animation: scroll-line 1.8s ease-in-out infinite; }
+
+/* ── Hide Clerk branding on auth pages ───────────────────────────────────── */
+.cl-powered-by-clerk,
+.cl-poweredByClerk,
+[data-clerk-powered-by],
+.cl-footer__pages,
+.cl-footerPages { display: none !important; }
