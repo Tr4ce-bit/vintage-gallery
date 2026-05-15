@@ -1,580 +1,421 @@
 "use client";
 
-import { useState, useRef } from "react";
-import Image from "next/image";
-import { motion, AnimatePresence, Variants } from "framer-motion";
-import { Check, ShoppingBag, Heart, ZoomIn, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, ShoppingBag, Heart, RotateCcw, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
+import { useCartStore } from "@/lib/store";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Design {
-  id: string;
-  name: string;
-  category: string;
-  imageUrl: string; // relative to /public/asset/designs/
-}
-
 interface ShirtColor {
   name: string;
-  hex: string;
-  textColor: "light" | "dark";
+  hex:  string;
 }
 
-// ─── Static data (replace with DB fetch in production) ────────────────────────
-
-const DESIGNS: Design[] = [
-  { id: "d1", name: "Arch Logo",      category: "graphic",  imageUrl: "/asset/designs/design-arch.png" },
-  { id: "d2", name: "Crown Crest",    category: "vintage",  imageUrl: "/asset/designs/design-crown.png" },
-  { id: "d3", name: "Gallery Script", category: "text",     imageUrl: "/asset/designs/design-script.png" },
-  { id: "d4", name: "Varsity Star",   category: "graphic",  imageUrl: "/asset/designs/design-star.png" },
-  { id: "d5", name: "Fleur De Lis",   category: "vintage",  imageUrl: "/asset/designs/design-fleur.png" },
-  { id: "d6", name: "Block Type",     category: "text",     imageUrl: "/asset/designs/design-block.png" },
-  { id: "d7", name: "Heritage Badge", category: "vintage",  imageUrl: "/asset/designs/design-badge.png" },
-  { id: "d8", name: "Minimal VG",     category: "graphic",  imageUrl: "/asset/designs/design-minimal.png" },
-];
+// ─── Data ─────────────────────────────────────────────────────────────────────
 
 const SHIRT_COLORS: ShirtColor[] = [
-  { name: "Bone White",    hex: "#F5F0E8", textColor: "dark" },
-  { name: "Pitch Black",   hex: "#0D0D0D", textColor: "light" },
-  { name: "Royal Indigo",  hex: "#1B1464", textColor: "light" },
-  { name: "Vintage Khaki", hex: "#C8B89A", textColor: "dark" },
-  { name: "Forest",        hex: "#2D4A3E", textColor: "light" },
-  { name: "Slate",         hex: "#3A4A5C", textColor: "light" },
-  { name: "Burgundy",      hex: "#6B2737", textColor: "light" },
-  { name: "Sand",          hex: "#D4C4A0", textColor: "dark" },
+  { name: "Bone White",    hex: "#F5F0E8" },
+  { name: "Pitch Black",   hex: "#0D0D0D" },
+  { name: "Royal Indigo",  hex: "#1B1464" },
+  { name: "Vintage Khaki", hex: "#C8B89A" },
+  { name: "Forest",        hex: "#2D4A3E" },
+  { name: "Slate",         hex: "#3A4A5C" },
+  { name: "Burgundy",      hex: "#6B2737" },
+  { name: "Sand",          hex: "#D4C4A0" },
 ];
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
-const CATEGORIES = ["all", "graphic", "vintage", "text"] as const;
 
-// ─── Animation variants ───────────────────────────────────────────────────────
+const DESIGN_CATEGORIES = [
+  { id: "text",    label: "Add Text"    },
+  { id: "graphic", label: "Add Graphic" },
+  { id: "none",    label: "Plain Tee"   },
+];
 
-const designCard: Variants = {
-  hidden:  { opacity: 0, scale: 0.85 },
-  visible: (i: number) => ({
-    opacity: 1,
-    scale: 1,
-    transition: { delay: i * 0.06, duration: 0.4, ease: [0.34, 1.56, 0.64, 1] },
-  }),
-  exit:    { opacity: 0, scale: 0.85, transition: { duration: 0.2 } },
-};
-
-const overlayVariant: Variants = {
-  hidden:  { opacity: 0, scale: 0.8 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.5, ease: [0.34, 1.56, 0.64, 1] } },
-  exit:    { opacity: 0, scale: 0.9, transition: { duration: 0.25 } },
-};
-
-// ─── T-Shirt SVG Mockup ───────────────────────────────────────────────────────
-// Clean SVG silhouette so design overlays land perfectly on the print area
+// ─── T-Shirt SVG ──────────────────────────────────────────────────────────────
 
 function TShirtSVG({ color }: { color: string }) {
   return (
-    <svg
-      viewBox="0 0 400 440"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-full h-full drop-shadow-[0_30px_60px_rgba(0,0,0,0.6)]"
-    >
-      <defs>
-        <filter id="shirt-shadow">
-          <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="rgba(0,0,0,0.4)" />
-        </filter>
-      </defs>
-      {/* T-shirt body + sleeves */}
+    <svg viewBox="0 0 400 440" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
       <path
-        d="
-          M 120 40
-          L 50  90
-          L 20 180
-          L 80 195
-          L 80 420
-          L 320 420
-          L 320 195
-          L 380 180
-          L 350 90
-          L 280 40
-          C 260 70 220 80 200 80
-          C 180 80 140 70 120 40
-          Z
-        "
+        d="M 120 40 L 50 90 L 20 180 L 80 195 L 80 420 L 320 420 L 320 195 L 380 180 L 350 90 L 280 40
+           C 260 70 220 80 200 80 C 180 80 140 70 120 40 Z"
         fill={color}
-        filter="url(#shirt-shadow)"
-        stroke="rgba(0,0,0,0.12)"
+        stroke="rgba(0,0,0,0.10)"
         strokeWidth="1.5"
       />
-      {/* Neck rib */}
-      <ellipse
-        cx="200"
-        cy="75"
-        rx="42"
-        ry="14"
-        fill={color}
-        stroke="rgba(0,0,0,0.18)"
-        strokeWidth="2"
-      />
-      {/* Subtle crease lines for realism */}
-      <line x1="200" y1="110" x2="200" y2="390" stroke="rgba(0,0,0,0.04)" strokeWidth="1" />
-      <line x1="140" y1="200" x2="155" y2="400" stroke="rgba(0,0,0,0.03)" strokeWidth="1" />
-      <line x1="260" y1="200" x2="245" y2="400" stroke="rgba(0,0,0,0.03)" strokeWidth="1" />
+      <ellipse cx="200" cy="78" rx="42" ry="14" fill={color} stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+      <line x1="200" y1="110" x2="200" y2="395" stroke="rgba(0,0,0,0.04)" strokeWidth="1" />
     </svg>
   );
 }
 
-// ─── Design overlay (sits on top of shirt in print area) ─────────────────────
-
-function DesignOverlay({ design }: { design: Design | null }) {
-  return (
-    <AnimatePresence mode="wait">
-      {design && (
-        <motion.div
-          key={design.id}
-          variants={overlayVariant}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          className="absolute"
-          // Print area: centred chest, 28% width of shirt canvas
-          style={{ top: "28%", left: "30%", width: "40%", aspectRatio: "1" }}
-        >
-          <Image
-            src={design.imageUrl}
-            alt={design.name}
-            fill
-            className="object-contain mix-blend-multiply"
-            onError={(e) => {
-              // Show placeholder when design image is missing
-              const el = e.currentTarget as HTMLImageElement;
-              el.style.display = "none";
-              const parent = el.parentElement;
-              if (parent) {
-                parent.style.background = "rgba(201,168,76,0.15)";
-                parent.style.borderRadius = "8px";
-                parent.style.display = "flex";
-                parent.style.alignItems = "center";
-                parent.style.justifyContent = "center";
-                parent.innerHTML = `<span style="color:#C9A84C;font-size:11px;letter-spacing:0.1em;text-align:center;padding:8px">${design.name}</span>`;
-              }
-            }}
-          />
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ─── Design grid card ─────────────────────────────────────────────────────────
-
-function DesignCard({
-  design,
-  selected,
-  index,
-  onClick,
-}: {
-  design: Design;
-  selected: boolean;
-  index: number;
-  onClick: () => void;
-}) {
-  return (
-    <motion.button
-      variants={designCard}
-      custom={index}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      onClick={onClick}
-      whileHover={{ scale: 1.05, y: -4 }}
-      whileTap={{ scale: 0.97 }}
-      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-colors duration-200 cursor-pointer ${
-        selected
-          ? "border-brand-gold shadow-[0_0_20px_rgba(201,168,76,0.35)]"
-          : "border-brand-border hover:border-brand-gold/40"
-      }`}
-    >
-      <div className="absolute inset-0 bg-brand-surface" />
-      <Image
-        src={design.imageUrl}
-        alt={design.name}
-        fill
-        className="object-contain p-3"
-        onError={(e) => {
-          const el = e.currentTarget as HTMLImageElement;
-          el.style.display = "none";
-          const parent = el.parentElement;
-          if (parent) {
-            parent.style.display = "flex";
-            parent.style.alignItems = "center";
-            parent.style.justifyContent = "center";
-            parent.innerHTML = `<span style="color:#C9A84C;font-size:10px;text-align:center;padding:4px">${design.name}</span>`;
-          }
-        }}
-      />
-      {/* Selected checkmark */}
-      <AnimatePresence>
-        {selected && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            className="absolute top-1.5 right-1.5 w-5 h-5 bg-brand-gold rounded-full flex items-center justify-center"
-          >
-            <Check size={11} className="text-brand-black" strokeWidth={3} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {/* Hover label */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-black/90 to-transparent py-2 px-2 translate-y-full group-hover:translate-y-0 transition-transform">
-        <p className="text-[10px] text-brand-cream/80 truncate">{design.name}</p>
-      </div>
-    </motion.button>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ProductCustomizer() {
-  const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
+  const { isSignedIn }                      = useUser();
+  const addItem                             = useCartStore((s) => s.addItem);
+
   const [shirtColor, setShirtColor]         = useState<ShirtColor>(SHIRT_COLORS[0]);
   const [selectedSize, setSelectedSize]     = useState<string>("M");
-  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [customText, setCustomText]         = useState("");
+  const [designType, setDesignType]         = useState("none");
   const [quantity, setQuantity]             = useState(1);
-  const [isWishlisted, setIsWishlisted]     = useState(false);
+  const [wishlisted, setWishlisted]         = useState(false);
   const [addedToCart, setAddedToCart]       = useState(false);
+  const [authToast, setAuthToast]           = useState(false);
 
-  const filteredDesigns =
-    activeCategory === "all"
-      ? DESIGNS
-      : DESIGNS.filter((d) => d.category === activeCategory);
+  const price = designType === "none" ? 150 : 180;
 
-  // Price: base GHS 150, +30 for custom design
-  const price = selectedDesign ? 180 : 150;
+  const showAuthToast = () => {
+    setAuthToast(true);
+    setTimeout(() => setAuthToast(false), 3000);
+  };
 
-  function handleAddToCart() {
+  const handleWishlist = () => {
+    if (!isSignedIn) { showAuthToast(); return; }
+    setWishlisted((w) => !w);
+  };
+
+  const handleAddToCart = () => {
+    addItem({
+      productId: `custom-${shirtColor.name}`,
+      slug:       "custom-tee",
+      name:       `Custom Tee — ${shirtColor.name}`,
+      collection: "Custom Studio",
+      price,
+      image:      "/asset/product-hope.jpg",
+      size:       selectedSize,
+      color:      shirtColor.name,
+      quantity,
+    });
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2500);
-    // TODO: dispatch to cart state / call API
-  }
+  };
 
-  function handleReset() {
-    setSelectedDesign(null);
+  const handleReset = () => {
     setShirtColor(SHIRT_COLORS[0]);
     setSelectedSize("M");
+    setCustomText("");
+    setDesignType("none");
     setQuantity(1);
-  }
+  };
+
+  // Text color on shirt (readable against the shirt color)
+  const isDarkShirt = ["#0D0D0D","#1B1464","#2D4A3E","#3A4A5C","#6B2737"].includes(shirtColor.hex);
 
   return (
-    <section className="min-h-screen bg-brand-black py-20 px-4">
-      <div className="max-w-7xl mx-auto">
+    <section className="min-h-screen bg-zinc-950 pt-[60px]">
+      <div className="max-w-7xl mx-auto px-5 md:px-8 py-16 md:py-24">
 
-        {/* ── Section header ── */}
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.65 }}
+          className="mb-16"
         >
-          <p className="text-brand-gold text-xs tracking-[0.4em] uppercase mb-4">
-            Product Studio
+          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-500 font-light mb-3">
+            Custom Studio
           </p>
-          <h2 className="font-heading text-5xl md:text-7xl font-bold text-brand-cream mb-4">
-            Design Your Piece
-          </h2>
-          <div className="w-20 h-px bg-brand-gold mx-auto mb-6" />
-          <p className="text-brand-cream/50 max-w-lg mx-auto text-sm leading-relaxed">
-            Choose a design, pick your color, select your fit. Every piece is made
-            to order — crafted for the culture.
-          </p>
+          <h1
+            className="font-serif text-white leading-none"
+            style={{ fontSize: "clamp(2.5rem, 6vw, 5rem)", fontWeight: 300 }}
+          >
+            Design Your <em style={{ fontStyle: "italic" }}>Piece.</em>
+          </h1>
         </motion.div>
 
-        {/* ── Two-column layout ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 xl:gap-20">
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 xl:gap-20">
 
-          {/* ─── LEFT: Mockup preview ─── */}
+          {/* LEFT — Shirt preview */}
           <motion.div
-            initial={{ opacity: 0, x: -40 }}
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            className="flex flex-col gap-6"
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className="flex flex-col gap-5"
           >
-            {/* Shirt canvas */}
-            <div className="relative glass-card rounded-2xl p-8 aspect-[4/5] flex items-center justify-center overflow-hidden">
-              {/* Subtle grid background */}
-              <div
-                className="absolute inset-0 opacity-[0.03]"
-                style={{
-                  backgroundImage: "linear-gradient(#C9A84C 1px, transparent 1px), linear-gradient(90deg, #C9A84C 1px, transparent 1px)",
-                  backgroundSize: "40px 40px",
-                }}
+            {/* Mockup canvas */}
+            <div className="relative rounded-2xl bg-zinc-900 border border-zinc-800 p-10 flex items-center justify-center overflow-hidden" style={{ minHeight: "400px" }}>
+              {/* Subtle dot grid */}
+              <div className="absolute inset-0 opacity-[0.04]"
+                style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "28px 28px" }}
               />
 
-              {/* T-shirt + design overlay */}
-              <div className="relative w-full max-w-xs mx-auto">
+              <div className="relative w-full max-w-[260px] mx-auto">
                 <TShirtSVG color={shirtColor.hex} />
-                <DesignOverlay design={selectedDesign} />
+
+                {/* Custom text overlay on shirt */}
+                {designType === "text" && customText && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    style={{ top: "30%", left: "20%", width: "60%", height: "30%" }}
+                  >
+                    <span
+                      className="font-serif text-center leading-tight break-words w-full"
+                      style={{
+                        fontSize: "clamp(0.7rem, 3vw, 1.1rem)",
+                        fontWeight: 600,
+                        letterSpacing: "0.08em",
+                        color: isDarkShirt ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.75)",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {customText}
+                    </span>
+                  </motion.div>
+                )}
+
+                {/* Graphic placeholder */}
+                {designType === "graphic" && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.7 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute flex items-center justify-center rounded-lg border border-dashed"
+                    style={{
+                      top: "28%", left: "28%", width: "44%", height: "32%",
+                      borderColor: isDarkShirt ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)",
+                    }}
+                  >
+                    <span
+                      className="font-sans text-[8px] tracking-[0.2em] uppercase"
+                      style={{ color: isDarkShirt ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)" }}
+                    >
+                      Your graphic
+                    </span>
+                  </motion.div>
+                )}
               </div>
 
-              {/* Zoom hint */}
-              <div className="absolute top-4 right-4 glass-card rounded-full p-2 opacity-40">
-                <ZoomIn size={14} className="text-brand-gold" />
+              {/* Colour label badge */}
+              <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-zinc-800/80 backdrop-blur-sm rounded-full px-3 py-1.5">
+                <span className="w-2.5 h-2.5 rounded-full border border-zinc-600" style={{ backgroundColor: shirtColor.hex }} />
+                <span className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-400">{shirtColor.name}</span>
               </div>
-
-              {/* No design placeholder */}
-              {!selectedDesign && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="absolute inset-0 flex items-end justify-center pb-10 pointer-events-none"
-                >
-                  <p className="text-brand-cream/20 text-xs tracking-widest uppercase">
-                    Select a design →
-                  </p>
-                </motion.div>
-              )}
             </div>
 
-            {/* Color swatches */}
-            <div className="glass-card rounded-xl p-5">
-              <p className="text-xs tracking-[0.25em] uppercase text-brand-gold mb-4">
-                Shirt Colour — <span className="text-brand-cream">{shirtColor.name}</span>
-              </p>
+            {/* Colour swatches */}
+            <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-5">
+              <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-500 font-light mb-4">Shirt Colour</p>
               <div className="flex flex-wrap gap-3">
-                {SHIRT_COLORS.map((color) => (
-                  <motion.button
-                    key={color.hex}
-                    whileHover={{ scale: 1.15 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShirtColor(color)}
-                    title={color.name}
-                    className={`w-9 h-9 rounded-full border-2 transition-all duration-200 ${
-                      shirtColor.hex === color.hex
-                        ? "border-brand-gold shadow-[0_0_12px_rgba(201,168,76,0.5)]"
-                        : "border-transparent hover:border-brand-gold/40"
+                {SHIRT_COLORS.map((c) => (
+                  <button
+                    key={c.hex}
+                    onClick={() => setShirtColor(c)}
+                    title={c.name}
+                    className={`w-9 h-9 rounded-full transition-all duration-200 ${
+                      shirtColor.hex === c.hex
+                        ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900 scale-110"
+                        : "hover:scale-105 opacity-70 hover:opacity-100"
                     }`}
-                    style={{ backgroundColor: color.hex }}
+                    style={{ backgroundColor: c.hex, border: "1px solid rgba(255,255,255,0.1)" }}
                   />
                 ))}
               </div>
             </div>
           </motion.div>
 
-          {/* ─── RIGHT: Configurator ─── */}
+          {/* RIGHT — Configurator */}
           <motion.div
-            initial={{ opacity: 0, x: 40 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
             className="flex flex-col gap-8"
           >
-            {/* Product info */}
+            {/* Price */}
             <div>
-              <p className="text-brand-gold/60 text-xs tracking-widest uppercase mb-2">
-                Vintage Gallery Store
+              <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-500 font-light mb-1">
+                Custom Tee — Made to Order
               </p>
-              <h3 className="font-heading text-4xl font-bold text-brand-cream mb-2">
-                Premium Drop Tee
-              </h3>
-              <div className="flex items-baseline gap-3">
-                <motion.span
-                  key={price}
-                  initial={{ y: -10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  className="text-3xl font-bold text-brand-gold"
-                >
-                  GHS {price}
-                </motion.span>
-                {selectedDesign && (
-                  <span className="text-xs text-brand-cream/40 line-through">GHS 150</span>
-                )}
-              </div>
+              <motion.p key={price} initial={{ y: -6, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                className="font-serif text-white leading-none" style={{ fontSize: "2.5rem", fontWeight: 300 }}>
+                GH₵ {price}
+              </motion.p>
+              {designType !== "none" && (
+                <p className="font-sans text-[10px] text-zinc-500 font-light mt-1">
+                  Includes custom design (+GH₵30)
+                </p>
+              )}
             </div>
 
-            {/* Size selector */}
+            {/* Design type */}
             <div>
-              <p className="text-xs tracking-[0.25em] uppercase text-brand-gold mb-4">
-                Size — <span className="text-brand-cream">{selectedSize}</span>
+              <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-500 font-light mb-4">
+                Customisation
               </p>
-              <div className="flex gap-2 flex-wrap">
-                {SIZES.map((size) => (
-                  <motion.button
-                    key={size}
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedSize(size)}
-                    className={`w-12 h-12 text-sm font-semibold tracking-wider border transition-all duration-200 ${
-                      selectedSize === size
-                        ? "border-brand-gold bg-brand-gold text-brand-black"
-                        : "border-brand-border text-brand-cream/60 hover:border-brand-gold/50"
+              <div className="flex gap-2">
+                {DESIGN_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setDesignType(cat.id)}
+                    className={`flex-1 py-3 rounded-xl font-sans text-[10px] tracking-[0.15em] uppercase font-light border transition-all duration-200 ${
+                      designType === cat.id
+                        ? "bg-white text-zinc-900 border-white"
+                        : "border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
                     }`}
                   >
-                    {size}
-                  </motion.button>
+                    {cat.label}
+                  </button>
                 ))}
               </div>
             </div>
 
-            {/* Design picker */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-xs tracking-[0.25em] uppercase text-brand-gold">
-                  Available Designs
-                </p>
-                {/* Category filter */}
-                <div className="flex gap-1">
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setActiveCategory(cat)}
-                      className={`text-[10px] px-2.5 py-1 tracking-wider uppercase transition-colors duration-200 ${
-                        activeCategory === cat
-                          ? "bg-brand-gold text-brand-black"
-                          : "text-brand-cream/40 hover:text-brand-cream"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Design grid */}
-              <motion.div layout className="grid grid-cols-4 gap-2.5">
-                <AnimatePresence mode="popLayout">
-                  {filteredDesigns.map((design, i) => (
-                    <DesignCard
-                      key={design.id}
-                      design={design}
-                      selected={selectedDesign?.id === design.id}
-                      index={i}
-                      onClick={() =>
-                        setSelectedDesign(
-                          selectedDesign?.id === design.id ? null : design
-                        )
-                      }
-                    />
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-
-              {selectedDesign && (
-                <motion.p
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-brand-gold text-xs mt-3 tracking-wider"
+            {/* Text input */}
+            <AnimatePresence>
+              {designType === "text" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
                 >
-                  ✦ {selectedDesign.name} — {selectedDesign.category}
-                </motion.p>
+                  <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-500 font-light mb-3">
+                    Your Text (max 20 characters)
+                  </p>
+                  <input
+                    type="text"
+                    value={customText}
+                    onChange={(e) => setCustomText(e.target.value.slice(0, 20))}
+                    placeholder="e.g. ACCRA"
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 font-serif text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors tracking-widest uppercase"
+                  />
+                </motion.div>
               )}
+              {designType === "graphic" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="rounded-xl border border-dashed border-zinc-700 p-6 text-center">
+                    <p className="font-sans text-sm text-zinc-400 font-light mb-1">
+                      Custom graphic uploads coming soon.
+                    </p>
+                    <p className="font-sans text-[10px] text-zinc-600">
+                      DM us on Instagram to discuss your design.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Size */}
+            <div>
+              <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-500 font-light mb-4">
+                Size — <span className="text-zinc-300">{selectedSize}</span>
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {SIZES.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSelectedSize(s)}
+                    className={`w-11 h-11 rounded-full font-sans text-[11px] border transition-all duration-200 ${
+                      selectedSize === s
+                        ? "bg-white text-zinc-900 border-white"
+                        : "border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Quantity */}
-            <div className="flex items-center gap-4">
-              <p className="text-xs tracking-widest uppercase text-brand-gold">Qty</p>
-              <div className="flex items-center border border-brand-border">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-10 h-10 flex items-center justify-center text-brand-cream/60 hover:text-brand-gold transition-colors"
-                >
-                  −
-                </button>
-                <span className="w-10 text-center text-sm text-brand-cream">
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity(Math.min(10, quantity + 1))}
-                  className="w-10 h-10 flex items-center justify-center text-brand-cream/60 hover:text-brand-gold transition-colors"
-                >
-                  +
-                </button>
+            {/* Qty */}
+            <div className="flex items-center gap-5">
+              <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-500 font-light">Qty</p>
+              <div className="flex items-center border border-zinc-800 rounded-full overflow-hidden">
+                <button onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors">−</button>
+                <span className="w-8 text-center font-sans text-sm text-zinc-300">{quantity}</span>
+                <button onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                  className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors">+</button>
               </div>
-              <span className="text-brand-cream/30 text-xs">Max 10 per order</span>
+              <span className="font-sans text-[10px] text-zinc-600 font-light">Max 10 per order</span>
             </div>
 
             {/* Actions */}
             <div className="flex gap-3">
-              <motion.button
+              <button
                 onClick={handleAddToCart}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex-1 btn-gold inline-flex items-center justify-center gap-3"
+                className="flex-1 flex items-center justify-center gap-2.5 bg-white text-zinc-900 font-sans font-medium text-[11px] tracking-[0.18em] uppercase py-4 rounded-full hover:bg-zinc-100 transition-colors"
               >
-                <AnimatePresence mode="wait">
-                  {addedToCart ? (
-                    <motion.span
-                      key="added"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="flex items-center gap-2"
-                    >
-                      <Check size={16} />
-                      Added to Cart
-                    </motion.span>
-                  ) : (
-                    <motion.span
-                      key="add"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="flex items-center gap-2"
-                    >
-                      <ShoppingBag size={16} />
-                      Add to Cart — GHS {price * quantity}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.button>
+                {addedToCart
+                  ? <><Check size={14} /> Added to Cart</>
+                  : <><ShoppingBag size={14} /> Add to Cart — GH₵ {price * quantity}</>
+                }
+              </button>
 
               {/* Wishlist */}
-              <motion.button
-                onClick={() => setIsWishlisted((w) => !w)}
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.92 }}
-                className="w-14 h-14 border border-brand-border flex items-center justify-center hover:border-brand-gold/50 transition-colors"
+              <button
+                onClick={handleWishlist}
+                className="w-14 h-14 rounded-full border border-zinc-800 flex items-center justify-center hover:border-zinc-600 transition-colors"
               >
-                <motion.span
-                  animate={{ scale: isWishlisted ? [1, 1.4, 1] : 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Heart
-                    size={18}
-                    className={isWishlisted ? "fill-brand-gold text-brand-gold" : "text-brand-cream/40"}
-                  />
-                </motion.span>
-              </motion.button>
+                <Heart size={16} className={wishlisted ? "fill-white text-white" : "text-zinc-500"} />
+              </button>
 
               {/* Reset */}
-              <motion.button
+              <button
                 onClick={handleReset}
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.92 }}
-                title="Reset customization"
-                className="w-14 h-14 border border-brand-border flex items-center justify-center hover:border-brand-gold/50 transition-colors text-brand-cream/40 hover:text-brand-gold"
+                title="Reset"
+                className="w-14 h-14 rounded-full border border-zinc-800 flex items-center justify-center hover:border-zinc-600 transition-colors text-zinc-500 hover:text-zinc-300"
               >
-                <RotateCcw size={16} />
-              </motion.button>
+                <RotateCcw size={14} />
+              </button>
             </div>
 
+            {/* Cart link */}
+            {addedToCart && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <Link href="/cart"
+                  className="flex items-center justify-center gap-2 font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 hover:text-white transition-colors">
+                  View Cart <ArrowRight size={11} />
+                </Link>
+              </motion.div>
+            )}
+
             {/* Trust signals */}
-            <div className="border-t border-brand-border pt-6 grid grid-cols-3 gap-4 text-center">
+            <div className="border-t border-zinc-800 pt-6 grid grid-cols-3 gap-4 text-center">
               {[
-                { icon: "🚚", label: "48h Delivery", sub: "Accra & surrounds" },
-                { icon: "✦",  label: "Made to Order", sub: "Your spec, every time" },
-                { icon: "💳", label: "MoMo Pay",     sub: "MTN · Telecel · AirtelTigo" },
+                { icon: "🚚", label: "48h Delivery",  sub: "Accra & surrounds"          },
+                { icon: "✦",  label: "Made to Order", sub: "Your spec, every time"       },
+                { icon: "💳", label: "MoMo Pay",      sub: "MTN · Telecel · AirtelTigo"  },
               ].map((item) => (
                 <div key={item.label} className="flex flex-col items-center gap-1">
-                  <span className="text-xl">{item.icon}</span>
-                  <p className="text-[11px] font-semibold text-brand-cream/70 leading-tight">
-                    {item.label}
-                  </p>
-                  <p className="text-[10px] text-brand-cream/30 leading-tight">
-                    {item.sub}
-                  </p>
+                  <span className="text-lg">{item.icon}</span>
+                  <p className="font-sans text-[10px] text-zinc-400 font-light leading-tight">{item.label}</p>
+                  <p className="font-sans text-[9px] text-zinc-600 font-light leading-tight">{item.sub}</p>
                 </div>
               ))}
             </div>
           </motion.div>
         </div>
       </div>
+
+      {/* Auth toast */}
+      <AnimatePresence>
+        {authToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-full px-5 py-3 shadow-xl"
+          >
+            <span className="font-sans text-sm text-zinc-300 font-light">Sign in to save to wishlist</span>
+            <Link href="/sign-in"
+              className="font-sans text-[10px] tracking-[0.15em] uppercase bg-white text-zinc-900 px-4 py-1.5 rounded-full font-medium hover:bg-zinc-100 transition-colors">
+              Sign In
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

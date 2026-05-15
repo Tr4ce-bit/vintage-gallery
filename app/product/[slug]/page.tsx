@@ -4,8 +4,9 @@ import { use, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { motion } from "framer-motion";
-import { ShoppingBag, ArrowLeft, Check, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShoppingBag, ArrowLeft, Check, ChevronDown, Heart } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 import { getProduct, PRODUCTS } from "@/lib/products";
 import { useCartStore } from "@/lib/store";
 import Footer from "@/components/Footer";
@@ -15,12 +16,24 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const product    = getProduct(slug);
   if (!product) notFound();
 
+  const { isSignedIn }                  = useUser();
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [qty, setQty]                   = useState(1);
   const [added, setAdded]               = useState(false);
+  const [wishlisted, setWishlisted]     = useState(false);
   const [sizeError, setSizeError]       = useState(false);
   const [detailsOpen, setDetailsOpen]   = useState(false);
+  const [authToast, setAuthToast]       = useState(false);
   const addItem                         = useCartStore((s) => s.addItem);
+
+  const handleWishlist = () => {
+    if (!isSignedIn) {
+      setAuthToast(true);
+      setTimeout(() => setAuthToast(false), 3000);
+      return;
+    }
+    setWishlisted((w) => !w);
+  };
 
   const handleAddToCart = () => {
     if (!selectedSize) { setSizeError(true); return; }
@@ -173,6 +186,15 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               View Cart &amp; Checkout
             </Link>
 
+            {/* Wishlist */}
+            <button
+              onClick={handleWishlist}
+              className="flex items-center justify-center gap-2 font-sans text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full border border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-900 transition-all duration-200 mb-4 w-full"
+            >
+              <Heart size={13} className={wishlisted ? "fill-zinc-900 text-zinc-900" : ""} />
+              {wishlisted ? "Saved to Wishlist" : "Add to Wishlist"}
+            </button>
+
             {/* Delivery note */}
             <p className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-300 font-light mb-8">
               🚚 Delivery across Accra &amp; Greater Accra · 48–72 hrs
@@ -232,6 +254,24 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         )}
       </main>
       <Footer />
+
+      {/* Auth toast */}
+      <AnimatePresence>
+        {authToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-full px-5 py-3 shadow-xl whitespace-nowrap"
+          >
+            <span className="font-sans text-sm text-zinc-300 font-light">Sign in to save to wishlist</span>
+            <Link href="/sign-in"
+              className="font-sans text-[10px] tracking-[0.15em] uppercase bg-white text-zinc-900 px-4 py-1.5 rounded-full font-medium hover:bg-zinc-100 transition-colors">
+              Sign In
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
