@@ -3,7 +3,6 @@ frontend:
   phases:
     preBuild:
       commands:
-        - cd admin-app
         - npm ci
         - echo "NEXT_PUBLIC_COGNITO_USER_POOL_ID=$NEXT_PUBLIC_COGNITO_USER_POOL_ID" >> .env.production
         - echo "NEXT_PUBLIC_COGNITO_CLIENT_ID=$NEXT_PUBLIC_COGNITO_CLIENT_ID" >> .env.production
@@ -15,10 +14,10 @@ frontend:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: admin-app/.next
+    baseDirectory: .next
     files:
       - "**/*"
   cache:
     paths:
-      - admin-app/node_modules/**/*
-      - admin-app/.next/cache/**/*
+      - node_modules/**/*
+      - .next/cache/**/*
