@@ -20,8 +20,16 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Vintage Gallery | Premium Streetwear · Accra",
+  title: {
+    default:  "Vintage Gallery | Premium Streetwear · Accra",
+    template: "%s · Vintage Gallery",
+  },
   description: "Curated vintage streetwear. Limited drops. Delivered across Ghana.",
+  icons: {
+    icon:             "/icon.svg",
+    shortcut:         "/icon.svg",
+    apple:            "/asset/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
