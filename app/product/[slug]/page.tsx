@@ -6,7 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, ArrowLeft, Check, ChevronDown, Heart } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/hooks/useAuth";
 import { getProduct, PRODUCTS } from "@/lib/products";
 import { useCartStore } from "@/lib/store";
 import Footer from "@/components/Footer";
@@ -16,7 +16,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const product    = getProduct(slug);
   if (!product) notFound();
 
-  const { isSignedIn }                  = useUser();
+  const { isSignedIn }                  = useAuth();
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [qty, setQty]                   = useState(1);
   const [added, setAdded]               = useState(false);

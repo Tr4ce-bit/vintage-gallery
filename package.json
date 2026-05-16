@@ -12,8 +12,9 @@
     "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.3.4",
     "@prisma/client": "^5.14.0",
+    "aws-amplify": "^6.17.0",
+    "aws-jwt-verify": "^5.1.1",
     "axios": "^1.7.2",
     "clsx": "^2.1.1",
     "framer-motion": "^11.2.10",

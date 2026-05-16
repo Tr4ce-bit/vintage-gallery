@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import ConditionalClerkProvider from "@/components/ConditionalClerkProvider";
+import AuthProvider from "@/components/AuthProvider";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -26,13 +26,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ConditionalClerkProvider>
+    <AuthProvider>
       <html lang="en" className={`${cormorant.variable} ${inter.variable}`}>
         <body className="bg-white text-zinc-900 antialiased">
           <Navbar />
           <main>{children}</main>
         </body>
       </html>
-    </ConditionalClerkProvider>
+    </AuthProvider>
   );
 }

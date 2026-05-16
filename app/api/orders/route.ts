@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUser } from "@/lib/auth-server";
 import { prisma } from "@/lib/db";
 
 // ── POST /api/orders  — create a pending order ────────────────────────────────
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -21,17 +21,18 @@ export async function POST(req: NextRequest) {
     momoNetwork,
     momoNumberMasked,
     items,
+    email,
   } = body;
 
   try {
-    // Ensure user profile exists
-    let profile = await prisma.userProfile.findUnique({ where: { clerkId: userId } });
+    // Ensure user profile exists in DB
+    let profile = await prisma.userProfile.findUnique({ where: { cognitoId: authUser.userId } });
     if (!profile) {
       profile = await prisma.userProfile.create({
         data: {
-          clerkId:  userId,
-          fullName: deliveryFullName,
-          email:    body.email ?? "",
+          cognitoId: authUser.userId,
+          fullName:  deliveryFullName,
+          email:     email ?? authUser.email ?? "",
         },
       });
     }
@@ -52,9 +53,9 @@ export async function POST(req: NextRequest) {
         items: {
           create: items.map((item: {
             productId: string;
-            size: string;
-            color: string;
-            quantity: number;
+            size:      string;
+            color:     string;
+            quantity:  number;
             unitPrice: number;
           }) => ({
             productId: item.productId,
@@ -77,14 +78,16 @@ export async function POST(req: NextRequest) {
 }
 
 // ── GET /api/orders  — get current user's orders ─────────────────────────────
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
+export async function GET(req: NextRequest) {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
   try {
-    const profile = await prisma.userProfile.findUnique({ where: { clerkId: userId } });
+    const profile = await prisma.userProfile.findUnique({
+      where: { cognitoId: authUser.userId },
+    });
     if (!profile) return NextResponse.json({ orders: [] });
 
     const orders = await prisma.order.findMany({

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Heart } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/hooks/useAuth";
 import { PRODUCTS } from "@/lib/products";
 import { useCartStore } from "@/lib/store";
 import Footer from "@/components/Footer";
@@ -13,7 +13,7 @@ import Footer from "@/components/Footer";
 const FILTERS = ["All", "HOPE Collection", "Icons Series"];
 
 export default function ShopPage() {
-  const { isSignedIn }  = useUser();
+  const { isSignedIn }  = useAuth();
   const addItem         = useCartStore((s) => s.addItem);
 
   const [active, setActive] = useState("All");

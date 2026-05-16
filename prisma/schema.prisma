@@ -1,5 +1,5 @@
 // Vintage Gallery Store – Prisma Schema
-// Database: PostgreSQL (AWS RDS Free Tier / Neon serverless)
+// Database: PostgreSQL (AWS RDS)
 
 generator client {
   provider = "prisma-client-js"
@@ -11,20 +11,20 @@ datasource db {
 }
 
 // ─────────────────────────────────────────────
-// USER PROFILE  (extends Clerk auth)
+// USER PROFILE  (extends Cognito auth)
 // ─────────────────────────────────────────────
 model UserProfile {
-  id                  String   @id @default(cuid())
-  clerkId             String   @unique          // Clerk user ID
-  fullName            String
-  email               String   @unique
-  phoneNumber         String?
-  ghanaPostAddress    String?                   // Ghana Post Digital Address e.g. GA-123-4567
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id               String   @id @default(cuid())
+  cognitoId        String   @unique          // Cognito sub (user ID)
+  fullName         String
+  email            String   @unique
+  phoneNumber      String?
+  ghanaPostAddress String?                   // Ghana Post Digital Address e.g. GA-123-4567
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  orders              Order[]
-  savedDesigns        SavedDesign[]
+  orders           Order[]
+  savedDesigns     SavedDesign[]
 
   @@map("user_profiles")
 }
@@ -114,7 +114,7 @@ model Order {
   totalAmount         Float                    // in GHS
   currency            String      @default("GHS")
 
-  // Delivery info (copied at order time so changes to profile don't affect history)
+  // Delivery info (copied at order time so profile changes don't affect history)
   deliveryFullName    String
   deliveryPhone       String
   deliveryAddress     String                   // Ghana Post Digital Address

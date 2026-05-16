@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ShoppingBag, Heart, RotateCcw, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/hooks/useAuth";
 import { useCartStore } from "@/lib/store";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ function TShirtSVG({ color }: { color: string }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ProductCustomizer() {
-  const { isSignedIn }                      = useUser();
+  const { isSignedIn }                      = useAuth();
   const addItem                             = useCartStore((s) => s.addItem);
 
   const [shirtColor, setShirtColor]         = useState<ShirtColor>(SHIRT_COLORS[0]);
