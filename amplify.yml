@@ -16,6 +16,7 @@ frontend:
         - echo "NEXT_PUBLIC_COGNITO_REGION=$NEXT_PUBLIC_COGNITO_REGION" >> .env.production
         - echo "ADMIN_EMAILS=$ADMIN_EMAILS" >> .env.production
         - echo "NEXT_PUBLIC_ADMIN_EMAILS=$NEXT_PUBLIC_ADMIN_EMAILS" >> .env.production
+        - echo "ADMIN_APP_URL=$ADMIN_APP_URL" >> .env.production
     build:
       commands:
         - npm run build

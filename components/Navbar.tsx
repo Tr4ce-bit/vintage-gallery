@@ -21,9 +21,6 @@ export default function Navbar() {
   const totalItems = useCartStore((s) => s.totalItems);
   const pathname   = usePathname();
 
-  // Admin has its own sidebar navigation
-  if (pathname.startsWith("/admin")) return null;
-
   // Only use transparent/dark-mode navbar on the homepage hero
   const isHomepage = pathname === "/";
 
