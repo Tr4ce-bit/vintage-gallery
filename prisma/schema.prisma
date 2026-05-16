@@ -34,13 +34,23 @@ model UserProfile {
 // ─────────────────────────────────────────────
 model Product {
   id          String   @id @default(cuid())
+  slug        String   @unique @default("")
   name        String
+  collection  String   @default("")
   description String?
+  details     String[] @default([])
   basePrice   Float                           // price in GHS (Ghanaian Cedis)
-  imageUrl    String                          // points to /public/asset/
+  imageUrl    String                          // primary image, points to /public/asset/
+  images      String[] @default([])           // all images
+  color       String   @default("White")
+  sizes       String[] @default(["XS","S","M","L","XL","XXL"])
+  badge       String?                         // e.g. "New", "Limited", "Featured"
+  featured    Boolean  @default(false)
   stock       Int      @default(100)
   isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   variants    ProductVariant[]
   orderItems  OrderItem[]

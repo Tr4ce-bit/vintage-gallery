@@ -14,6 +14,8 @@ frontend:
         - echo "NEXT_PUBLIC_COGNITO_USER_POOL_ID=$NEXT_PUBLIC_COGNITO_USER_POOL_ID" >> .env.production
         - echo "NEXT_PUBLIC_COGNITO_CLIENT_ID=$NEXT_PUBLIC_COGNITO_CLIENT_ID" >> .env.production
         - echo "NEXT_PUBLIC_COGNITO_REGION=$NEXT_PUBLIC_COGNITO_REGION" >> .env.production
+        - echo "ADMIN_EMAILS=$ADMIN_EMAILS" >> .env.production
+        - echo "NEXT_PUBLIC_ADMIN_EMAILS=$NEXT_PUBLIC_ADMIN_EMAILS" >> .env.production
     build:
       commands:
         - npm run build

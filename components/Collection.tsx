@@ -8,6 +8,8 @@ import Link from "next/link";
 import { PRODUCTS, type Product } from "@/lib/products";
 import { useCartStore } from "@/lib/store";
 
+// products prop is optional — falls back to hardcoded PRODUCTS if not provided
+
 // ─── Photo card ───────────────────────────────────────────────────────────────
 
 function PhotoCard({ p, i, featured }: { p: Product; i: number; featured?: boolean }) {
@@ -115,9 +117,10 @@ function PhotoCard({ p, i, featured }: { p: Product; i: number; featured?: boole
 
 // ─── Section ──────────────────────────────────────────────────────────────────
 
-export default function Collection() {
+export default function Collection({ products: propProducts }: { products?: Product[] }) {
   const hRef    = useRef(null);
   const hInView = useInView(hRef, { once: true, margin: "-10%" });
+  const products = propProducts ?? PRODUCTS;
 
   return (
     <section id="collection" className="bg-white py-20 md:py-28 px-5 md:px-8">
@@ -159,8 +162,8 @@ export default function Collection() {
 
         {/* Product grid — real photos only */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {PRODUCTS.map((p, i) => (
-            <PhotoCard key={p.id} p={p} i={i} featured={p.featured && PRODUCTS.length > 2} />
+          {products.map((p, i) => (
+            <PhotoCard key={p.id} p={p} i={i} featured={p.featured && products.length > 2} />
           ))}
         </div>
 

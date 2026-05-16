@@ -51,11 +51,11 @@ export function useAuth() {
     setUser(null);
   }
 
-  /** Returns the access token for API calls, or null if not signed in. */
+  /** Returns the ID token for API calls (contains email, verified server-side). */
   async function getAccessToken(): Promise<string | null> {
     try {
       const session = await fetchAuthSession();
-      return session.tokens?.accessToken?.toString() ?? null;
+      return session.tokens?.idToken?.toString() ?? null;
     } catch {
       return null;
     }

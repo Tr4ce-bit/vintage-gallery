@@ -3,12 +3,16 @@ import Collection from "@/components/Collection";
 import About from "@/components/About";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
+import { fetchActiveProducts } from "@/lib/db-products";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const products = await fetchActiveProducts();
   return (
     <>
       <Hero />
-      <Collection />
+      <Collection products={products} />
       <About />
       <Newsletter />
       <Footer />

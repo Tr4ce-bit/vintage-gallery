@@ -1,6 +1,6 @@
 /**
  * Server-side Cognito JWT verification for API routes.
- * Verifies the access token sent in the Authorization header.
+ * Verifies the ID token sent in the Authorization header (contains email).
  */
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 
@@ -11,7 +11,7 @@ function getVerifier() {
     verifier = CognitoJwtVerifier.create({
       userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
       clientId:   process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!,
-      tokenUse:   "access",
+      tokenUse:   "id",
     });
   }
   return verifier;
