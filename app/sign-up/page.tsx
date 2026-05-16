@@ -1,21 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { Eye, EyeOff, ShieldAlert, CheckCircle2, Circle } from "lucide-react";
 import { signUp } from "aws-amplify/auth";
+
+// Password rules that match the Cognito Plus policy
+const RULES = [
+  { id: "length",    label: "At least 8 characters",      test: (p: string) => p.length >= 8 },
+  { id: "upper",     label: "One uppercase letter (A–Z)",  test: (p: string) => /[A-Z]/.test(p) },
+  { id: "lower",     label: "One lowercase letter (a–z)",  test: (p: string) => /[a-z]/.test(p) },
+  { id: "number",    label: "One number (0–9)",            test: (p: string) => /[0-9]/.test(p) },
+];
+
+function friendlyError(err: unknown): string {
+  if (!(err instanceof Error)) return "Sign up failed. Please try again.";
+  const msg = err.message;
+  if (msg.includes("email already exists") || msg.includes("already exists") || msg.includes("UsernameExistsException"))
+    return "An account with this email already exists.";
+  if (msg.includes("Password did not conform") || msg.includes("password"))
+    return "Password doesn't meet the requirements below.";
+  if (msg.includes("Invalid email"))
+    return "Please enter a valid email address.";
+  return msg;
+}
 
 export default function SignUpPage() {
   const router = useRouter();
-  const [name,     setName]     = useState("");
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [error,    setError]    = useState("");
-  const [loading,  setLoading]  = useState(false);
+  const [name,          setName]          = useState("");
+  const [email,         setEmail]         = useState("");
+  const [password,      setPassword]      = useState("");
+  const [showPassword,  setShowPassword]  = useState(false);
+  const [error,         setError]         = useState("");
+  const [loading,       setLoading]       = useState(false);
+  const [touched,       setTouched]       = useState(false);
+
+  const checks = useMemo(() => RULES.map(r => ({ ...r, passed: r.test(password) })), [password]);
+  const allPass = checks.every(c => c.passed);
+  const strength = checks.filter(c => c.passed).length; // 0–4
+
+  const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"][strength];
+  const strengthColor = ["", "bg-red-400", "bg-amber-400", "bg-amber-300", "bg-emerald-500"][strength];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setTouched(true);
+    if (!allPass) return;
     setError("");
     setLoading(true);
 
@@ -24,19 +56,13 @@ export default function SignUpPage() {
         username: email,
         password,
         options: {
-          userAttributes: {
-            email,
-            name,
-          },
+          userAttributes: { email, name },
           autoSignIn: true,
         },
       });
-
-      // Redirect to verify page so user enters the code
       router.push(`/verify?email=${encodeURIComponent(email)}`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Sign up failed.";
-      setError(msg);
+    } catch (err) {
+      setError(friendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -45,7 +71,7 @@ export default function SignUpPage() {
   return (
     <div className="min-h-screen flex">
 
-      {/* ── Left panel — brand ── */}
+      {/* ── Left panel ── */}
       <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between bg-zinc-950 p-12 overflow-hidden">
         <div className="absolute inset-0">
           <Image src="/asset/product-tupac.jpg" alt="" fill
@@ -53,7 +79,6 @@ export default function SignUpPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/60 via-zinc-950/40 to-zinc-950/80" />
         </div>
 
-        {/* Logo */}
         <div className="relative z-10">
           <Link href="/" className="flex flex-col items-start leading-none">
             <span className="font-serif text-white" style={{ fontSize: "1.5rem", fontWeight: 700, letterSpacing: "0.08em" }}>VG</span>
@@ -61,11 +86,8 @@ export default function SignUpPage() {
           </Link>
         </div>
 
-        {/* Perks */}
         <div className="relative z-10 space-y-5">
-          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-white/40 font-light">
-            Member Benefits
-          </p>
+          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-white/40 font-light">Member Benefits</p>
           {[
             { title: "Early Drop Access",    desc: "Be first to shop every new release" },
             { title: "Wishlist & Saves",      desc: "Save pieces and come back anytime" },
@@ -83,10 +105,9 @@ export default function SignUpPage() {
         </div>
       </div>
 
-      {/* ── Right panel — form ── */}
+      {/* ── Right panel ── */}
       <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-12">
 
-        {/* Mobile logo */}
         <div className="lg:hidden mb-10">
           <Link href="/" className="flex flex-col items-center leading-none">
             <span className="font-serif text-zinc-900" style={{ fontSize: "1.6rem", fontWeight: 700, letterSpacing: "0.08em" }}>VG</span>
@@ -96,9 +117,7 @@ export default function SignUpPage() {
 
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-300 font-light mb-2">
-              Create Account
-            </p>
+            <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-300 font-light mb-2">Create Account</p>
             <h1 className="font-serif text-zinc-900 leading-none"
               style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)", fontWeight: 300 }}>
               Join Vintage Gallery.
@@ -106,6 +125,7 @@ export default function SignUpPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Name */}
             <div>
               <label className="block font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 font-light mb-1.5">
                 Full name
@@ -121,6 +141,7 @@ export default function SignUpPage() {
               />
             </div>
 
+            {/* Email */}
             <div>
               <label className="block font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 font-light mb-1.5">
                 Email address
@@ -136,24 +157,74 @@ export default function SignUpPage() {
               />
             </div>
 
+            {/* Password + strength */}
             <div>
               <label className="block font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 font-light mb-1.5">
                 Password
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                autoComplete="new-password"
-                className="w-full border border-zinc-200 rounded-xl px-4 py-3 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors"
-                placeholder="Min. 8 characters"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setTouched(true); }}
+                  required
+                  autoComplete="new-password"
+                  className="w-full border border-zinc-200 rounded-xl px-4 py-3 pr-11 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors"
+                  placeholder="Create a strong password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(s => !s)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+
+              {/* Strength bar */}
+              {password.length > 0 && (
+                <div className="mt-2.5 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1 bg-zinc-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${strengthColor}`}
+                        style={{ width: `${(strength / 4) * 100}%` }}
+                      />
+                    </div>
+                    <span className={`font-sans text-[10px] font-medium ${
+                      strength <= 1 ? "text-red-400" :
+                      strength <= 2 ? "text-amber-500" :
+                      strength === 3 ? "text-amber-400" :
+                      "text-emerald-500"
+                    }`}>
+                      {strengthLabel}
+                    </span>
+                  </div>
+
+                  {/* Rule checklist — only show if not all passing */}
+                  {(!allPass || touched) && (
+                    <ul className="space-y-1">
+                      {checks.map(c => (
+                        <li key={c.id} className="flex items-center gap-2">
+                          {c.passed
+                            ? <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                            : <Circle size={12} className="text-zinc-200 shrink-0" />}
+                          <span className={`font-sans text-[11px] ${c.passed ? "text-zinc-400" : "text-zinc-300"}`}>
+                            {c.label}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
 
             {error && (
-              <p className="font-sans text-sm text-red-500">{error}</p>
+              <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                <ShieldAlert size={14} className="text-red-400 mt-0.5 shrink-0" />
+                <p className="font-sans text-sm text-red-600 font-light">{error}</p>
+              </div>
             )}
 
             <button

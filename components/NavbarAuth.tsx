@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, ShoppingBag, LogOut, ChevronDown } from "lucide-react";
+import { User, ShoppingBag, Shield, LogOut, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Props { mobile?: boolean; onDark?: boolean }
@@ -88,6 +88,14 @@ export default function NavbarAuth({ mobile = false, onDark = false }: Props) {
               >
                 <ShoppingBag size={13} strokeWidth={1.5} />
                 My Orders
+              </Link>
+              <Link
+                href="/account/security"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 font-sans text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
+              >
+                <Shield size={13} strokeWidth={1.5} />
+                Security
               </Link>
             </div>
 
