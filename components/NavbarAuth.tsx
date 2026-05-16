@@ -1,58 +1,117 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { User, ShoppingBag, LogOut, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Props { mobile?: boolean; onDark?: boolean }
 
 export default function NavbarAuth({ mobile = false, onDark = false }: Props) {
   const { isSignedIn, isLoaded, user, signOut } = useAuth();
-  const router = useRouter();
+  const router  = useRouter();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   // Prevent flash of wrong state while auth loads
-  if (!isLoaded) return <div className="w-16 h-5" />;
+  if (!isLoaded) return <div className="w-8 h-8" />;
 
+  /* ── Signed-in ─────────────────────────────────────────────────────────── */
   if (isSignedIn) {
-    /* ── Signed-in: show initial avatar + sign-out ─────────────────────── */
-    const initial = (user?.email?.[0] ?? user?.username?.[0] ?? "U").toUpperCase();
+    const displayName = user?.email ?? user?.username ?? "Account";
 
     if (mobile) {
       return (
-        <button
-          onClick={async () => { await signOut(); router.push("/"); }}
-          className="font-sans text-[11px] tracking-[0.2em] uppercase text-zinc-400 font-light"
-        >
-          Sign out
-        </button>
+        <div className="flex flex-col gap-3">
+          <span className="font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 font-light">
+            {displayName}
+          </span>
+          <button
+            onClick={async () => { await signOut(); router.push("/"); }}
+            className="font-sans text-[11px] tracking-[0.2em] uppercase text-zinc-400 font-light text-left"
+          >
+            Sign out
+          </button>
+        </div>
       );
     }
 
     return (
-      <div className="hidden md:flex items-center gap-3">
-        <span
-          className={`font-sans text-[10px] tracking-[0.15em] uppercase font-light ${
-            onDark ? "text-white/60" : "text-zinc-500"
-          }`}
-        >
-          {user?.email ?? user?.username}
-        </span>
+      <div className="hidden md:flex items-center" ref={menuRef}>
         <button
-          onClick={async () => { await signOut(); router.push("/"); }}
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-medium transition-opacity hover:opacity-75 ${
+          onClick={() => setOpen((o) => !o)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
             onDark
-              ? "bg-white text-zinc-900"
-              : "bg-zinc-900 text-white"
+              ? "hover:bg-white/10 text-white/70 hover:text-white"
+              : "hover:bg-zinc-100 text-zinc-500 hover:text-zinc-900"
           }`}
-          title="Sign out"
         >
-          {initial}
+          <User size={15} strokeWidth={1.5} />
+          <ChevronDown
+            size={11}
+            strokeWidth={2}
+            className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          />
         </button>
+
+        {/* Dropdown */}
+        {open && (
+          <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-zinc-100 rounded-2xl shadow-xl shadow-zinc-900/8 overflow-hidden z-50">
+            {/* User info header */}
+            <div className="px-4 py-3 border-b border-zinc-50">
+              <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-300 font-light mb-0.5">
+                Signed in as
+              </p>
+              <p className="font-sans text-sm text-zinc-800 font-medium truncate">
+                {displayName}
+              </p>
+            </div>
+
+            {/* Menu items */}
+            <div className="py-1.5">
+              <Link
+                href="/orders"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 font-sans text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
+              >
+                <ShoppingBag size={13} strokeWidth={1.5} />
+                My Orders
+              </Link>
+            </div>
+
+            {/* Sign out */}
+            <div className="border-t border-zinc-50 py-1.5">
+              <button
+                onClick={async () => {
+                  setOpen(false);
+                  await signOut();
+                  router.push("/");
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 font-sans text-sm text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={13} strokeWidth={1.5} />
+                Sign out
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
-  /* ── Signed-out: Sign in / Join links ─────────────────────────────────── */
+  /* ── Signed-out ────────────────────────────────────────────────────────── */
   if (mobile) {
     return (
       <>

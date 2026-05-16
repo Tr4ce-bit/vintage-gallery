@@ -82,7 +82,7 @@ export default function Navbar() {
           </nav>
 
           {/* Right actions */}
-          <div className="flex items-center gap-4">
+          <div className="relative flex items-center gap-4">
             <NavbarAuth onDark={onDark} />
 
             <Link href="/cart" className={`relative transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}>
