@@ -3,11 +3,19 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ShoppingBag, Heart, RotateCcw, ArrowRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useCartStore } from "@/lib/store";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface StudioDesign {
+  id:       string;
+  name:     string;
+  imageUrl: string;
+  category: string | null;
+}
 
 interface ShirtColor {
   name:  string;
@@ -212,15 +220,17 @@ function PrintZone({
   light,
   designType,
   customText,
+  selectedDesign,
 }: {
-  light:      boolean;
-  designType: string;
-  customText: string;
+  light:          boolean;
+  designType:     string;
+  customText:     string;
+  selectedDesign: StudioDesign | null;
 }) {
   if (designType === "none") return null;
 
-  const textCol = light ? "rgba(0,0,0,0.78)" : "rgba(255,255,255,0.90)";
-  const borderCol = light ? "rgba(0,0,0,0.18)" : "rgba(255,255,255,0.22)";
+  const textCol   = light ? "rgba(0,0,0,0.78)"    : "rgba(255,255,255,0.90)";
+  const borderCol = light ? "rgba(0,0,0,0.18)"    : "rgba(255,255,255,0.22)";
 
   return (
     <div
@@ -235,12 +245,12 @@ function PrintZone({
           transition={{ duration: 0.2 }}
           className="font-serif text-center leading-tight break-words w-full"
           style={{
-            fontSize:        "clamp(0.75rem, 2.8vw, 1.25rem)",
-            fontWeight:      600,
-            letterSpacing:   "0.12em",
-            textTransform:   "uppercase",
-            color:           textCol,
-            textShadow:      light
+            fontSize:      "clamp(0.75rem, 2.8vw, 1.25rem)",
+            fontWeight:    600,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color:         textCol,
+            textShadow:    light
               ? "0 1px 3px rgba(255,255,255,0.4)"
               : "0 1px 3px rgba(0,0,0,0.5)",
           }}
@@ -252,18 +262,32 @@ function PrintZone({
       {designType === "text" && !customText && (
         <span
           className="font-sans text-center"
-          style={{
-            fontSize:  "0.6rem",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: borderCol,
-          }}
+          style={{ fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: borderCol }}
         >
           Your text appears here
         </span>
       )}
 
-      {designType === "graphic" && (
+      {designType === "graphic" && selectedDesign && (
+        <motion.div
+          key={selectedDesign.id}
+          initial={{ opacity: 0, scale: 0.88 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.25 }}
+          className="relative w-full h-full"
+        >
+          <Image
+            src={selectedDesign.imageUrl}
+            alt={selectedDesign.name}
+            fill
+            className="object-contain"
+            style={{ mixBlendMode: light ? "multiply" : "screen" }}
+            unoptimized
+          />
+        </motion.div>
+      )}
+
+      {designType === "graphic" && !selectedDesign && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -271,10 +295,10 @@ function PrintZone({
           style={{ borderColor: borderCol }}
         >
           <span style={{ fontSize: "0.7rem", letterSpacing: "0.2em", textTransform: "uppercase", color: borderCol, fontFamily: "sans-serif" }}>
-            Print Area
+            Pick a design
           </span>
           <span style={{ fontSize: "0.55rem", color: borderCol, fontFamily: "sans-serif" }}>
-            DM us your graphic
+            Select below to preview
           </span>
         </motion.div>
       )}
@@ -288,19 +312,24 @@ export default function ProductCustomizer() {
   const { isSignedIn } = useAuth();
   const addItem        = useCartStore((s) => s.addItem);
 
-  const [color,       setColor]       = useState<ShirtColor>(SHIRT_COLORS[0]);
-  const [size,        setSize]        = useState("M");
-  const [designType,  setDesignType]  = useState("none");
-  const [customText,  setCustomText]  = useState("");
-  const [quantity,    setQuantity]    = useState(1);
-  const [wishlisted,  setWishlisted]  = useState(false);
-  const [addedToCart, setAddedToCart] = useState(false);
-  const [authToast,   setAuthToast]   = useState(false);
+  const [color,          setColor]          = useState<ShirtColor>(SHIRT_COLORS[0]);
+  const [size,           setSize]           = useState("M");
+  const [designType,     setDesignType]     = useState("none");
+  const [customText,     setCustomText]     = useState("");
+  const [quantity,       setQuantity]       = useState(1);
+  const [wishlisted,     setWishlisted]     = useState(false);
+  const [addedToCart,    setAddedToCart]    = useState(false);
+  const [authToast,      setAuthToast]      = useState(false);
 
   // Live pricing from admin
   const [basePriceGHS,   setBasePriceGHS]   = useState(150);
   const [designAddonGHS, setDesignAddonGHS] = useState(30);
   const [pricesLoaded,   setPricesLoaded]   = useState(false);
+
+  // Studio designs (uploaded by admin)
+  const [designs,        setDesigns]        = useState<StudioDesign[]>([]);
+  const [selectedDesign, setSelectedDesign] = useState<StudioDesign | null>(null);
+  const [designsLoaded,  setDesignsLoaded]  = useState(false);
 
   useEffect(() => {
     fetch("/api/studio")
@@ -311,6 +340,14 @@ export default function ProductCustomizer() {
         setPricesLoaded(true);
       })
       .catch(() => setPricesLoaded(true));
+
+    fetch("/api/studio/designs")
+      .then(r => r.json())
+      .then(d => {
+        setDesigns(d.designs ?? []);
+        setDesignsLoaded(true);
+      })
+      .catch(() => setDesignsLoaded(true));
   }, []);
 
   const price = designType === "none" ? basePriceGHS : basePriceGHS + designAddonGHS;
@@ -324,7 +361,7 @@ export default function ProductCustomizer() {
     addItem({
       productId: `custom-${color.name}-${size}`,
       slug:       "custom-tee",
-      name:       `Custom Tee — ${color.name}${customText ? ` · "${customText}"` : ""}`,
+      name:       `Custom Tee — ${color.name}${customText ? ` · "${customText}"` : ""}${selectedDesign ? ` · ${selectedDesign.name}` : ""}`,
       collection: "Custom Studio",
       price,
       image:      "/asset/product-hope.jpg",
@@ -341,6 +378,7 @@ export default function ProductCustomizer() {
     setSize("M");
     setDesignType("none");
     setCustomText("");
+    setSelectedDesign(null);
     setQuantity(1);
   };
 
@@ -397,7 +435,12 @@ export default function ProductCustomizer() {
                     className="relative"
                   >
                     <PlainShirt color={color.hex} light={color.light} />
-                    <PrintZone light={color.light} designType={designType} customText={customText} />
+                    <PrintZone
+                      light={color.light}
+                      designType={designType}
+                      customText={customText}
+                      selectedDesign={selectedDesign}
+                    />
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -480,7 +523,11 @@ export default function ProductCustomizer() {
                 {DESIGN_TYPES.map(dt => (
                   <button
                     key={dt.id}
-                    onClick={() => { setDesignType(dt.id); if (dt.id !== "text") setCustomText(""); }}
+                    onClick={() => {
+                      setDesignType(dt.id);
+                      if (dt.id !== "text")    setCustomText("");
+                      if (dt.id !== "graphic") setSelectedDesign(null);
+                    }}
                     className={`py-3.5 rounded-xl font-sans text-[10px] tracking-[0.12em] uppercase font-light border transition-all duration-200 ${
                       designType === dt.id
                         ? "bg-white text-zinc-900 border-white"
@@ -526,24 +573,81 @@ export default function ProductCustomizer() {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 p-6 text-center">
-                    <p className="font-sans text-sm text-zinc-300 font-light mb-2">
-                      Custom graphic uploads coming soon.
-                    </p>
-                    <p className="font-sans text-xs text-zinc-600 mb-4">
-                      For now, DM us your design on Instagram or WhatsApp and we&apos;ll create a mockup for you.
-                    </p>
-                    <div className="flex items-center justify-center gap-3">
-                      <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
-                        className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 border border-zinc-700 px-4 py-2 rounded-full hover:border-zinc-500 hover:text-zinc-200 transition-colors">
-                        Instagram
-                      </a>
-                      <a href="https://wa.me/" target="_blank" rel="noopener noreferrer"
-                        className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 border border-zinc-700 px-4 py-2 rounded-full hover:border-zinc-500 hover:text-zinc-200 transition-colors">
-                        WhatsApp
-                      </a>
+                  <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-500 font-light mb-3">
+                    Choose a Graphic
+                  </p>
+
+                  {!designsLoaded ? (
+                    <div className="flex items-center gap-2 py-4">
+                      <div className="w-4 h-4 border-2 border-zinc-700 border-t-zinc-300 rounded-full animate-spin" />
+                      <span className="font-sans text-xs text-zinc-600 font-light">Loading designs…</span>
                     </div>
-                  </div>
+                  ) : designs.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 p-6 text-center">
+                      <p className="font-sans text-sm text-zinc-400 font-light mb-1">No graphics available yet.</p>
+                      <p className="font-sans text-xs text-zinc-600">
+                        DM us on{" "}
+                        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
+                          className="underline underline-offset-2 text-zinc-400 hover:text-zinc-200">
+                          Instagram
+                        </a>{" "}
+                        or{" "}
+                        <a href="https://wa.me/" target="_blank" rel="noopener noreferrer"
+                          className="underline underline-offset-2 text-zinc-400 hover:text-zinc-200">
+                          WhatsApp
+                        </a>{" "}
+                        with your own graphic and we&apos;ll create a mockup for you.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                      {designs.map(d => {
+                        const active = selectedDesign?.id === d.id;
+                        return (
+                          <button
+                            key={d.id}
+                            onClick={() => setSelectedDesign(active ? null : d)}
+                            title={d.name}
+                            className={`relative rounded-xl overflow-hidden border-2 transition-all duration-200 aspect-square bg-zinc-900 ${
+                              active
+                                ? "border-white ring-2 ring-white ring-offset-2 ring-offset-zinc-950"
+                                : "border-zinc-800 hover:border-zinc-600"
+                            }`}
+                          >
+                            <Image
+                              src={d.imageUrl}
+                              alt={d.name}
+                              fill
+                              className="object-contain p-2"
+                              unoptimized
+                            />
+                            {active && (
+                              <div className="absolute inset-0 bg-white/10 flex items-end justify-center pb-1.5">
+                                <span className="font-sans text-[8px] tracking-[0.15em] uppercase bg-white text-zinc-900 px-2 py-0.5 rounded-full font-medium">
+                                  Selected
+                                </span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {selectedDesign && (
+                    <p className="font-sans text-[10px] text-zinc-500 font-light mt-2">
+                      {selectedDesign.name}
+                      {selectedDesign.category && (
+                        <span className="text-zinc-700"> · {selectedDesign.category}</span>
+                      )}
+                      <button
+                        onClick={() => setSelectedDesign(null)}
+                        className="ml-2 text-zinc-600 hover:text-zinc-400 underline underline-offset-2"
+                      >
+                        Clear
+                      </button>
+                    </p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

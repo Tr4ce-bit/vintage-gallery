@@ -188,3 +188,19 @@ model Settings {
 
   @@map("settings")
 }
+
+// ─────────────────────────────────────────────
+// STUDIO DESIGNS  (uploadable graphics for the custom studio)
+// ─────────────────────────────────────────────
+model StudioDesign {
+  id        String   @id @default(cuid())
+  name      String
+  imageUrl  String                          // S3 URL — must be transparent PNG
+  category  String?                         // optional grouping label
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("studio_designs")
+}
