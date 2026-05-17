@@ -8,6 +8,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        // Warm off-white — replaces pure #ffffff everywhere bg-white is used
+        white: "#f9f8f6",
+      },
       fontFamily: {
         serif: ["var(--font-cormorant)", "Cormorant Garamond", "Georgia", "serif"],
         sans:  ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],

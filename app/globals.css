@@ -16,8 +16,8 @@ html { scroll-behavior: smooth; }
 }
 
 body {
-  background: #ffffff;
-  color: #0f0f0e;
+  background: #f9f8f6;
+  color: #1a1917;
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.6;
