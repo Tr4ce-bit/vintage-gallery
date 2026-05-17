@@ -177,3 +177,14 @@ enum MomoNetwork {
   TELECEL
   AIRTELTIGO
 }
+
+// ─────────────────────────────────────────────
+// SETTINGS  (key-value store for admin config)
+// ─────────────────────────────────────────────
+model Settings {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}

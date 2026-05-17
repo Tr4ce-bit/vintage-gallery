@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, Settings, LogOut, ExternalLink, Menu, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
@@ -16,6 +16,7 @@ const NAV = [
   { label: "Dashboard", href: "/",         icon: LayoutDashboard },
   { label: "Orders",    href: "/orders",   icon: ShoppingBag     },
   { label: "Products",  href: "/products", icon: Package         },
+  { label: "Studio",    href: "/studio",   icon: Settings        },
 ];
 
 export default function AdminShellLayout({ children }: { children: React.ReactNode }) {

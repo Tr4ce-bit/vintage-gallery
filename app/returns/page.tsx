@@ -15,11 +15,11 @@ const NOT_ELIGIBLE = [
   "Items that have been worn, washed, or altered",
   "Items without original tags and packaging",
   "Sale or final-sale items (marked clearly on product page)",
-  "Items returned after the 7-day window",
+  "Items returned after the 24-hour window",
 ];
 
 const STEPS = [
-  { step: "01", title: "Contact us within 7 days", desc: "Email or WhatsApp us within 7 days of receiving your order. Include your order reference and photos of the item." },
+  { step: "01", title: "Contact us within 24 hours", desc: "Email or WhatsApp us within 24 hours of receiving your order. Include your order reference and photos of the item." },
   { step: "02", title: "We review your request",   desc: "Our team will review your request within 1–2 business days and confirm whether it qualifies." },
   { step: "03", title: "Return the item",          desc: "Once approved, ship the item back in its original packaging. We will cover return shipping costs for defective items." },
   { step: "04", title: "Exchange or refund",       desc: "Your replacement will be dispatched within 3 business days, or your refund processed to your MoMo within 5 business days." },
@@ -44,7 +44,7 @@ export default function ReturnsPage() {
             Returns &amp; Exchanges.
           </h1>
           <p className="font-sans text-sm text-zinc-500 dark:text-zinc-400 font-light leading-relaxed mb-12 max-w-lg">
-            We stand behind every piece we sell. If something isn&apos;t right, we want to fix it. Our return window is <strong className="text-zinc-700 dark:text-zinc-300 font-medium">7 days</strong> from the date of delivery.
+            We stand behind every piece we sell. If something isn&apos;t right, we want to fix it. Our return window is <strong className="text-zinc-700 dark:text-zinc-300 font-medium">24 hours</strong> from the date of delivery.
           </p>
 
           {/* Eligible / Not eligible */}

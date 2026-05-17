@@ -86,7 +86,7 @@ export default function TermsPage() {
                 6. Returns & Refunds
               </h2>
               <p>
-                Returns are accepted within 7 days of delivery for defective, damaged, or incorrectly sent items only. Change-of-mind returns are not accepted. See our{" "}
+                Returns are accepted within 24 hours of delivery for defective, damaged, or incorrectly sent items only. Change-of-mind returns are not accepted. See our{" "}
                 <Link href="/returns" className="text-zinc-900 dark:text-zinc-200 underline underline-offset-2">Returns Policy</Link>{" "}
                 for the full process.
               </p>

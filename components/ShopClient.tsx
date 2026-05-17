@@ -122,11 +122,15 @@ export default function ShopClient({ products }: { products: Product[] }) {
                       className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                    {p.badge && (
+                    {p.stock !== undefined && p.stock <= 0 ? (
+                      <span className="absolute top-3 left-3 font-sans text-[9px] tracking-[0.15em] uppercase font-medium bg-zinc-900 text-white px-3 py-1 rounded-full">
+                        Sold Out
+                      </span>
+                    ) : p.badge ? (
                       <span className="absolute top-3 left-3 font-sans text-[9px] tracking-[0.15em] uppercase font-medium bg-white text-zinc-900 px-3 py-1 rounded-full">
                         {p.badge}
                       </span>
-                    )}
+                    ) : null}
 
                     <button
                       onClick={(e) => handleWishlist(e, p.id)}
@@ -135,13 +139,15 @@ export default function ShopClient({ products }: { products: Product[] }) {
                       <Heart size={12} className={liked[p.id] ? "fill-zinc-900 text-zinc-900" : "text-zinc-400"} />
                     </button>
 
-                    <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                      <button onClick={(e) => handleAdd(e, p)}
-                        className="w-full flex items-center justify-center gap-2 bg-white text-zinc-900 font-sans font-medium text-[10px] tracking-[0.15em] uppercase py-3 rounded-full hover:bg-zinc-100 transition-colors">
-                        <ShoppingBag size={12} />
-                        {added[p.id] ? "Added ✓" : `Quick Add · ${p.sizes[2] ?? p.sizes[0]}`}
-                      </button>
-                    </div>
+                    {(p.stock === undefined || p.stock > 0) && (
+                      <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                        <button onClick={(e) => handleAdd(e, p)}
+                          className="w-full flex items-center justify-center gap-2 bg-white text-zinc-900 font-sans font-medium text-[10px] tracking-[0.15em] uppercase py-3 rounded-full hover:bg-zinc-100 transition-colors">
+                          <ShoppingBag size={12} />
+                          {added[p.id] ? "Added ✓" : `Quick Add · ${p.sizes[2] ?? p.sizes[0]}`}
+                        </button>
+                      </div>
+                    )}
                   </Link>
 
                   <div className="mt-4 px-1">

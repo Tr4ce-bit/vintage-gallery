@@ -71,7 +71,7 @@ const SECTIONS = [
     faqs: [
       {
         q: "What is your returns policy?",
-        a: "We accept returns within 7 days for defective, damaged, or incorrectly sent items. Change-of-mind returns are not accepted. See the full Returns page for details.",
+        a: "We accept returns within 24 hours of delivery for defective, damaged, or incorrectly sent items. Change-of-mind returns are not accepted. See the full Returns page for details.",
       },
       {
         q: "How long do refunds take?",

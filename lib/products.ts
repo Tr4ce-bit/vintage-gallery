@@ -14,6 +14,7 @@ export interface Product {
   color: string;
   badge?: string;
   featured?: boolean;
+  stock?: number;        // undefined = unlimited (for hardcoded/static products)
 }
 
 export const PRODUCTS: Product[] = [

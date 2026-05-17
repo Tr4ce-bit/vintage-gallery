@@ -88,6 +88,13 @@ export default function ProductClient({ product, related }: Props) {
                 {product.badge}
               </span>
             )}
+            {product.stock !== undefined && product.stock <= 0 && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <span className="font-sans text-[11px] tracking-[0.25em] uppercase font-medium bg-white text-zinc-900 px-5 py-2 rounded-full">
+                  Sold Out
+                </span>
+              </div>
+            )}
           </motion.div>
 
           {/* Info */}
@@ -142,41 +149,58 @@ export default function ProductClient({ product, related }: Props) {
             </div>
 
             {/* Qty + Add to cart */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-full overflow-hidden">
-                <button
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="w-10 h-11 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors font-light text-lg"
-                >
-                  −
-                </button>
-                <span className="w-8 text-center font-sans text-sm text-zinc-700 dark:text-zinc-200">{qty}</span>
-                <button
-                  onClick={() => setQty((q) => q + 1)}
-                  className="w-10 h-11 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors font-light text-lg"
-                >
-                  +
-                </button>
+            {product.stock !== undefined && product.stock <= 0 ? (
+              <div className="mb-6">
+                <div className="w-full flex items-center justify-center gap-2.5 font-sans font-medium text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed mb-3">
+                  Out of Stock
+                </div>
+                <p className="font-sans text-[10px] text-zinc-400 dark:text-zinc-500 font-light text-center">
+                  This item is currently unavailable. Check back soon or{" "}
+                  <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                    message us on WhatsApp
+                  </a>{" "}
+                  to be notified.
+                </p>
               </div>
-              <button
-                onClick={handleAddToCart}
-                className="flex-1 flex items-center justify-center gap-2.5 font-sans font-medium text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full transition-all duration-300 bg-zinc-900 text-white hover:bg-zinc-700"
-              >
-                {added ? (
-                  <><Check size={14} /> Added to Cart</>
-                ) : (
-                  <><ShoppingBag size={14} /> Add to Cart</>
-                )}
-              </button>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-full overflow-hidden">
+                    <button
+                      onClick={() => setQty((q) => Math.max(1, q - 1))}
+                      className="w-10 h-11 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors font-light text-lg"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center font-sans text-sm text-zinc-700 dark:text-zinc-200">{qty}</span>
+                    <button
+                      onClick={() => setQty((q) => q + 1)}
+                      className="w-10 h-11 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors font-light text-lg"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleAddToCart}
+                    className="flex-1 flex items-center justify-center gap-2.5 font-sans font-medium text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full transition-all duration-300 bg-zinc-900 text-white hover:bg-zinc-700"
+                  >
+                    {added ? (
+                      <><Check size={14} /> Added to Cart</>
+                    ) : (
+                      <><ShoppingBag size={14} /> Add to Cart</>
+                    )}
+                  </button>
+                </div>
 
-            {/* Checkout shortcut */}
-            <Link
-              href="/cart"
-              className="flex items-center justify-center gap-2 font-sans text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-all duration-200 mb-8"
-            >
-              View Cart &amp; Checkout
-            </Link>
+                {/* Checkout shortcut */}
+                <Link
+                  href="/cart"
+                  className="flex items-center justify-center gap-2 font-sans text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-all duration-200 mb-8"
+                >
+                  View Cart &amp; Checkout
+                </Link>
+              </>
+            )}
 
             {/* Wishlist */}
             <button
