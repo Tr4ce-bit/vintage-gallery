@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -47,9 +48,19 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
     <>
       <div className="px-6 py-6 border-b border-zinc-800">
         <div className="flex items-center justify-between">
-          <div className="flex flex-col items-start leading-none">
-            <span className="font-serif text-white" style={{ fontSize: "1.25rem", fontWeight: 700, letterSpacing: "0.08em" }}>VG</span>
-            <span className="font-serif text-white/40" style={{ fontSize: "0.38rem", fontWeight: 600, letterSpacing: "0.38em", textTransform: "uppercase", marginTop: "2px" }}>Vintage Gallery</span>
+          <div className="flex items-center gap-2.5">
+            <Image
+              src="https://vintage-gallery-products.s3.amazonaws.com/branding/logo-transparent.png"
+              alt="Vintage Gallery"
+              width={36}
+              height={36}
+              className="object-contain shrink-0"
+              style={{ filter: "brightness(0) invert(1)" }}
+            />
+            <div className="flex flex-col leading-none">
+              <span className="font-serif text-white" style={{ fontSize: "0.95rem", fontWeight: 700, letterSpacing: "0.1em" }}>VG</span>
+              <span className="font-serif text-white/40" style={{ fontSize: "0.38rem", fontWeight: 600, letterSpacing: "0.38em", textTransform: "uppercase", marginTop: "1px" }}>Admin</span>
+            </div>
           </div>
           {/* Close button — mobile only */}
           <button
@@ -128,7 +139,17 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
           >
             <Menu size={20} />
           </button>
-          <span className="font-serif text-white text-sm font-medium tracking-wider">VG Admin</span>
+          <div className="flex items-center gap-2">
+            <Image
+              src="https://vintage-gallery-products.s3.amazonaws.com/branding/logo-transparent.png"
+              alt="Vintage Gallery"
+              width={28}
+              height={28}
+              className="object-contain"
+              style={{ filter: "brightness(0) invert(1)" }}
+            />
+            <span className="font-serif text-white text-sm font-medium tracking-wider">Admin</span>
+          </div>
         </div>
 
         <main className="flex-1 overflow-auto bg-zinc-50">
