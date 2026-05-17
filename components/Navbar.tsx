@@ -49,8 +49,8 @@ export default function Navbar() {
       >
         <div className="max-w-7xl mx-auto px-5 md:px-8 h-[60px] flex items-center justify-between">
 
-          {/* Logo — floats over hero like Netflix, transitions to natural on scroll */}
-          <Link href="/" className="relative flex items-center" style={{ height: 44 }}>
+          {/* Logo — floats over hero like Netflix, no background box */}
+          <Link href="/" className="flex items-center gap-2.5">
             <Image
               src="https://vintage-gallery-products.s3.amazonaws.com/branding/logo.png"
               alt="Vintage Gallery"
@@ -58,18 +58,23 @@ export default function Navbar() {
               height={44}
               priority
               className="object-contain transition-all duration-300"
-              style={{
-                filter: onDark
-                  ? "brightness(0) invert(1)"   // white logo on dark hero
-                  : "none",                      // natural logo on white bg
-                opacity: onDark ? 0.92 : 1,
+              style={onDark ? {
+                // On dark hero: invert the logo so the mark becomes white,
+                // then screen-blend so the (now black) background disappears into the dark page
+                filter: "invert(1)",
+                mixBlendMode: "screen",
+              } : {
+                // On white background: multiply-blend so the white box in the
+                // PNG disappears into the white page, leaving only the logo mark
+                filter: "none",
+                mixBlendMode: "multiply",
               }}
             />
             <span
-              className={`ml-2.5 font-serif tracking-[0.22em] uppercase transition-colors duration-300 ${
+              className={`font-serif tracking-[0.22em] uppercase transition-colors duration-300 ${
                 onDark ? "text-white/90" : "text-zinc-900"
               }`}
-              style={{ fontSize: "0.8rem", fontWeight: 600, letterSpacing: "0.28em" }}
+              style={{ fontSize: "0.8rem", fontWeight: 600 }}
             >
               Vintage Gallery
             </span>
