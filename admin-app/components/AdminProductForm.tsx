@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Camera, X, Loader2, ImagePlus } from "lucide-react";
+import { Camera, X, ImagePlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
 
@@ -39,11 +39,13 @@ interface ImageUploaderProps {
 
 function ImageUploader({ value, onChange, label, required, size = "large", getToken }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
+  const [progress,  setProgress]  = useState(0);   // 0-100
   const [error,     setError]     = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
     setError("");
+    setProgress(0);
     setUploading(true);
 
     const token = await getToken();
@@ -51,25 +53,49 @@ function ImageUploader({ value, onChange, label, required, size = "large", getTo
     form.append("file", file);
 
     try {
-      const res  = await fetch(apiUrl("/api/admin/upload"), {
-        method:  "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body:    form,
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        // Track upload progress (0 → 100)
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const data = JSON.parse(xhr.responseText);
+            setProgress(100);
+            onChange(data.url);
+            resolve();
+          } else {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              reject(new Error(data.error ?? "Upload failed"));
+            } catch {
+              reject(new Error("Upload failed"));
+            }
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error — please try again"));
+
+        xhr.open("POST", apiUrl("/api/admin/upload"));
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.send(form);
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed");
-      onChange(data.url);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
+      setProgress(0);
     }
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
-    // reset input so same file can be re-selected
     e.target.value = "";
   }
 
@@ -104,10 +130,38 @@ function ImageUploader({ value, onChange, label, required, size = "large", getTo
           />
         )}
 
-        {/* Overlay when uploading */}
+        {/* Upload overlay with progress bar */}
         {uploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
-            <Loader2 size={isLarge ? 28 : 18} className="animate-spin text-zinc-400" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-10 gap-3 px-5">
+            {isLarge ? (
+              <>
+                {/* Percentage */}
+                <p className="font-sans text-2xl font-light text-zinc-700 tabular-nums">
+                  {progress}%
+                </p>
+                {/* Bar track */}
+                <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-zinc-900 rounded-full transition-all duration-150"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400">
+                  Uploading…
+                </p>
+              </>
+            ) : (
+              <>
+                {/* Compact bar for small slots */}
+                <p className="font-sans text-xs text-zinc-500 tabular-nums">{progress}%</p>
+                <div className="w-full h-1 bg-zinc-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-zinc-900 rounded-full transition-all duration-150"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
 
