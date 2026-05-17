@@ -150,7 +150,6 @@ function ImageUploader({ value, onChange, label, required, size = "large", getTo
           ref={inputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           className="hidden"
           onChange={handleChange}
         />
