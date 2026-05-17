@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { User, ShoppingBag, Shield, LogOut, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-interface Props { mobile?: boolean; onDark?: boolean }
+interface Props { mobile?: boolean; onDark?: boolean; onClose?: () => void }
 
-export default function NavbarAuth({ mobile = false, onDark = false }: Props) {
+export default function NavbarAuth({ mobile = false, onDark = false, onClose }: Props) {
   const { isSignedIn, isLoaded, user, signOut } = useAuth();
   const router  = useRouter();
   const [open, setOpen] = useState(false);
@@ -39,7 +39,7 @@ export default function NavbarAuth({ mobile = false, onDark = false }: Props) {
             {displayName}
           </span>
           <button
-            onClick={async () => { await signOut(); router.push("/"); }}
+            onClick={async () => { onClose?.(); await signOut(); router.push("/"); }}
             className="font-sans text-[11px] tracking-[0.2em] uppercase text-zinc-400 font-light text-left"
           >
             Sign out
@@ -125,12 +125,14 @@ export default function NavbarAuth({ mobile = false, onDark = false }: Props) {
       <>
         <Link
           href="/sign-in"
+          onClick={() => onClose?.()}
           className="font-sans text-[11px] tracking-[0.2em] uppercase text-zinc-400 font-light"
         >
           Sign in
         </Link>
         <Link
           href="/sign-up"
+          onClick={() => onClose?.()}
           className="font-sans text-[11px] tracking-[0.2em] uppercase font-medium bg-zinc-900 text-white px-5 py-2 rounded-full"
         >
           Join

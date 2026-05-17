@@ -145,7 +145,7 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                <NavbarAuth mobile onDark={false} />
+                <NavbarAuth mobile onDark={false} onClose={() => setMenuOpen(false)} />
                 {mounted && (
                   <button
                     onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
