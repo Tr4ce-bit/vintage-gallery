@@ -42,7 +42,7 @@ export default function OrdersPage() {
   const shown = filter === "All" ? orders : orders.filter(o => o.status === filter);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 sm:px-8 sm:py-8">
       <div className="mb-6">
         <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Management</p>
         <h1 className="font-serif text-zinc-900" style={{ fontSize: "2rem", fontWeight: 300 }}>Orders</h1>
@@ -68,6 +68,7 @@ export default function OrdersPage() {
         ) : shown.length === 0 ? (
           <p className="px-6 py-12 font-sans text-sm text-zinc-300 text-center">No orders found.</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-100">
@@ -98,6 +99,7 @@ export default function OrdersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

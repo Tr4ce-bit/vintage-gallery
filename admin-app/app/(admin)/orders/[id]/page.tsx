@@ -78,7 +78,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const subtotal = order.items.reduce((s, i) => s + i.subtotal, 0);
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-4xl">
       <Link href="/orders" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-300 hover:text-zinc-600 transition-colors mb-8">
         <ArrowLeft size={12} /> Orders
       </Link>
@@ -100,6 +100,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <div className="px-6 py-4 border-b border-zinc-50">
               <h2 className="font-sans text-sm font-medium text-zinc-800">Order Items</h2>
             </div>
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-zinc-50">
@@ -120,6 +121,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 ))}
               </tbody>
             </table>
+            </div>
             <div className="px-5 py-4 border-t border-zinc-50 space-y-1.5">
               <div className="flex justify-between font-sans text-sm text-zinc-400"><span>Subtotal</span><span>GH₵ {subtotal}</span></div>
               <div className="flex justify-between font-sans text-sm text-zinc-400"><span>Delivery</span><span>GH₵ 30</span></div>
@@ -129,7 +131,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
           <div className="bg-white border border-zinc-100 rounded-2xl px-6 py-5">
             <h2 className="font-sans text-sm font-medium text-zinc-800 mb-4">Update Status</h2>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <select value={newStatus} onChange={e => setNewStatus(e.target.value)}
                 className="flex-1 border border-zinc-200 rounded-xl px-4 py-2.5 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400">
                 {ALL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}

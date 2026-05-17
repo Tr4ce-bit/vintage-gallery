@@ -61,11 +61,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     </div>
   );
   if (notFound) return (
-    <div className="px-8 py-8"><p className="font-sans text-sm text-zinc-400">Product not found.</p></div>
+    <div className="px-4 py-6 sm:px-8 sm:py-8"><p className="font-sans text-sm text-zinc-400">Product not found.</p></div>
   );
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 sm:px-8 sm:py-8">
       <Link href="/products" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-300 hover:text-zinc-600 transition-colors mb-8">
         <ArrowLeft size={12} /> Products
       </Link>
