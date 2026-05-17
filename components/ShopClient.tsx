@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,20 +11,31 @@ import { useCartStore } from "@/lib/store";
 import Footer from "@/components/Footer";
 import type { Product } from "@/lib/products";
 
-const FILTERS = ["All", "HOPE Collection", "Icons Series"];
+const FILTERS = ["All", "HOPE Collection", "Icons Series", "Limited Drops", "New Arrivals"];
 
 export default function ShopClient({ products }: { products: Product[] }) {
   const { isSignedIn } = useAuth();
   const addItem        = useCartStore((s) => s.addItem);
+  const searchParams   = useSearchParams();
 
   const [active,    setActive]    = useState("All");
   const [liked,     setLiked]     = useState<Record<string, boolean>>({});
   const [added,     setAdded]     = useState<Record<string, boolean>>({});
   const [authToast, setAuthToast] = useState(false);
 
+  // Pre-set filter from URL ?filter=HOPE+Collection
+  useEffect(() => {
+    const f = searchParams.get("filter");
+    if (f && FILTERS.includes(f)) setActive(f);
+  }, [searchParams]);
+
   const filtered = active === "All"
     ? products
-    : products.filter((p) => p.collection === active);
+    : active === "New Arrivals"
+      ? products.filter((p) => p.badge === "New" || p.featured)
+      : active === "Limited Drops"
+        ? products.filter((p) => p.badge === "Limited" || p.badge === "Sold Out")
+        : products.filter((p) => p.collection === active);
 
   const handleAdd = (e: React.MouseEvent, p: Product) => {
     e.preventDefault();

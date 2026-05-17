@@ -46,8 +46,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <body className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 antialiased transition-colors duration-300">
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <NextTopLoader
-              color="#c9a84c"
-              shadow="0 0 10px #c9a84c,0 0 5px #c9a84c"
+              color="#18181b"
+              shadow={false}
               height={2}
               showSpinner={false}
               easing="ease"

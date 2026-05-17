@@ -7,24 +7,24 @@ import { Instagram, Twitter, Youtube, MessageCircle, ArrowUpRight } from "lucide
 
 const LINKS = {
   Shop: [
-    { label: "New Arrivals",   href: "#collection" },
-    { label: "HOPE Collection",href: "#collection" },
-    { label: "Icons Series",   href: "#collection" },
-    { label: "Limited Drops",  href: "#collection" },
-    { label: "Custom Studio",  href: "/customize"  },
+    { label: "New Arrivals",   href: "/shop?filter=New+Arrivals"   },
+    { label: "HOPE Collection",href: "/shop?filter=HOPE+Collection" },
+    { label: "Icons Series",   href: "/shop?filter=Icons+Series"   },
+    { label: "Limited Drops",  href: "/shop?filter=Limited+Drops"  },
+    { label: "Custom Studio",  href: "/customize"                  },
   ],
   Brand: [
-    { label: "Our Story",      href: "#about" },
-    { label: "Drop Schedule",  href: "#"      },
-    { label: "Lookbook",       href: "#"      },
-    { label: "Collabs",        href: "#"      },
+    { label: "Our Story",      href: "/#about"        },
+    { label: "Drop Schedule",  href: "/drop-schedule" },
+    { label: "Lookbook",       href: "/lookbook"      },
+    { label: "Collabs",        href: "/collabs"       },
   ],
   Help: [
-    { label: "Sizing Guide",   href: "#" },
-    { label: "Shipping",       href: "#" },
-    { label: "Returns",        href: "#" },
-    { label: "Contact",        href: "#contact" },
-    { label: "FAQs",           href: "#" },
+    { label: "Sizing Guide",   href: "/sizing-guide" },
+    { label: "Shipping",       href: "/shipping"     },
+    { label: "Returns",        href: "/returns"      },
+    { label: "Contact",        href: "/#contact"     },
+    { label: "FAQs",           href: "/faq"          },
   ],
 };
 
@@ -127,10 +127,14 @@ export default function Footer() {
             © {year} Vintage Gallery Store. All rights reserved.
           </p>
           <div className="flex items-center gap-5">
-            {["Privacy", "Terms", "Cookies"].map(item => (
-              <a key={item} href="#" className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors font-light">
-                {item}
-              </a>
+            {[
+              { label: "Privacy", href: "/privacy" },
+              { label: "Terms",   href: "/terms"   },
+              { label: "Cookies", href: "/cookies" },
+            ].map(item => (
+              <Link key={item.label} href={item.href} className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors font-light">
+                {item.label}
+              </Link>
             ))}
           </div>
         </div>
