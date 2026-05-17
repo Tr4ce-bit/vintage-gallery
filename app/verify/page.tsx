@@ -56,7 +56,7 @@ function VerifyForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-6 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950 px-6 py-12">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="mb-10 flex flex-col items-center leading-none">
@@ -95,7 +95,7 @@ function VerifyForm() {
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
               required
               autoFocus
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 font-sans text-sm text-zinc-900 tracking-[0.5em] text-center focus:outline-none focus:border-zinc-400 transition-colors"
+              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-900 dark:text-zinc-100 bg-transparent dark:bg-zinc-900 tracking-[0.5em] text-center focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
               placeholder="000000"
             />
           </div>

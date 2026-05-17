@@ -129,12 +129,12 @@ export default function SignInPage() {
       </div>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-12">
+      <div className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-zinc-950 px-6 py-12">
 
         <div className="lg:hidden mb-10">
           <Link href="/" className="flex flex-col items-center leading-none">
-            <span className="font-serif text-zinc-900" style={{ fontSize: "1.6rem", fontWeight: 700, letterSpacing: "0.08em" }}>VG</span>
-            <span className="font-serif text-zinc-400" style={{ fontSize: "0.42rem", fontWeight: 600, letterSpacing: "0.38em", textTransform: "uppercase", marginTop: "2px" }}>Vintage Gallery</span>
+            <span className="font-serif text-zinc-900 dark:text-zinc-100" style={{ fontSize: "1.6rem", fontWeight: 700, letterSpacing: "0.08em" }}>VG</span>
+            <span className="font-serif text-zinc-400 dark:text-zinc-500" style={{ fontSize: "0.42rem", fontWeight: 600, letterSpacing: "0.38em", textTransform: "uppercase", marginTop: "2px" }}>Vintage Gallery</span>
           </Link>
         </div>
 
@@ -145,7 +145,7 @@ export default function SignInPage() {
             <>
               <div className="mb-8">
                 <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-300 font-light mb-2">Welcome Back</p>
-                <h1 className="font-serif text-zinc-900 leading-none"
+                <h1 className="font-serif text-zinc-900 dark:text-zinc-50 leading-none"
                   style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)", fontWeight: 300 }}>
                   Sign in to your account.
                 </h1>
@@ -162,7 +162,7 @@ export default function SignInPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="email"
-                    className="w-full border border-zinc-200 rounded-xl px-4 py-3 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors"
+                    className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-900 dark:text-zinc-100 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
                     placeholder="you@example.com"
                   />
                 </div>
@@ -184,7 +184,7 @@ export default function SignInPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       autoComplete="current-password"
-                      className="w-full border border-zinc-200 rounded-xl px-4 py-3 pr-11 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors"
+                      className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 pr-11 font-sans text-sm text-zinc-900 dark:text-zinc-100 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
                       placeholder="••••••••"
                     />
                     <button

@@ -20,7 +20,7 @@ export default function Newsletter() {
   };
 
   return (
-    <section className="bg-white py-16 px-5 md:px-8">
+    <section className="bg-white dark:bg-zinc-950 py-16 px-5 md:px-8">
       <div className="max-w-7xl mx-auto">
         <motion.div
           ref={ref}
@@ -69,19 +69,19 @@ export default function Newsletter() {
                 <span className="font-sans text-sm tracking-[0.15em] uppercase font-light">You&apos;re on the list.</span>
               </motion.div>
             ) : (
-              <form onSubmit={submit} className="flex gap-2.5 max-w-md">
+              <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2.5 max-w-md">
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com"
                   required
-                  className="flex-1 bg-white/8 border border-white/10 rounded-full px-5 py-3.5 font-sans text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors"
+                  className="flex-1 min-w-0 bg-white/8 border border-white/10 rounded-full px-5 py-3.5 font-sans text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white/20 transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-white text-zinc-900 font-sans font-medium text-[10px] tracking-[0.15em] uppercase px-6 py-3.5 rounded-full hover:bg-zinc-100 transition-colors disabled:opacity-50 shrink-0 flex items-center gap-2"
+                  className="w-full sm:w-auto bg-white text-zinc-900 font-sans font-medium text-[10px] tracking-[0.15em] uppercase px-6 py-3.5 rounded-full hover:bg-zinc-100 transition-colors disabled:opacity-50 shrink-0 flex items-center justify-center gap-2"
                 >
                   {loading
                     ? <span className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-900 rounded-full animate-spin" />

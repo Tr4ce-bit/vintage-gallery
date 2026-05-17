@@ -55,11 +55,11 @@ export default function ProductClient({ product, related }: Props) {
 
   return (
     <>
-      <main className="min-h-screen bg-white pt-[60px]">
+      <main className="min-h-screen bg-white dark:bg-zinc-950 pt-[60px]">
         {/* Back */}
         <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8 pb-0">
           <Link href="/shop"
-            className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors group">
+            className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors group">
             <ArrowLeft size={12} className="group-hover:-translate-x-0.5 transition-transform" />
             Back to Shop
           </Link>
@@ -73,7 +73,7 @@ export default function ProductClient({ product, related }: Props) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7 }}
-            className="relative rounded-2xl overflow-hidden bg-zinc-100"
+            className="relative rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800"
             style={{ aspectRatio: "3/4" }}
           >
             <Image
@@ -97,11 +97,11 @@ export default function ProductClient({ product, related }: Props) {
             transition={{ duration: 0.7, delay: 0.1 }}
             className="flex flex-col justify-center"
           >
-            <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-300 font-light mb-3">
+            <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-3">
               {product.collection}
             </p>
             <h1
-              className="font-serif text-zinc-900 leading-[1.0] mb-4"
+              className="font-serif text-zinc-900 dark:text-zinc-50 leading-[1.0] mb-4"
               style={{ fontSize: "clamp(2.2rem, 4vw, 3.5rem)", fontWeight: 300 }}
             >
               {product.name}
@@ -131,8 +131,8 @@ export default function ProductClient({ product, related }: Props) {
                     onClick={() => { setSelectedSize(s); setSizeError(false); }}
                     className={`font-sans text-[11px] w-11 h-11 rounded-full border transition-all duration-200 ${
                       selectedSize === s
-                        ? "bg-zinc-900 text-white border-zinc-900"
-                        : "border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-900"
+                        ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white"
+                        : "border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
                   >
                     {s}
@@ -143,17 +143,17 @@ export default function ProductClient({ product, related }: Props) {
 
             {/* Qty + Add to cart */}
             <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center border border-zinc-200 rounded-full overflow-hidden">
+              <div className="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-full overflow-hidden">
                 <button
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="w-10 h-11 flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-colors font-light text-lg"
+                  className="w-10 h-11 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors font-light text-lg"
                 >
                   −
                 </button>
-                <span className="w-8 text-center font-sans text-sm text-zinc-700">{qty}</span>
+                <span className="w-8 text-center font-sans text-sm text-zinc-700 dark:text-zinc-200">{qty}</span>
                 <button
                   onClick={() => setQty((q) => q + 1)}
-                  className="w-10 h-11 flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-colors font-light text-lg"
+                  className="w-10 h-11 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors font-light text-lg"
                 >
                   +
                 </button>
@@ -173,7 +173,7 @@ export default function ProductClient({ product, related }: Props) {
             {/* Checkout shortcut */}
             <Link
               href="/cart"
-              className="flex items-center justify-center gap-2 font-sans text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full border border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-900 transition-all duration-200 mb-8"
+              className="flex items-center justify-center gap-2 font-sans text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-all duration-200 mb-8"
             >
               View Cart &amp; Checkout
             </Link>
@@ -181,7 +181,7 @@ export default function ProductClient({ product, related }: Props) {
             {/* Wishlist */}
             <button
               onClick={handleWishlist}
-              className="flex items-center justify-center gap-2 font-sans text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full border border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-900 transition-all duration-200 mb-4 w-full"
+              className="flex items-center justify-center gap-2 font-sans text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-all duration-200 mb-4 w-full"
             >
               <Heart size={13} className={wishlisted ? "fill-zinc-900 text-zinc-900" : ""} />
               {wishlisted ? "Saved to Wishlist" : "Add to Wishlist"}
@@ -193,10 +193,10 @@ export default function ProductClient({ product, related }: Props) {
             </p>
 
             {/* Product details accordion */}
-            <div className="border-t border-zinc-100">
+            <div className="border-t border-zinc-100 dark:border-zinc-800">
               <button
                 onClick={() => setDetailsOpen((o) => !o)}
-                className="w-full flex items-center justify-between py-4 font-sans text-[10px] tracking-[0.25em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors"
+                className="w-full flex items-center justify-between py-4 font-sans text-[10px] tracking-[0.25em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
               >
                 Product Details
                 <ChevronDown size={14} className={`transition-transform duration-300 ${detailsOpen ? "rotate-180" : ""}`} />
@@ -204,8 +204,8 @@ export default function ProductClient({ product, related }: Props) {
               {detailsOpen && (
                 <ul className="pb-4 space-y-2">
                   {product.details.map((d) => (
-                    <li key={d} className="flex items-start gap-2.5 font-sans text-sm text-zinc-400 font-light">
-                      <span className="mt-1.5 w-1 h-1 rounded-full bg-zinc-300 shrink-0" />
+                    <li key={d} className="flex items-start gap-2.5 font-sans text-sm text-zinc-500 dark:text-zinc-400 font-light">
+                      <span className="mt-1.5 w-1 h-1 rounded-full bg-zinc-400 dark:bg-zinc-600 shrink-0" />
                       {d}
                     </li>
                   ))}
@@ -217,7 +217,7 @@ export default function ProductClient({ product, related }: Props) {
 
         {/* Related */}
         {related.length > 0 && (
-          <section className="border-t border-zinc-100 py-16 px-5 md:px-8">
+          <section className="border-t border-zinc-100 dark:border-zinc-800 py-16 px-5 md:px-8">
             <div className="max-w-7xl mx-auto">
               <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-300 font-light mb-8">
                 You Might Also Like
@@ -225,7 +225,7 @@ export default function ProductClient({ product, related }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {related.map((p) => (
                   <Link key={p.id} href={`/product/${p.slug}`} className="group block">
-                    <div className="relative overflow-hidden rounded-2xl bg-zinc-100 mb-4" style={{ aspectRatio: "4/3" }}>
+                    <div className="relative overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800 mb-4" style={{ aspectRatio: "4/3" }}>
                       <Image
                         src={p.image}
                         alt={p.name}
@@ -233,10 +233,10 @@ export default function ProductClient({ product, related }: Props) {
                         className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.04]"
                       />
                     </div>
-                    <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-300 font-light mb-1">{p.collection}</p>
+                    <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-1">{p.collection}</p>
                     <div className="flex items-center justify-between">
-                      <span className="font-serif text-zinc-900 text-xl font-light">{p.name}</span>
-                      <span className="font-sans text-sm text-zinc-400 font-light">GH₵ {p.price}</span>
+                      <span className="font-serif text-zinc-900 dark:text-zinc-100 text-xl font-light">{p.name}</span>
+                      <span className="font-sans text-sm text-zinc-500 dark:text-zinc-400 font-light">GH₵ {p.price}</span>
                     </div>
                   </Link>
                 ))}

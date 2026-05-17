@@ -101,7 +101,7 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-white pt-[60px]">
+      <main className="min-h-screen bg-white dark:bg-zinc-950 pt-[60px]">
         <div className="max-w-6xl mx-auto px-5 md:px-8 py-10">
 
           {/* Header */}
@@ -147,7 +147,7 @@ export default function CheckoutPage() {
                         value={form[key as keyof typeof form]}
                         onChange={set(key as keyof typeof form)}
                         placeholder={placeholder}
-                        className="w-full border border-zinc-200 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 placeholder-zinc-300 focus:outline-none focus:border-zinc-400 transition-colors"
+                        className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 dark:text-zinc-200 placeholder-zinc-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
                       />
                     </div>
                   ))}
@@ -160,7 +160,7 @@ export default function CheckoutPage() {
                       onChange={set("notes")}
                       placeholder="Any instructions for delivery..."
                       rows={2}
-                      className="w-full border border-zinc-200 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 placeholder-zinc-300 focus:outline-none focus:border-zinc-400 transition-colors resize-none"
+                      className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 dark:text-zinc-200 placeholder-zinc-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors resize-none"
                     />
                   </div>
                 </div>
@@ -180,12 +180,12 @@ export default function CheckoutPage() {
                       onClick={() => setNetwork(n.id)}
                       className={`rounded-xl border py-3 px-2 flex flex-col items-center gap-2 transition-all duration-200 ${
                         network === n.id
-                          ? "border-zinc-900 bg-zinc-50"
-                          : "border-zinc-200 hover:border-zinc-300"
+                          ? "border-zinc-900 dark:border-white bg-zinc-100 dark:bg-zinc-800"
+                          : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-500"
                       }`}
                     >
                       <span className={`w-3 h-3 rounded-full ${n.color}`} />
-                      <span className="font-sans text-[10px] tracking-[0.1em] text-zinc-600 font-light">{n.label}</span>
+                      <span className="font-sans text-[10px] tracking-[0.1em] text-zinc-600 dark:text-zinc-300 font-light">{n.label}</span>
                     </button>
                   ))}
                 </div>
@@ -200,7 +200,7 @@ export default function CheckoutPage() {
                     value={momoPhone}
                     onChange={(e) => setMomoPhone(e.target.value)}
                     placeholder="0241234567"
-                    className="w-full border border-zinc-200 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 placeholder-zinc-300 focus:outline-none focus:border-zinc-400 transition-colors"
+                    className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 dark:text-zinc-200 placeholder-zinc-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
                   />
                   <p className="font-sans text-[9px] text-zinc-300 font-light mt-2">
                     You will receive a push notification to approve the payment on your phone.

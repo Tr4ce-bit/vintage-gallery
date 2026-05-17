@@ -43,7 +43,7 @@ export default function SuccessPage({
 
   return (
     <>
-      <main className="min-h-screen bg-white pt-[60px] flex items-center justify-center px-5">
+      <main className="min-h-screen bg-white dark:bg-zinc-950 pt-[60px] flex items-center justify-center px-5">
         <div className="w-full max-w-lg text-center py-20">
           {status === "verifying" && (
             <motion.div
@@ -68,7 +68,7 @@ export default function SuccessPage({
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.5, type: "spring" }}
-                className="w-20 h-20 rounded-full bg-zinc-50 flex items-center justify-center mb-8"
+                className="w-20 h-20 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-8"
               >
                 <CheckCircle size={36} strokeWidth={1.5} className="text-zinc-900" />
               </motion.div>
@@ -87,11 +87,11 @@ export default function SuccessPage({
               </p>
 
               {orderRef && (
-                <div className="rounded-xl bg-zinc-50 border border-zinc-100 px-6 py-4 mb-10 inline-block">
-                  <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-300 font-light mb-1">
+                <div className="rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-6 py-4 mb-10 inline-block">
+                  <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-1">
                     Reference
                   </p>
-                  <p className="font-mono text-sm text-zinc-600">{orderRef}</p>
+                  <p className="font-mono text-sm text-zinc-600 dark:text-zinc-300">{orderRef}</p>
                 </div>
               )}
 

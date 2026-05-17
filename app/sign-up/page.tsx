@@ -106,7 +106,7 @@ export default function SignUpPage() {
       </div>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-12">
+      <div className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-zinc-950 px-6 py-12">
 
         <div className="lg:hidden mb-10">
           <Link href="/" className="flex flex-col items-center leading-none">
@@ -136,7 +136,7 @@ export default function SignUpPage() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 autoComplete="name"
-                className="w-full border border-zinc-200 rounded-xl px-4 py-3 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors"
+                className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-900 dark:text-zinc-100 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
                 placeholder="Kofi Mensah"
               />
             </div>
@@ -152,7 +152,7 @@ export default function SignUpPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full border border-zinc-200 rounded-xl px-4 py-3 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors"
+                className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-900 dark:text-zinc-100 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
                 placeholder="you@example.com"
               />
             </div>
@@ -169,7 +169,7 @@ export default function SignUpPage() {
                   onChange={(e) => { setPassword(e.target.value); setTouched(true); }}
                   required
                   autoComplete="new-password"
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-3 pr-11 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors"
+                  className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 pr-11 font-sans text-sm text-zinc-900 dark:text-zinc-100 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
                   placeholder="Create a strong password"
                 />
                 <button
