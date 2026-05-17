@@ -21,10 +21,9 @@ interface ShirtColor {
   name:  string;
   hex:   string;
   light: boolean;
-  swatch?: string; // optional display hex if different from shirt hex
 }
 
-// ─── Colour palette (6 core colours) ─────────────────────────────────────────
+// ─── Colour palette ───────────────────────────────────────────────────────────
 
 const SHIRT_COLORS: ShirtColor[] = [
   { name: "White",        hex: "#FAFAF8", light: true  },
@@ -43,161 +42,224 @@ const DESIGN_TYPES = [
   { id: "graphic", label: "Graphic" },
 ];
 
-// ─── Photo-realistic flat-lay T-shirt SVG ─────────────────────────────────────
-// Matches the wide boxy crew-neck silhouette in the reference photo.
-// viewBox: 0 0 560 560  (body spans y 64 → 510)
+// ─── Canvas shirt — real photo with per-pixel recolouring ─────────────────────
+// The source image (public/shirt-base.png) is a black shirt on white.
+// For every pixel that isn't near-white background we map its luminance to the
+// target colour: dark shadows stay dark, light highlights stay light.
 
-function PlainShirt({ color, light }: { color: string; light: boolean }) {
-  const shadowA  = light ? "rgba(0,0,0,0.11)" : "rgba(0,0,0,0.28)";
-  const shadowB  = light ? "rgba(0,0,0,0.07)" : "rgba(0,0,0,0.20)";
-  const hiA      = light ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.06)";
-  const seam     = light ? "rgba(0,0,0,0.07)" : "rgba(0,0,0,0.18)";
-  const hemClr   = light ? "rgba(0,0,0,0.09)" : "rgba(0,0,0,0.22)";
-  const labelBg  = light ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.90)";
+function ShirtCanvas({
+  color,
+  children,
+}: {
+  color:    ShirtColor;
+  children?: React.ReactNode;
+}) {
+  const canvasRef  = useRef<HTMLCanvasElement>(null);
+  const baseRef    = useRef<HTMLImageElement | null>(null);
+  const colorRef   = useRef(color);
+  colorRef.current = color;
+  const [ready,    setReady]    = useState(false);
+  const [fallback, setFallback] = useState(false);
 
-  // Main boxy body — matches Filippa K / oversized flat-lay proportions
+  // ── pixel recolour ───────────────────────────────────────────────────────────
+  const applyColor = useCallback((img: HTMLImageElement, c: ShirtColor) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+
+    // Draw at native resolution then let CSS scale to fit
+    canvas.width  = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    ctx.drawImage(img, 0, 0);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data      = imageData.data;
+
+    // Parse hex target
+    const tr = parseInt(c.hex.slice(1, 3), 16);
+    const tg = parseInt(c.hex.slice(3, 5), 16);
+    const tb = parseInt(c.hex.slice(5, 7), 16);
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      // Perceptual luminance
+      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+      // Skip near-white background
+      if (lum > 0.90) continue;
+
+      // The source shirt (black) ranges lum ≈ 0 (deep shadow) → ≈ 0.45 (highlight)
+      // Normalise to [0,1] then remap to target colour.
+      // factor range: 0.15 (darkest shadow) → 1.0 (full colour at highlight)
+      const t      = Math.min(lum / 0.45, 1.0);
+      const factor = 0.15 + 0.85 * t;
+
+      data[i]     = Math.min(255, Math.round(tr * factor));
+      data[i + 1] = Math.min(255, Math.round(tg * factor));
+      data[i + 2] = Math.min(255, Math.round(tb * factor));
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    setReady(true);
+  }, []);
+
+  // Load once
+  useEffect(() => {
+    const img      = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload     = () => {
+      baseRef.current = img;
+      applyColor(img, colorRef.current);
+    };
+    img.onerror = () => setFallback(true);
+    img.src     = "/shirt-base.png";
+  }, [applyColor]);
+
+  // Re-colour whenever selected colour changes
+  useEffect(() => {
+    if (baseRef.current) applyColor(baseRef.current, color);
+  }, [color, applyColor]);
+
+  // ── Fallback SVG while image loads / if file missing ────────────────────────
+  if (fallback) {
+    return <PlainShirtSVG color={color.hex} light={color.light}>{children}</PlainShirtSVG>;
+  }
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Canvas fills container; CSS scaling preserves aspect ratio */}
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full"
+        style={{
+          objectFit: "contain",
+          opacity: ready ? 1 : 0,
+          transition: "opacity 0.25s ease",
+          filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.55)) drop-shadow(0 2px 10px rgba(0,0,0,0.35))",
+        }}
+      />
+      {/* Spinner while loading */}
+      {!ready && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-white/10 border-t-white/50 rounded-full animate-spin" />
+        </div>
+      )}
+      {/* Design overlay */}
+      {children}
+    </div>
+  );
+}
+
+// ─── Fallback / back-face SVG shirt ──────────────────────────────────────────
+// Used as: (a) front fallback if photo missing, (b) back face of 3-D flip.
+
+function PlainShirtSVG({
+  color, light, children,
+}: {
+  color: string; light: boolean; children?: React.ReactNode;
+}) {
+  const shadowA = light ? "rgba(0,0,0,0.11)" : "rgba(0,0,0,0.28)";
+  const shadowB = light ? "rgba(0,0,0,0.07)" : "rgba(0,0,0,0.20)";
+  const hiA     = light ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.06)";
+  const seam    = light ? "rgba(0,0,0,0.07)"  : "rgba(0,0,0,0.18)";
+  const hemClr  = light ? "rgba(0,0,0,0.09)"  : "rgba(0,0,0,0.22)";
+  const labelBg = light ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.90)";
+
   const BODY = `
-    M 172,64
-    C 142,70 86,85 74,97
-    L 4,183
-    C 18,204 43,218 63,221
+    M 172,64 C 142,70 86,85 74,97
+    L 4,183 C 18,204 43,218 63,221
     C 83,215 110,204 117,196
-    L 117,493
-    Q 117,509 134,511
-    L 426,511
-    Q 443,509 443,493
-    L 443,196
-    C 450,204 477,215 497,221
+    L 117,493 Q 117,509 134,511
+    L 426,511 Q 443,509 443,493
+    L 443,196 C 450,204 477,215 497,221
     C 517,218 542,204 556,183
-    L 486,97
-    C 474,85 418,70 388,64
+    L 486,97 C 474,85 418,70 388,64
     C 366,96 336,118 280,118
     C 224,118 194,96 172,64 Z
   `;
 
   return (
-    <svg viewBox="0 0 560 560" fill="none" xmlns="http://www.w3.org/2000/svg"
-      className="w-full h-full"
-      style={{ filter: "drop-shadow(0 6px 28px rgba(0,0,0,0.50)) drop-shadow(0 2px 8px rgba(0,0,0,0.30))" }}>
-      <defs>
-        {/* Edge-darkening radial gradient (fabric depth) */}
-        <radialGradient id="sh-edge" cx="280" cy="290" r="260" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="rgba(255,255,255,0)" />
-          <stop offset="62%"  stopColor="rgba(0,0,0,0)" />
-          <stop offset="100%" stopColor={shadowA} />
-        </radialGradient>
-        {/* Top-down flat-lay lighting */}
-        <linearGradient id="sh-light" x1="280" y1="64" x2="280" y2="511" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor={hiA} />
-          <stop offset="30%"  stopColor="rgba(255,255,255,0)" />
-          <stop offset="100%" stopColor={shadowB} />
-        </linearGradient>
-        {/* Left-sleeve underside shadow */}
-        <linearGradient id="sh-lsl" x1="4" y1="0" x2="117" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor={shadowA} />
-          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-        </linearGradient>
-        {/* Right-sleeve underside shadow */}
-        <linearGradient id="sh-rsl" x1="556" y1="0" x2="443" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor={shadowA} />
-          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-        </linearGradient>
-        {/* Centre chest catch-light */}
-        <radialGradient id="sh-chest" cx="280" cy="310" r="140" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor={hiA} />
-          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-        </radialGradient>
-      </defs>
+    <div className="relative w-full h-full">
+      <svg viewBox="0 0 560 560" fill="none" xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full"
+        style={{ filter: "drop-shadow(0 6px 28px rgba(0,0,0,0.50)) drop-shadow(0 2px 8px rgba(0,0,0,0.30))" }}>
+        <defs>
+          <radialGradient id="svg-edge" cx="280" cy="290" r="260" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor="rgba(255,255,255,0)" />
+            <stop offset="62%"  stopColor="rgba(0,0,0,0)" />
+            <stop offset="100%" stopColor={shadowA} />
+          </radialGradient>
+          <linearGradient id="svg-light" x1="280" y1="64" x2="280" y2="511" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor={hiA} />
+            <stop offset="30%"  stopColor="rgba(255,255,255,0)" />
+            <stop offset="100%" stopColor={shadowB} />
+          </linearGradient>
+          <radialGradient id="svg-chest" cx="280" cy="310" r="140" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor={hiA} />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </radialGradient>
+        </defs>
 
-      {/* ── Base fill ── */}
-      <path d={BODY} fill={color} />
+        <path d={BODY} fill={color} />
+        <path d={BODY} fill="url(#svg-edge)" />
+        <path d={BODY} fill="url(#svg-light)" />
+        <path d={BODY} fill="url(#svg-chest)" />
 
-      {/* ── Lighting / depth overlays ── */}
-      <path d={BODY} fill="url(#sh-edge)" />
-      <path d={BODY} fill="url(#sh-light)" />
-      <path d={BODY} fill="url(#sh-chest)" />
+        {/* Collar */}
+        <path d="M 177,68 C 197,98 228,116 280,118 C 332,116 363,98 383,68"
+          stroke={shadowA} strokeWidth="11" strokeLinecap="round" fill="none" />
+        <path d="M 181,72 C 200,100 230,116 280,117 C 330,116 360,100 379,72"
+          stroke={shadowB} strokeWidth="4"  strokeLinecap="round" fill="none" />
+        <path d="M 185,75 C 204,102 232,115 280,116 C 328,115 356,102 375,75"
+          stroke={hiA}    strokeWidth="2"  strokeLinecap="round" fill="none" />
 
-      {/* Left sleeve inner shadow */}
-      <path d="M 4,183 C 18,204 43,218 63,221 C 83,215 110,204 117,196 L 117,183"
-        fill="url(#sh-lsl)" opacity="0.5" />
-      {/* Right sleeve inner shadow */}
-      <path d="M 556,183 C 542,204 517,218 497,221 C 477,215 450,204 443,196 L 443,183"
-        fill="url(#sh-rsl)" opacity="0.5" />
+        {/* Brand label */}
+        <g transform="translate(251,100)">
+          <rect width="58" height="20" rx="2" fill={labelBg} />
+          <rect width="58" height="20" rx="2" stroke="rgba(0,0,0,0.10)" strokeWidth="0.5" fill="none" />
+          <text x="29" y="8"    textAnchor="middle" fill="rgba(0,0,0,0.55)" fontSize="4.2" fontFamily="sans-serif" letterSpacing="0.9" fontWeight="600">VINTAGE</text>
+          <text x="29" y="15.5" textAnchor="middle" fill="rgba(0,0,0,0.55)" fontSize="4.2" fontFamily="sans-serif" letterSpacing="0.9" fontWeight="600">GALLERY</text>
+        </g>
 
-      {/* ── Ribbed collar ── */}
-      {/* Outer collar ridge / thickness */}
-      <path d="M 177,68 C 197,98 228,116 280,118 C 332,116 363,98 383,68"
-        stroke={shadowA} strokeWidth="11" strokeLinecap="round" fill="none" />
-      {/* Inner collar line */}
-      <path d="M 181,72 C 200,100 230,116 280,117 C 330,116 360,100 379,72"
-        stroke={shadowB} strokeWidth="4" strokeLinecap="round" fill="none" />
-      {/* Collar top highlight */}
-      <path d="M 185,75 C 204,102 232,115 280,116 C 328,115 356,102 375,75"
-        stroke={hiA} strokeWidth="2" strokeLinecap="round" fill="none" />
-
-      {/* ── Brand label (back neck tag, visible from front in flat-lay) ── */}
-      <g transform="translate(251,100)">
-        <rect width="58" height="20" rx="2" fill={labelBg} />
-        <rect width="58" height="20" rx="2" stroke="rgba(0,0,0,0.10)" strokeWidth="0.5" fill="none" />
-        <text x="29" y="8" textAnchor="middle" fill="rgba(0,0,0,0.55)"
-          fontSize="4.2" fontFamily="sans-serif" letterSpacing="0.9" fontWeight="600">VINTAGE</text>
-        <text x="29" y="15.5" textAnchor="middle" fill="rgba(0,0,0,0.55)"
-          fontSize="4.2" fontFamily="sans-serif" letterSpacing="0.9" fontWeight="600">GALLERY</text>
-      </g>
-
-      {/* ── Shoulder seams ── */}
-      <path d="M 175,67 C 150,73 102,86 76,97" stroke={seam} strokeWidth="1" fill="none" />
-      <path d="M 385,67 C 410,73 458,86 484,97" stroke={seam} strokeWidth="1" fill="none" />
-
-      {/* ── Left sleeve hem ── */}
-      <path d="M 6,185 C 20,206 44,220 65,223" stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
-      <path d="M 8,182 C 22,203 46,217 67,220" stroke={hiA}    strokeWidth="1.5" strokeLinecap="round" fill="none" />
-
-      {/* ── Right sleeve hem ── */}
-      <path d="M 554,185 C 540,206 516,220 495,223" stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
-      <path d="M 552,182 C 538,203 514,217 493,220" stroke={hiA}    strokeWidth="1.5" strokeLinecap="round" fill="none" />
-
-      {/* ── Side seams ── */}
-      <path d="M 117,202 L 117,493" stroke={seam} strokeWidth="1" fill="none" />
-      <path d="M 443,202 L 443,493" stroke={seam} strokeWidth="1" fill="none" />
-
-      {/* ── Bottom hem ── */}
-      <path d="M 117,493 Q 117,509 134,511 L 426,511 Q 443,509 443,493"
-        stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
-      <path d="M 117,490 Q 117,506 134,508 L 426,508 Q 443,506 443,490"
-        stroke={hiA} strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      {/* Double-stitch on hem */}
-      <path d="M 127,504 L 433,504" stroke={seam} strokeWidth="0.5" fill="none" />
-    </svg>
+        {/* Seams / hems */}
+        <path d="M 175,67 C 150,73 102,86 76,97"  stroke={seam} strokeWidth="1" fill="none" />
+        <path d="M 385,67 C 410,73 458,86 484,97"  stroke={seam} strokeWidth="1" fill="none" />
+        <path d="M 6,185 C 20,206 44,220 65,223"   stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
+        <path d="M 554,185 C 540,206 516,220 495,223" stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
+        <path d="M 117,202 L 117,493" stroke={seam} strokeWidth="1" fill="none" />
+        <path d="M 443,202 L 443,493" stroke={seam} strokeWidth="1" fill="none" />
+        <path d="M 117,493 Q 117,509 134,511 L 426,511 Q 443,509 443,493"
+          stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
+        <path d="M 127,504 L 433,504" stroke={seam} strokeWidth="0.5" fill="none" />
+      </svg>
+      {children}
+    </div>
   );
 }
 
-// ─── Back of shirt ────────────────────────────────────────────────────────────
+// ─── Back of shirt (SVG) ──────────────────────────────────────────────────────
 
 function PlainShirtBack({ color, light }: { color: string; light: boolean }) {
   const shadowA = light ? "rgba(0,0,0,0.11)" : "rgba(0,0,0,0.28)";
   const shadowB = light ? "rgba(0,0,0,0.07)" : "rgba(0,0,0,0.20)";
   const hiA     = light ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.06)";
-  const seam    = light ? "rgba(0,0,0,0.07)" : "rgba(0,0,0,0.18)";
-  const hemClr  = light ? "rgba(0,0,0,0.09)" : "rgba(0,0,0,0.22)";
+  const seam    = light ? "rgba(0,0,0,0.07)"  : "rgba(0,0,0,0.18)";
+  const hemClr  = light ? "rgba(0,0,0,0.09)"  : "rgba(0,0,0,0.22)";
   const labelBg = light ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.90)";
 
-  // Back neckline is a shallow curve (not deep like the front)
   const BODY = `
-    M 172,64
-    C 142,70 86,85 74,97
-    L 4,183
-    C 18,204 43,218 63,221
+    M 172,64 C 142,70 86,85 74,97
+    L 4,183 C 18,204 43,218 63,221
     C 83,215 110,204 117,196
-    L 117,493
-    Q 117,509 134,511
-    L 426,511
-    Q 443,509 443,493
-    L 443,196
-    C 450,204 477,215 497,221
+    L 117,493 Q 117,509 134,511
+    L 426,511 Q 443,509 443,493
+    L 443,196 C 450,204 477,215 497,221
     C 517,218 542,204 556,183
-    L 486,97
-    C 474,85 418,70 388,64
+    L 486,97 C 474,85 418,70 388,64
     C 366,74 330,82 280,82
     C 230,82 194,74 172,64 Z
   `;
@@ -223,32 +285,27 @@ function PlainShirtBack({ color, light }: { color: string; light: boolean }) {
       <path d={BODY} fill="url(#sb-edge)" />
       <path d={BODY} fill="url(#sb-light)" />
 
-      {/* Back collar / neckline rib */}
+      {/* Back collar */}
       <path d="M 177,68 C 205,78 255,84 280,84 C 305,84 355,78 383,68"
         stroke={shadowA} strokeWidth="9" strokeLinecap="round" fill="none" />
       <path d="M 181,71 C 208,80 257,85 280,85 C 303,85 352,80 379,71"
         stroke={hiA} strokeWidth="2" strokeLinecap="round" fill="none" />
 
-      {/* Back neck label (visible from back) */}
+      {/* Back neck label */}
       <g transform="translate(251,68)">
         <rect width="58" height="20" rx="2" fill={labelBg} />
         <rect width="58" height="20" rx="2" stroke="rgba(0,0,0,0.10)" strokeWidth="0.5" fill="none" />
-        <text x="29" y="8" textAnchor="middle" fill="rgba(0,0,0,0.55)"
-          fontSize="4.2" fontFamily="sans-serif" letterSpacing="0.9" fontWeight="600">VINTAGE</text>
-        <text x="29" y="15.5" textAnchor="middle" fill="rgba(0,0,0,0.55)"
-          fontSize="4.2" fontFamily="sans-serif" letterSpacing="0.9" fontWeight="600">GALLERY</text>
+        <text x="29" y="8"    textAnchor="middle" fill="rgba(0,0,0,0.55)" fontSize="4.2" fontFamily="sans-serif" letterSpacing="0.9" fontWeight="600">VINTAGE</text>
+        <text x="29" y="15.5" textAnchor="middle" fill="rgba(0,0,0,0.55)" fontSize="4.2" fontFamily="sans-serif" letterSpacing="0.9" fontWeight="600">GALLERY</text>
       </g>
 
-      {/* Shoulder seams */}
-      <path d="M 175,67 C 150,73 102,86 76,97" stroke={seam} strokeWidth="1" fill="none" />
-      <path d="M 385,67 C 410,73 458,86 484,97" stroke={seam} strokeWidth="1" fill="none" />
-      {/* Sleeve hems */}
-      <path d="M 6,185 C 20,206 44,220 65,223" stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
+      {/* Seams / hems */}
+      <path d="M 175,67 C 150,73 102,86 76,97"  stroke={seam} strokeWidth="1" fill="none" />
+      <path d="M 385,67 C 410,73 458,86 484,97"  stroke={seam} strokeWidth="1" fill="none" />
+      <path d="M 6,185 C 20,206 44,220 65,223"   stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
       <path d="M 554,185 C 540,206 516,220 495,223" stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
-      {/* Side seams */}
       <path d="M 117,202 L 117,493" stroke={seam} strokeWidth="1" fill="none" />
       <path d="M 443,202 L 443,493" stroke={seam} strokeWidth="1" fill="none" />
-      {/* Bottom hem */}
       <path d="M 117,493 Q 117,509 134,511 L 426,511 Q 443,509 443,493"
         stroke={hemClr} strokeWidth="5.5" strokeLinecap="round" fill="none" />
       <path d="M 127,504 L 433,504" stroke={seam} strokeWidth="0.5" fill="none" />
@@ -256,9 +313,9 @@ function PlainShirtBack({ color, light }: { color: string; light: boolean }) {
   );
 }
 
-// ─── Print Zone overlay ───────────────────────────────────────────────────────
-// Positioned on the chest area of the new viewBox (0 0 560 560)
-// Print zone: x 155–405 (left 27.7%, right 27.7%), y 230–390 (top 41%, h 28.6%)
+// ─── Print zone ───────────────────────────────────────────────────────────────
+// Positioned over the chest area of the real photo.
+// The shirt in the photo: chest spans ~22%–78% horizontally, ~33%–65% vertically.
 
 function PrintZone({
   light, designType, customText, selectedDesign,
@@ -266,36 +323,44 @@ function PrintZone({
   light: boolean; designType: string; customText: string; selectedDesign: StudioDesign | null;
 }) {
   if (designType === "none") return null;
-  const textCol   = light ? "rgba(0,0,0,0.80)"   : "rgba(255,255,255,0.92)";
-  const borderCol = light ? "rgba(0,0,0,0.16)"   : "rgba(255,255,255,0.20)";
+  const textCol   = light ? "rgba(0,0,0,0.80)"  : "rgba(255,255,255,0.92)";
+  const borderCol = light ? "rgba(0,0,0,0.16)"  : "rgba(255,255,255,0.20)";
 
   return (
     <div className="absolute pointer-events-none flex items-center justify-center"
-      style={{ left: "27%", right: "27%", top: "41%", height: "27%" }}>
+      style={{ left: "24%", right: "24%", top: "34%", height: "28%" }}>
+
       {designType === "text" && customText && (
-        <motion.span key={customText} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2 }} className="font-serif text-center leading-tight break-words w-full"
+        <motion.span key={customText}
+          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2 }}
+          className="font-serif text-center leading-tight break-words w-full"
           style={{
-            fontSize: "clamp(0.8rem, 3vw, 1.3rem)", fontWeight: 600,
+            fontSize: "clamp(0.8rem,3vw,1.3rem)", fontWeight: 600,
             letterSpacing: "0.12em", textTransform: "uppercase", color: textCol,
             textShadow: light ? "0 1px 4px rgba(255,255,255,0.5)" : "0 1px 4px rgba(0,0,0,0.6)",
           }}>
           {customText}
         </motion.span>
       )}
+
       {designType === "text" && !customText && (
         <span className="font-sans text-center"
           style={{ fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: borderCol }}>
           Your text here
         </span>
       )}
+
       {designType === "graphic" && selectedDesign && (
-        <motion.div key={selectedDesign.id} initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }}
+        <motion.div key={selectedDesign.id}
+          initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.25 }} className="relative w-full h-full">
           <Image src={selectedDesign.imageUrl} alt={selectedDesign.name} fill
-            className="object-contain" style={{ mixBlendMode: light ? "multiply" : "screen" }} unoptimized />
+            className="object-contain"
+            style={{ mixBlendMode: light ? "multiply" : "screen" }} unoptimized />
         </motion.div>
       )}
+
       {designType === "graphic" && !selectedDesign && (
         <div className="w-full h-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1"
           style={{ borderColor: borderCol }}>
@@ -327,7 +392,7 @@ function GridFloor() {
   return (
     <div className="absolute bottom-0 left-0 right-0 h-[38%] overflow-hidden pointer-events-none">
       <div className="w-full h-full" style={{
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px)`,
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px)`,
         backgroundSize: "60px 60px",
         transform: "perspective(350px) rotateX(52deg)",
         transformOrigin: "center top",
@@ -357,7 +422,7 @@ export default function ProductCustomizer() {
   const { isSignedIn } = useAuth();
   const addItem        = useCartStore((s) => s.addItem);
 
-  const [color,          setColor]          = useState<ShirtColor>(SHIRT_COLORS[0]);
+  const [color,          setColor]          = useState<ShirtColor>(SHIRT_COLORS[1]); // default Black (matches photo)
   const [size,           setSize]           = useState("M");
   const [designType,     setDesignType]     = useState("none");
   const [customText,     setCustomText]     = useState("");
@@ -442,7 +507,7 @@ export default function ProductCustomizer() {
   };
 
   const handleReset = () => {
-    setColor(SHIRT_COLORS[0]);
+    setColor(SHIRT_COLORS[1]);
     setSize("M");
     setDesignType("none");
     setCustomText("");
@@ -458,14 +523,12 @@ export default function ProductCustomizer() {
       <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-zinc-400 font-light">
         Shirt Colour
       </p>
-      {/* 2×3 colour grid with labels */}
       <div className="grid grid-cols-3 gap-3">
         {SHIRT_COLORS.map(c => (
           <button key={c.hex} onClick={() => setColor(c)}
             className={`flex flex-col items-center gap-2 p-2 rounded-xl transition-all duration-200 ${
               color.hex === c.hex ? "ring-2 ring-white ring-offset-2 ring-offset-black" : "hover:bg-white/5"
             }`}>
-            {/* Colour circle */}
             <div className="w-10 h-10 rounded-full transition-transform duration-200 hover:scale-110"
               style={{
                 backgroundColor: c.hex,
@@ -480,8 +543,6 @@ export default function ProductCustomizer() {
           </button>
         ))}
       </div>
-
-      {/* Selected colour name */}
       <div className="flex items-center gap-2.5 pt-1">
         <div className="w-3 h-3 rounded-full shrink-0"
           style={{ backgroundColor: color.hex, boxShadow: `0 0 8px ${color.hex}80` }} />
@@ -494,7 +555,6 @@ export default function ProductCustomizer() {
 
   const DesignControls = () => (
     <div className="p-5 space-y-5 overflow-y-auto max-h-[70vh]">
-      {/* Type selector */}
       <div>
         <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-zinc-400 font-light mb-3">
           Customisation
@@ -518,7 +578,6 @@ export default function ProductCustomizer() {
         </div>
       </div>
 
-      {/* Text input */}
       <AnimatePresence>
         {designType === "text" && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
@@ -569,7 +628,8 @@ export default function ProductCustomizer() {
             {selectedDesign && (
               <p className="font-sans text-[10px] text-zinc-400">
                 {selectedDesign.name}
-                <button onClick={() => setSelectedDesign(null)} className="ml-2 text-zinc-600 hover:text-zinc-300 underline underline-offset-2">Clear</button>
+                <button onClick={() => setSelectedDesign(null)}
+                  className="ml-2 text-zinc-600 hover:text-zinc-300 underline underline-offset-2">Clear</button>
               </p>
             )}
           </motion.div>
@@ -578,18 +638,45 @@ export default function ProductCustomizer() {
     </div>
   );
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ─── Shirt scene — shared between desktop + mobile ────────────────────────────
+
+  function ShirtScene({ width, height }: { width: number; height: number }) {
+    return (
+      <div style={{ perspective: "900px" }}
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
+        className={isDragging ? "cursor-grabbing" : "cursor-grab"}>
+        <motion.div
+          animate={isDragging ? {} : { y: [0, -12, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+          <div style={{
+            width: `${width}px`, height: `${height}px`,
+            transformStyle: "preserve-3d",
+            transform: `rotateY(${rotateY}deg)`,
+            transition: isDragging ? "none" : "transform 0.7s cubic-bezier(0.34,1.4,0.64,1)",
+          }}>
+            {/* Front — real photo via canvas */}
+            <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
+              <ShirtCanvas color={color}>
+                <PrintZone light={color.light} designType={designType}
+                  customText={customText} selectedDesign={selectedDesign} />
+              </ShirtCanvas>
+            </div>
+            {/* Back — SVG illustration */}
+            <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+              <PlainShirtBack color={color.hex} light={color.light} />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <section className="relative min-h-screen overflow-hidden"
       style={{ background: "linear-gradient(160deg,#0a0a0f 0%,#030303 60%,#050508 100%)" }}>
-
-      <style>{`
-        @keyframes vr-float {
-          0%,100% { transform: translateY(0px) rotateZ(-0.3deg); }
-          50%      { transform: translateY(-14px) rotateZ(0.3deg); }
-        }
-      `}</style>
 
       <AmbientGlow hex={color.hex} />
       <GridFloor />
@@ -640,45 +727,12 @@ export default function ProductCustomizer() {
           transition={{ delay: 0.05, duration: 0.8 }}
           className="flex-1 flex flex-col items-center justify-center py-6 max-w-[440px]">
 
-          {/* Shirt canvas */}
-          <div style={{ perspective: "900px" }}
-            onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
-            className={isDragging ? "cursor-grabbing" : "cursor-grab"}>
-            <motion.div
-              animate={isDragging ? {} : { y: [0, -14, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
-              <AnimatePresence mode="wait">
-                <motion.div key={color.hex + "-container"} style={{
-                  width: "310px", height: "370px",
-                  transformStyle: "preserve-3d",
-                  transform: `rotateY(${rotateY}deg)`,
-                  transition: isDragging ? "none" : "transform 0.7s cubic-bezier(0.34,1.4,0.64,1)",
-                }}>
-                  {/* Front */}
-                  <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
-                    <motion.div key={color.hex} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }} className="relative w-full h-full">
-                      <PlainShirt color={color.hex} light={color.light} />
-                      <PrintZone light={color.light} designType={designType}
-                        customText={customText} selectedDesign={selectedDesign} />
-                    </motion.div>
-                  </div>
-                  {/* Back */}
-                  <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                    <div className="relative w-full h-full">
-                      <PlainShirtBack color={color.hex} light={color.light} />
-                    </div>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </motion.div>
-          </div>
+          <ShirtScene width={310} height={380} />
 
           {/* Front / back dots */}
           <div className="flex gap-2 mt-5">
             {[0, 180].map(angle => {
-              const mod = ((rotateY % 360) + 360) % 360;
+              const mod    = ((rotateY % 360) + 360) % 360;
               const active = angle === 0 ? (mod <= 90 || mod >= 270) : !(mod <= 90 || mod >= 270);
               return <button key={angle} onClick={() => setRotateY(angle)}
                 className={`h-1.5 rounded-full transition-all duration-300 ${active ? "w-6 bg-white" : "w-1.5 bg-white/20"}`} />;
@@ -700,7 +754,8 @@ export default function ProductCustomizer() {
               {SIZES.map(s => (
                 <button key={s} onClick={() => { setSize(s); setSizeError(false); }}
                   className={`w-11 h-11 rounded-full font-sans text-[11px] border transition-all duration-200 ${
-                    size === s ? "bg-white text-zinc-900 border-white"
+                    size === s
+                      ? "bg-white text-zinc-900 border-white"
                       : "border-white/15 text-zinc-500 hover:border-white/40 hover:text-zinc-200"
                   }`}>{s}</button>
               ))}
@@ -729,7 +784,6 @@ export default function ProductCustomizer() {
 
           <GlassPanel><DesignControls /></GlassPanel>
 
-          {/* Price */}
           <GlassPanel>
             <div className="p-5 space-y-1">
               <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-500 font-light">Total</p>
@@ -745,7 +799,6 @@ export default function ProductCustomizer() {
             </div>
           </GlassPanel>
 
-          {/* Actions */}
           <div className="space-y-2">
             <button onClick={handleAddToCart} disabled={!pricesLoaded}
               className="w-full flex items-center justify-center gap-2.5 bg-white text-zinc-900 font-sans font-medium text-[11px] tracking-[0.15em] uppercase py-4 rounded-full hover:bg-zinc-100 transition-colors disabled:opacity-40">
@@ -753,7 +806,10 @@ export default function ProductCustomizer() {
             </button>
             <div className="flex gap-2">
               <button
-                onClick={() => { if (!isSignedIn) { setAuthToast(true); setTimeout(() => setAuthToast(false), 3000); return; } setWishlisted(w => !w); }}
+                onClick={() => {
+                  if (!isSignedIn) { setAuthToast(true); setTimeout(() => setAuthToast(false), 3000); return; }
+                  setWishlisted(w => !w);
+                }}
                 className="flex-1 flex items-center justify-center gap-2 font-sans text-[10px] tracking-[0.12em] uppercase py-3 rounded-full transition-all"
                 style={{ border: "1px solid rgba(255,255,255,0.10)", color: wishlisted ? "#fff" : "rgba(255,255,255,0.4)" }}>
                 <Heart size={12} className={wishlisted ? "fill-white" : ""} />
@@ -789,38 +845,11 @@ export default function ProductCustomizer() {
       {/* ── MOBILE ─────────────────────────────────────────────────────────────── */}
       <div className="lg:hidden relative z-10 pb-36">
 
-        {/* Shirt */}
         <div className="flex flex-col items-center pt-2 pb-4">
-          <div style={{ perspective: "900px" }}
-            onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
-            className={isDragging ? "cursor-grabbing" : "cursor-grab"}>
-            <motion.div animate={isDragging ? {} : { y: [0, -10, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
-              <div style={{
-                width: "250px", height: "300px",
-                transformStyle: "preserve-3d",
-                transform: `rotateY(${rotateY}deg)`,
-                transition: isDragging ? "none" : "transform 0.7s cubic-bezier(0.34,1.4,0.64,1)",
-              }}>
-                <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
-                  <div className="relative w-full h-full">
-                    <PlainShirt color={color.hex} light={color.light} />
-                    <PrintZone light={color.light} designType={designType}
-                      customText={customText} selectedDesign={selectedDesign} />
-                  </div>
-                </div>
-                <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                  <div className="relative w-full h-full">
-                    <PlainShirtBack color={color.hex} light={color.light} />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
+          <ShirtScene width={250} height={300} />
           <div className="flex gap-2 mt-3">
             {[0, 180].map(angle => {
-              const mod = ((rotateY % 360) + 360) % 360;
+              const mod    = ((rotateY % 360) + 360) % 360;
               const active = angle === 0 ? (mod <= 90 || mod >= 270) : !(mod <= 90 || mod >= 270);
               return <button key={angle} onClick={() => setRotateY(angle)}
                 className={`h-1 rounded-full transition-all duration-300 ${active ? "w-5 bg-white" : "w-1 bg-white/20"}`} />;
@@ -858,7 +887,8 @@ export default function ProductCustomizer() {
                 <p className={`font-sans text-[9px] tracking-[0.3em] uppercase font-light ${sizeError ? "text-red-400" : "text-zinc-500"}`}>
                   {sizeError ? "Select a size" : "Size"}
                 </p>
-                <Link href="/sizing-guide" className="font-sans text-[9px] uppercase tracking-[0.1em] text-zinc-700 underline underline-offset-2">
+                <Link href="/sizing-guide"
+                  className="font-sans text-[9px] uppercase tracking-[0.1em] text-zinc-700 underline underline-offset-2">
                   Size Guide
                 </Link>
               </div>
@@ -900,7 +930,10 @@ export default function ProductCustomizer() {
             {addedToCart ? <><Check size={14} /> Added!</> : <><ShoppingBag size={14} /> Add to Cart</>}
           </button>
           <button
-            onClick={() => { if (!isSignedIn) { setAuthToast(true); setTimeout(() => setAuthToast(false), 3000); return; } setWishlisted(w => !w); }}
+            onClick={() => {
+              if (!isSignedIn) { setAuthToast(true); setTimeout(() => setAuthToast(false), 3000); return; }
+              setWishlisted(w => !w);
+            }}
             className="w-14 h-14 rounded-2xl flex items-center justify-center"
             style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
             <Heart size={16} className={wishlisted ? "fill-white text-white" : "text-zinc-500"} />
@@ -908,7 +941,7 @@ export default function ProductCustomizer() {
         </div>
       </div>
 
-      {/* Arrow buttons (desktop) */}
+      {/* Desktop rotate buttons */}
       <div className="hidden lg:flex absolute bottom-8 left-1/2 -translate-x-1/2 z-10 items-center gap-3">
         <button onClick={() => setRotateY(r => r - 90)}
           className="w-9 h-9 rounded-full flex items-center justify-center text-white/30 hover:text-white/70 transition-colors"
