@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 sm:px-8 sm:py-8">
       <div className="mb-8">
         <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Overview</p>
         <h1 className="font-serif text-zinc-900" style={{ fontSize: "2rem", fontWeight: 300 }}>Dashboard</h1>
@@ -94,6 +94,7 @@ export default function AdminDashboard() {
         {recent.length === 0
           ? <p className="px-6 py-8 font-sans text-sm text-zinc-300 text-center">No orders yet.</p>
           : (
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-zinc-50">
@@ -122,6 +123,7 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
       </div>
     </div>

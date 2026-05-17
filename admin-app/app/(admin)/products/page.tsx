@@ -54,7 +54,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 sm:px-8 sm:py-8">
       <div className="flex items-end justify-between mb-8">
         <div>
           <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Catalog</p>
@@ -77,6 +77,7 @@ export default function ProductsPage() {
             <Link href="/products/new" className="font-sans text-sm text-zinc-900 font-medium hover:underline">Add your first product →</Link>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-100">
@@ -124,6 +125,7 @@ export default function ProductsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>
