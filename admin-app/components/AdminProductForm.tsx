@@ -108,7 +108,7 @@ export default function AdminProductForm({ initial, mode }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>Product Name *</label>
           <input className={inputCls} value={form.name} onChange={e => set("name", e.target.value)} required placeholder="All Eyez On Me" />
@@ -119,7 +119,7 @@ export default function AdminProductForm({ initial, mode }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>Collection *</label>
           <input className={inputCls} value={form.collection} onChange={e => set("collection", e.target.value)} required placeholder="Icons Series" />
@@ -140,7 +140,7 @@ export default function AdminProductForm({ initial, mode }: Props) {
         <input className={inputCls} value={form.images} onChange={e => set("images", e.target.value)} placeholder="/asset/product-tupac-back.jpg, ..." />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>Base Color</label>
           <input className={inputCls} value={form.color} onChange={e => set("color", e.target.value)} placeholder="White" />
@@ -167,7 +167,7 @@ export default function AdminProductForm({ initial, mode }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div>
           <label className={labelCls}>Badge</label>
           <select className={inputCls} value={form.badge} onChange={e => set("badge", e.target.value)}>

@@ -73,23 +73,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
     </div>
   );
-  if (!order) return <div className="px-8 py-8 font-sans text-sm text-zinc-400">Order not found.</div>;
+  if (!order) return <div className="px-4 md:px-8 py-6 md:py-8 font-sans text-sm text-zinc-400">Order not found.</div>;
 
   const subtotal = order.items.reduce((s, i) => s + i.subtotal, 0);
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-4 md:px-8 py-6 md:py-8 max-w-4xl">
       <Link href="/orders" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-300 hover:text-zinc-600 transition-colors mb-8">
         <ArrowLeft size={12} /> Orders
       </Link>
 
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-8">
         <div>
           <p className="font-mono text-sm text-zinc-400 mb-1">{order.paystackReference}</p>
-          <h1 className="font-serif text-zinc-900 mb-1" style={{ fontSize: "1.8rem", fontWeight: 300 }}>Order Detail</h1>
+          <h1 className="font-serif text-zinc-900 mb-1" style={{ fontSize: "clamp(1.4rem, 4vw, 1.8rem)", fontWeight: 300 }}>Order Detail</h1>
           <p className="font-sans text-sm text-zinc-400">{fmt(order.createdAt)}</p>
         </div>
-        <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-3 py-1.5 rounded-full ${STATUS_COLOR[order.status] ?? "bg-zinc-100 text-zinc-500"}`}>
+        <span className={`self-start font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-3 py-1.5 rounded-full ${STATUS_COLOR[order.status] ?? "bg-zinc-100 text-zinc-500"}`}>
           {order.status}
         </span>
       </div>
@@ -97,29 +97,31 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white border border-zinc-100 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-50">
+            <div className="px-5 md:px-6 py-4 border-b border-zinc-50">
               <h2 className="font-sans text-sm font-medium text-zinc-800">Order Items</h2>
             </div>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-zinc-50">
-                  {["Product","Size","Qty","Unit","Subtotal"].map(h => (
-                    <th key={h} className="px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {order.items.map(item => (
-                  <tr key={item.id} className="border-b border-zinc-50 last:border-0">
-                    <td className="px-5 py-3 font-sans text-sm text-zinc-700">{item.product?.name ?? "Deleted"}</td>
-                    <td className="px-5 py-3 font-sans text-sm text-zinc-400">{item.size}</td>
-                    <td className="px-5 py-3 font-sans text-sm text-zinc-400">{item.quantity}</td>
-                    <td className="px-5 py-3 font-sans text-sm text-zinc-400">GH₵ {item.unitPrice}</td>
-                    <td className="px-5 py-3 font-sans text-sm font-medium text-zinc-700">GH₵ {item.subtotal}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[400px]">
+                <thead>
+                  <tr className="border-b border-zinc-50">
+                    {["Product","Size","Qty","Unit","Subtotal"].map(h => (
+                      <th key={h} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {order.items.map(item => (
+                    <tr key={item.id} className="border-b border-zinc-50 last:border-0">
+                      <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-700">{item.product?.name ?? "Deleted"}</td>
+                      <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-400">{item.size}</td>
+                      <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-400">{item.quantity}</td>
+                      <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-400">GH₵ {item.unitPrice}</td>
+                      <td className="px-4 md:px-5 py-3 font-sans text-sm font-medium text-zinc-700">GH₵ {item.subtotal}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <div className="px-5 py-4 border-t border-zinc-50 space-y-1.5">
               <div className="flex justify-between font-sans text-sm text-zinc-400"><span>Subtotal</span><span>GH₵ {subtotal}</span></div>
               <div className="flex justify-between font-sans text-sm text-zinc-400"><span>Delivery</span><span>GH₵ 30</span></div>

@@ -97,7 +97,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </Link>
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-8">
           <div>
             <p className="font-mono text-sm text-zinc-400 mb-1">
               #{order.paystackReference.slice(-8).toUpperCase()}
@@ -108,7 +108,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </h1>
             <p className="font-sans text-sm text-zinc-400">{fmt(order.createdAt)}</p>
           </div>
-          <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-3 py-1.5 rounded-full ${STATUS_COLOR[order.status] ?? "bg-zinc-100 text-zinc-500"}`}>
+          <span className={`self-start font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-3 py-1.5 rounded-full ${STATUS_COLOR[order.status] ?? "bg-zinc-100 text-zinc-500"}`}>
             {order.status}
           </span>
         </div>
@@ -161,26 +161,28 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <div className="px-5 py-4 border-b border-zinc-50">
                 <h2 className="font-sans text-sm font-medium text-zinc-800">Items</h2>
               </div>
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-zinc-50">
-                    {["Product","Size","Qty","Price","Subtotal"].map(h => (
-                      <th key={h} className="px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {order.items.map(item => (
-                    <tr key={item.id} className="border-b border-zinc-50 last:border-0">
-                      <td className="px-5 py-3 font-sans text-sm text-zinc-700">{item.product?.name ?? "Product deleted"}</td>
-                      <td className="px-5 py-3 font-sans text-sm text-zinc-400">{item.size}</td>
-                      <td className="px-5 py-3 font-sans text-sm text-zinc-400">{item.quantity}</td>
-                      <td className="px-5 py-3 font-sans text-sm text-zinc-400">GH₵ {item.unitPrice}</td>
-                      <td className="px-5 py-3 font-sans text-sm font-medium text-zinc-700">GH₵ {item.subtotal}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[380px]">
+                  <thead>
+                    <tr className="border-b border-zinc-50">
+                      {["Product","Size","Qty","Price","Subtotal"].map(h => (
+                        <th key={h} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {order.items.map(item => (
+                      <tr key={item.id} className="border-b border-zinc-50 last:border-0">
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-700">{item.product?.name ?? "Product deleted"}</td>
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-400">{item.size}</td>
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-400">{item.quantity}</td>
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-400">GH₵ {item.unitPrice}</td>
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm font-medium text-zinc-700">GH₵ {item.subtotal}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               {/* Financial summary */}
               <div className="px-5 py-4 border-t border-zinc-50 space-y-2">
                 <div className="flex justify-between font-sans text-sm text-zinc-400">

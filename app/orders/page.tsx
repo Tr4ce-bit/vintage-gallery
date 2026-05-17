@@ -79,38 +79,40 @@ export default function OrdersPage() {
               </Link>
             </div>
           ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-zinc-100">
-                  {["Order","Date","Items","Total","Status",""].map((h, i) => (
-                    <th key={i} className="px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map(o => (
-                  <tr key={o.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
-                    <td className="px-5 py-4 font-mono text-xs text-zinc-500">
-                      #{o.paystackReference.slice(-8).toUpperCase()}
-                    </td>
-                    <td className="px-5 py-4 font-sans text-sm text-zinc-400">{fmt(o.createdAt)}</td>
-                    <td className="px-5 py-4 font-sans text-sm text-zinc-400">{o.items.length} {o.items.length === 1 ? "item" : "items"}</td>
-                    <td className="px-5 py-4 font-sans text-sm font-medium text-zinc-700">GH₵ {o.totalAmount}</td>
-                    <td className="px-5 py-4">
-                      <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-zinc-100 text-zinc-500"}`}>
-                        {o.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <Link href={`/orders/${o.id}`}
-                        className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors">
-                        View →
-                      </Link>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px]">
+                <thead>
+                  <tr className="border-b border-zinc-100">
+                    {["Order","Date","Items","Total","Status",""].map((h, i) => (
+                      <th key={i} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {orders.map(o => (
+                    <tr key={o.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
+                      <td className="px-4 md:px-5 py-4 font-mono text-xs text-zinc-500">
+                        #{o.paystackReference.slice(-8).toUpperCase()}
+                      </td>
+                      <td className="px-4 md:px-5 py-4 font-sans text-sm text-zinc-400 whitespace-nowrap">{fmt(o.createdAt)}</td>
+                      <td className="px-4 md:px-5 py-4 font-sans text-sm text-zinc-400">{o.items.length} {o.items.length === 1 ? "item" : "items"}</td>
+                      <td className="px-4 md:px-5 py-4 font-sans text-sm font-medium text-zinc-700">GH₵ {o.totalAmount}</td>
+                      <td className="px-4 md:px-5 py-4">
+                        <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-zinc-100 text-zinc-500"}`}>
+                          {o.status}
+                        </span>
+                      </td>
+                      <td className="px-4 md:px-5 py-4">
+                        <Link href={`/orders/${o.id}`}
+                          className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors">
+                          View →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

@@ -54,11 +54,11 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="px-8 py-8">
-      <div className="flex items-end justify-between mb-8">
+    <div className="px-4 md:px-8 py-6 md:py-8">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-8">
         <div>
           <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Catalog</p>
-          <h1 className="font-serif text-zinc-900" style={{ fontSize: "2rem", fontWeight: 300 }}>Products</h1>
+          <h1 className="font-serif text-zinc-900" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>Products</h1>
         </div>
         <Link href="/products/new"
           className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-zinc-700 text-white rounded-full font-sans text-[11px] tracking-[0.15em] uppercase transition-colors">
@@ -77,53 +77,55 @@ export default function ProductsPage() {
             <Link href="/products/new" className="font-sans text-sm text-zinc-900 font-medium hover:underline">Add your first product →</Link>
           </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-zinc-100">
-                {["","Name","Collection","Price","Stock","Status",""].map((h,i) => (
-                  <th key={i} className="px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {products.map(p => (
-                <tr key={p.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
-                  <td className="px-5 py-3.5 w-12">
-                    <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-zinc-100">
-                      <Image src={p.imageUrl} alt={p.name} fill className="object-cover" />
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <p className="font-sans text-sm font-medium text-zinc-800">{p.name}</p>
-                    {p.badge && <span className="font-sans text-[9px] tracking-[0.15em] uppercase text-zinc-400">{p.badge}</span>}
-                  </td>
-                  <td className="px-5 py-3.5 font-sans text-sm text-zinc-500">{p.collection}</td>
-                  <td className="px-5 py-3.5 font-sans text-sm text-zinc-700 font-medium">GH₵ {p.basePrice}</td>
-                  <td className="px-5 py-3.5 font-sans text-sm text-zinc-500">{p.stock}</td>
-                  <td className="px-5 py-3.5">
-                    <button onClick={() => toggleActive(p.id, p.isActive)}
-                      className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full transition-colors ${
-                        p.isActive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
-                      }`}>
-                      {p.isActive ? "Active" : "Inactive"}
-                    </button>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2">
-                      <Link href={`/products/${p.id}`}
-                        className="w-7 h-7 rounded-lg bg-zinc-50 hover:bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors">
-                        <Pencil size={12} />
-                      </Link>
-                      <button onClick={() => deleteProduct(p.id, p.name)}
-                        className="w-7 h-7 rounded-lg bg-zinc-50 hover:bg-red-50 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors">
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[580px]">
+              <thead>
+                <tr className="border-b border-zinc-100">
+                  {["","Name","Collection","Price","Stock","Status",""].map((h,i) => (
+                    <th key={i} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {products.map(p => (
+                  <tr key={p.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
+                    <td className="px-4 md:px-5 py-3.5 w-12">
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-zinc-100">
+                        <Image src={p.imageUrl} alt={p.name} fill className="object-cover" />
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-5 py-3.5">
+                      <p className="font-sans text-sm font-medium text-zinc-800">{p.name}</p>
+                      {p.badge && <span className="font-sans text-[9px] tracking-[0.15em] uppercase text-zinc-400">{p.badge}</span>}
+                    </td>
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-500">{p.collection}</td>
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-700 font-medium">GH₵ {p.basePrice}</td>
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-500">{p.stock}</td>
+                    <td className="px-4 md:px-5 py-3.5">
+                      <button onClick={() => toggleActive(p.id, p.isActive)}
+                        className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full transition-colors ${
+                          p.isActive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
+                        }`}>
+                        {p.isActive ? "Active" : "Inactive"}
+                      </button>
+                    </td>
+                    <td className="px-4 md:px-5 py-3.5">
+                      <div className="flex items-center gap-2">
+                        <Link href={`/products/${p.id}`}
+                          className="w-7 h-7 rounded-lg bg-zinc-50 hover:bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors">
+                          <Pencil size={12} />
+                        </Link>
+                        <button onClick={() => deleteProduct(p.id, p.name)}
+                          className="w-7 h-7 rounded-lg bg-zinc-50 hover:bg-red-50 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

@@ -41,8 +41,11 @@ function PhotoCard({ p, i, featured }: { p: Product; i: number; featured?: boole
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-5%" }}
       transition={{ duration: 0.65, delay: i * 0.1, ease: [0.22, 0.61, 0.36, 1] }}
-      className={`group relative overflow-hidden rounded-2xl bg-zinc-100 ${featured ? "md:col-span-2 md:row-span-2" : ""}`}
-      style={{ minHeight: featured ? "520px" : "380px" }}
+      className={`group relative overflow-hidden rounded-2xl bg-zinc-100 ${
+        featured
+          ? "md:col-span-2 md:row-span-2 min-h-[280px] sm:min-h-[420px] md:min-h-[520px]"
+          : "min-h-[260px] sm:min-h-[380px]"
+      }`}
     >
       <Link href={`/product/${p.slug}`} className="absolute inset-0 z-10" aria-label={`View ${p.name}`} />
 

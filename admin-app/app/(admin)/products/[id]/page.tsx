@@ -65,12 +65,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   );
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 md:px-8 py-6 md:py-8">
       <Link href="/products" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-300 hover:text-zinc-600 transition-colors mb-8">
         <ArrowLeft size={12} /> Products
       </Link>
       <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Catalog</p>
-      <h1 className="font-serif text-zinc-900 mb-8" style={{ fontSize: "2rem", fontWeight: 300 }}>Edit Product</h1>
+      <h1 className="font-serif text-zinc-900 mb-8" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>Edit Product</h1>
       <AdminProductForm mode="edit" initial={initial!} />
     </div>
   );

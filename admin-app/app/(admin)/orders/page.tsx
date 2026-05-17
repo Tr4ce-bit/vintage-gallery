@@ -42,10 +42,10 @@ export default function OrdersPage() {
   const shown = filter === "All" ? orders : orders.filter(o => o.status === filter);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 md:px-8 py-6 md:py-8">
       <div className="mb-6">
         <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Management</p>
-        <h1 className="font-serif text-zinc-900" style={{ fontSize: "2rem", fontWeight: 300 }}>Orders</h1>
+        <h1 className="font-serif text-zinc-900" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>Orders</h1>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-6">
@@ -68,36 +68,38 @@ export default function OrdersPage() {
         ) : shown.length === 0 ? (
           <p className="px-6 py-12 font-sans text-sm text-zinc-300 text-center">No orders found.</p>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-zinc-100">
-                {["Reference","Customer","Items","Amount","Status","Date",""].map(h => (
-                  <th key={h} className="px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map(o => (
-                <tr key={o.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
-                  <td className="px-5 py-3.5 font-mono text-xs text-zinc-400">{o.paystackReference.slice(-8).toUpperCase()}</td>
-                  <td className="px-5 py-3.5 font-sans text-sm text-zinc-700">{o.user?.fullName ?? "—"}</td>
-                  <td className="px-5 py-3.5 font-sans text-sm text-zinc-400">{o.items.length}</td>
-                  <td className="px-5 py-3.5 font-sans text-sm text-zinc-700 font-medium">GH₵ {o.totalAmount}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-zinc-100 text-zinc-500"}`}>
-                      {o.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 font-sans text-sm text-zinc-400">{fmt(o.createdAt)}</td>
-                  <td className="px-5 py-3.5">
-                    <Link href={`/orders/${o.id}`} className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors">
-                      View →
-                    </Link>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
+              <thead>
+                <tr className="border-b border-zinc-100">
+                  {["Reference","Customer","Items","Amount","Status","Date",""].map(h => (
+                    <th key={h} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {shown.map(o => (
+                  <tr key={o.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
+                    <td className="px-4 md:px-5 py-3.5 font-mono text-xs text-zinc-400">{o.paystackReference.slice(-8).toUpperCase()}</td>
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-700">{o.user?.fullName ?? "—"}</td>
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-400">{o.items.length}</td>
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-700 font-medium">GH₵ {o.totalAmount}</td>
+                    <td className="px-4 md:px-5 py-3.5">
+                      <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-zinc-100 text-zinc-500"}`}>
+                        {o.status}
+                      </span>
+                    </td>
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-400 whitespace-nowrap">{fmt(o.createdAt)}</td>
+                    <td className="px-4 md:px-5 py-3.5">
+                      <Link href={`/orders/${o.id}`} className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors">
+                        View →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

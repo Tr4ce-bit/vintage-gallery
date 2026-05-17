@@ -61,20 +61,20 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="px-8 py-8">
-      <div className="mb-8">
+    <div className="px-4 md:px-8 py-6 md:py-8">
+      <div className="mb-6 md:mb-8">
         <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Overview</p>
-        <h1 className="font-serif text-zinc-900" style={{ fontSize: "2rem", fontWeight: 300 }}>Dashboard</h1>
+        <h1 className="font-serif text-zinc-900" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>Dashboard</h1>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8 md:mb-10">
         {[
           { label: "Total Revenue",   value: `GH₵ ${revenue.toLocaleString()}`, icon: TrendingUp,   color: "text-emerald-500" },
           { label: "Pending Orders",  value: pending,                            icon: Clock,        color: "text-amber-500"   },
           { label: "Total Orders",    value: orders.length,                      icon: CheckCircle2, color: "text-blue-500"    },
           { label: "Active Products", value: activeProducts,                     icon: Package,      color: "text-violet-500"  },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white border border-zinc-100 rounded-2xl px-5 py-5">
+          <div key={label} className="bg-white border border-zinc-100 rounded-2xl px-4 py-4 md:px-5 md:py-5">
             <div className="flex items-center justify-between mb-3">
               <p className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light">{label}</p>
               <Icon size={15} strokeWidth={1.5} className={color} />
@@ -94,34 +94,36 @@ export default function AdminDashboard() {
         {recent.length === 0
           ? <p className="px-6 py-8 font-sans text-sm text-zinc-300 text-center">No orders yet.</p>
           : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-zinc-50">
-                  {["Reference","Customer","Amount","Status","Date"].map(h => (
-                    <th key={h} className="px-6 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map(o => (
-                  <tr key={o.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
-                    <td className="px-6 py-3.5">
-                      <Link href={`/orders/${o.id}`} className="font-mono text-xs text-zinc-500 hover:text-zinc-900">
-                        {o.paystackReference.slice(-8).toUpperCase()}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-3.5 font-sans text-sm text-zinc-700">{o.user?.fullName ?? "—"}</td>
-                    <td className="px-6 py-3.5 font-sans text-sm text-zinc-700">GH₵ {o.totalAmount}</td>
-                    <td className="px-6 py-3.5">
-                      <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-zinc-100 text-zinc-500"}`}>
-                        {o.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3.5 font-sans text-sm text-zinc-400">{fmt(o.createdAt)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px]">
+                <thead>
+                  <tr className="border-b border-zinc-50">
+                    {["Reference","Customer","Amount","Status","Date"].map(h => (
+                      <th key={h} className="px-4 md:px-6 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recent.map(o => (
+                    <tr key={o.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
+                      <td className="px-4 md:px-6 py-3.5">
+                        <Link href={`/orders/${o.id}`} className="font-mono text-xs text-zinc-500 hover:text-zinc-900">
+                          {o.paystackReference.slice(-8).toUpperCase()}
+                        </Link>
+                      </td>
+                      <td className="px-4 md:px-6 py-3.5 font-sans text-sm text-zinc-700">{o.user?.fullName ?? "—"}</td>
+                      <td className="px-4 md:px-6 py-3.5 font-sans text-sm text-zinc-700">GH₵ {o.totalAmount}</td>
+                      <td className="px-4 md:px-6 py-3.5">
+                        <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-zinc-100 text-zinc-500"}`}>
+                          {o.status}
+                        </span>
+                      </td>
+                      <td className="px-4 md:px-6 py-3.5 font-sans text-sm text-zinc-400 whitespace-nowrap">{fmt(o.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
       </div>
     </div>
