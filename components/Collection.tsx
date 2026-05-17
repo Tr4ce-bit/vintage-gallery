@@ -126,16 +126,16 @@ export default function Collection({ products: propProducts }: { products?: Prod
   const products = propProducts ?? PRODUCTS;
 
   return (
-    <section id="collection" className="bg-white py-20 md:py-28 px-5 md:px-8">
+    <section id="collection" className="bg-white dark:bg-zinc-950 py-20 md:py-28 px-5 md:px-8">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
-        <div ref={hRef} className="flex items-end justify-between mb-12 border-b border-zinc-100 pb-8">
+        <div ref={hRef} className="flex items-end justify-between mb-12 border-b border-zinc-100 dark:border-zinc-800 pb-8">
           <div>
             <motion.p
               initial={{ opacity: 0 }}
               animate={hInView ? { opacity: 1 } : {}}
-              className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-300 font-light mb-3"
+              className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-3"
             >
               SS&apos;25 — Available Now
             </motion.p>
@@ -143,7 +143,7 @@ export default function Collection({ products: propProducts }: { products?: Prod
               initial={{ opacity: 0, y: 16 }}
               animate={hInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.1 }}
-              className="font-serif text-zinc-900 leading-none"
+              className="font-serif text-zinc-900 dark:text-zinc-50 leading-none"
               style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)", fontWeight: 300 }}
             >
               The Drop.
@@ -156,7 +156,7 @@ export default function Collection({ products: propProducts }: { products?: Prod
           >
             <Link
               href="/shop"
-              className="hidden md:inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors group"
+              className="hidden md:inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors group"
             >
               View All <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
@@ -172,7 +172,7 @@ export default function Collection({ products: propProducts }: { products?: Prod
 
         {/* Mobile view all */}
         <div className="mt-10 text-center md:hidden">
-          <Link href="/shop" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-500 border border-zinc-200 px-6 py-3 rounded-full">
+          <Link href="/shop" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 px-6 py-3 rounded-full">
             View All Pieces <ArrowRight size={12} />
           </Link>
         </div>

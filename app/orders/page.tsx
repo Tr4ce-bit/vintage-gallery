@@ -53,28 +53,28 @@ export default function OrdersPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white pt-[60px]">
+    <main className="min-h-screen bg-white dark:bg-zinc-950 pt-[60px]">
       <div className="max-w-4xl mx-auto px-5 md:px-8 py-12">
 
         {/* Header */}
         <div className="mb-8">
-          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-300 font-light mb-2">Account</p>
-          <h1 className="font-serif text-zinc-900 leading-none"
+          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-2">Account</p>
+          <h1 className="font-serif text-zinc-900 dark:text-zinc-50 leading-none"
             style={{ fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 300 }}>
             My Orders
           </h1>
         </div>
 
-        <div className="bg-white border border-zinc-100 rounded-2xl overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center h-32">
               <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
             </div>
           ) : orders.length === 0 ? (
             <div className="px-6 py-16 text-center">
-              <p className="font-sans text-sm text-zinc-300 mb-4">No orders yet.</p>
+              <p className="font-sans text-sm text-zinc-400 dark:text-zinc-500 mb-4">No orders yet.</p>
               <Link href="/shop"
-                className="font-sans text-sm text-zinc-900 font-medium hover:underline">
+                className="font-sans text-sm text-zinc-900 dark:text-zinc-100 font-medium hover:underline">
                 Shop the collection →
               </Link>
             </div>
@@ -82,21 +82,21 @@ export default function OrdersPage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[480px]">
                 <thead>
-                  <tr className="border-b border-zinc-100">
+                  <tr className="border-b border-zinc-100 dark:border-zinc-800">
                     {["Order","Date","Items","Total","Status",""].map((h, i) => (
-                      <th key={i} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
+                      <th key={i} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500 font-light">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map(o => (
-                    <tr key={o.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
-                      <td className="px-4 md:px-5 py-4 font-mono text-xs text-zinc-500">
+                    <tr key={o.id} className="border-b border-zinc-50 dark:border-zinc-800 last:border-0 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
+                      <td className="px-4 md:px-5 py-4 font-mono text-xs text-zinc-600 dark:text-zinc-400">
                         #{o.paystackReference.slice(-8).toUpperCase()}
                       </td>
-                      <td className="px-4 md:px-5 py-4 font-sans text-sm text-zinc-400 whitespace-nowrap">{fmt(o.createdAt)}</td>
-                      <td className="px-4 md:px-5 py-4 font-sans text-sm text-zinc-400">{o.items.length} {o.items.length === 1 ? "item" : "items"}</td>
-                      <td className="px-4 md:px-5 py-4 font-sans text-sm font-medium text-zinc-700">GH₵ {o.totalAmount}</td>
+                      <td className="px-4 md:px-5 py-4 font-sans text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">{fmt(o.createdAt)}</td>
+                      <td className="px-4 md:px-5 py-4 font-sans text-sm text-zinc-500 dark:text-zinc-400">{o.items.length} {o.items.length === 1 ? "item" : "items"}</td>
+                      <td className="px-4 md:px-5 py-4 font-sans text-sm font-medium text-zinc-700 dark:text-zinc-200">GH₵ {o.totalAmount}</td>
                       <td className="px-4 md:px-5 py-4">
                         <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-zinc-100 text-zinc-500"}`}>
                           {o.status}
@@ -104,7 +104,7 @@ export default function OrdersPage() {
                       </td>
                       <td className="px-4 md:px-5 py-4">
                         <Link href={`/orders/${o.id}`}
-                          className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors">
+                          className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
                           View →
                         </Link>
                       </td>

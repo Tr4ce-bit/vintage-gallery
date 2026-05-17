@@ -115,25 +115,25 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const lockedByAdmin = !canCancel && !isCancelled;
 
   return (
-    <main className="min-h-screen bg-white pt-[60px]">
+    <main className="min-h-screen bg-white dark:bg-zinc-950 pt-[60px]">
       <div className="max-w-4xl mx-auto px-5 md:px-8 py-12">
 
         <Link href="/orders"
-          className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-300 hover:text-zinc-600 transition-colors mb-8">
+          className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors mb-8">
           <ArrowLeft size={12} /> My Orders
         </Link>
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-8">
           <div>
-            <p className="font-mono text-sm text-zinc-400 mb-1">
+            <p className="font-mono text-sm text-zinc-500 dark:text-zinc-400 mb-1">
               #{order.paystackReference.slice(-8).toUpperCase()}
             </p>
-            <h1 className="font-serif text-zinc-900 mb-1"
+            <h1 className="font-serif text-zinc-900 dark:text-zinc-50 mb-1"
               style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", fontWeight: 300 }}>
               Order Detail
             </h1>
-            <p className="font-sans text-sm text-zinc-400">{fmt(order.createdAt)}</p>
+            <p className="font-sans text-sm text-zinc-500 dark:text-zinc-400">{fmt(order.createdAt)}</p>
           </div>
           <span className={`self-start font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-3 py-1.5 rounded-full ${STATUS_COLOR[order.status] ?? "bg-zinc-100 text-zinc-500"}`}>
             {order.status}
@@ -142,8 +142,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Status timeline */}
         {!isCancelled && (
-          <div className="bg-white border border-zinc-100 rounded-2xl px-4 md:px-6 py-6 mb-6">
-            <h2 className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-300 font-light mb-5">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl px-4 md:px-6 py-6 mb-6">
+            <h2 className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-5">
               Order Progress
             </h2>
             <div className="flex items-start gap-0">
@@ -165,7 +165,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       }
                     </div>
                     <p className={`font-sans text-[9px] tracking-[0.1em] uppercase text-center leading-tight ${
-                      isDone || isCurrent ? "text-zinc-700" : "text-zinc-300"
+                      isDone || isCurrent ? "text-zinc-700 dark:text-zinc-300" : "text-zinc-400 dark:text-zinc-600"
                     }`}>
                       {TIMELINE_LABELS[step]}
                     </p>
@@ -189,40 +189,40 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Items + totals */}
           <div className="lg:col-span-2 space-y-5">
-            <div className="bg-white border border-zinc-100 rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-zinc-50">
-                <h2 className="font-sans text-sm font-medium text-zinc-800">Items</h2>
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-50 dark:border-zinc-800">
+                <h2 className="font-sans text-sm font-medium text-zinc-800 dark:text-zinc-200">Items</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[380px]">
                   <thead>
-                    <tr className="border-b border-zinc-50">
+                    <tr className="border-b border-zinc-50 dark:border-zinc-800">
                       {["Product","Size","Qty","Price","Subtotal"].map(h => (
-                        <th key={h} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
+                        <th key={h} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500 font-light">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {order.items.map(item => (
-                      <tr key={item.id} className="border-b border-zinc-50 last:border-0">
-                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-700">{item.product?.name ?? "Product deleted"}</td>
-                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-400">{item.size}</td>
-                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-400">{item.quantity}</td>
-                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-400">GH₵ {item.unitPrice}</td>
-                        <td className="px-4 md:px-5 py-3 font-sans text-sm font-medium text-zinc-700">GH₵ {item.subtotal}</td>
+                      <tr key={item.id} className="border-b border-zinc-50 dark:border-zinc-800 last:border-0">
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-700 dark:text-zinc-200">{item.product?.name ?? "Product deleted"}</td>
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-500 dark:text-zinc-400">{item.size}</td>
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-500 dark:text-zinc-400">{item.quantity}</td>
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm text-zinc-500 dark:text-zinc-400">GH₵ {item.unitPrice}</td>
+                        <td className="px-4 md:px-5 py-3 font-sans text-sm font-medium text-zinc-700 dark:text-zinc-200">GH₵ {item.subtotal}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="px-5 py-4 border-t border-zinc-50 space-y-2">
-                <div className="flex justify-between font-sans text-sm text-zinc-400">
+              <div className="px-5 py-4 border-t border-zinc-50 dark:border-zinc-800 space-y-2">
+                <div className="flex justify-between font-sans text-sm text-zinc-500 dark:text-zinc-400">
                   <span>Subtotal</span><span>GH₵ {subtotal}</span>
                 </div>
-                <div className="flex justify-between font-sans text-sm text-zinc-400">
+                <div className="flex justify-between font-sans text-sm text-zinc-500 dark:text-zinc-400">
                   <span>Delivery</span><span>GH₵ 30</span>
                 </div>
-                <div className="flex justify-between font-sans text-sm font-semibold text-zinc-900 pt-1 border-t border-zinc-50">
+                <div className="flex justify-between font-sans text-sm font-semibold text-zinc-900 dark:text-zinc-50 pt-1 border-t border-zinc-50 dark:border-zinc-800">
                   <span>Total</span><span>GH₵ {order.totalAmount}</span>
                 </div>
               </div>
@@ -231,23 +231,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* Sidebar: delivery + cancel */}
           <div className="space-y-4">
-            <div className="bg-white border border-zinc-100 rounded-2xl px-5 py-5 space-y-2">
-              <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-300 font-light mb-3">Delivery Info</h3>
-              <p className="font-sans text-sm font-medium text-zinc-800">{order.deliveryFullName}</p>
-              <p className="font-sans text-sm text-zinc-500">{order.deliveryPhone}</p>
-              <p className="font-sans text-sm text-zinc-500">{order.deliveryAddress}</p>
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl px-5 py-5 space-y-2">
+              <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-3">Delivery Info</h3>
+              <p className="font-sans text-sm font-medium text-zinc-800 dark:text-zinc-200">{order.deliveryFullName}</p>
+              <p className="font-sans text-sm text-zinc-600 dark:text-zinc-400">{order.deliveryPhone}</p>
+              <p className="font-sans text-sm text-zinc-600 dark:text-zinc-400">{order.deliveryAddress}</p>
               {order.deliveryNotes && (
-                <p className="font-sans text-sm text-zinc-400 italic">{order.deliveryNotes}</p>
+                <p className="font-sans text-sm text-zinc-500 dark:text-zinc-500 italic">{order.deliveryNotes}</p>
               )}
             </div>
 
             {/* Cancel section */}
             {!isCancelled && (
-              <div className="bg-white border border-zinc-100 rounded-2xl px-5 py-5">
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl px-5 py-5">
                 {canCancel ? (
                   <>
-                    <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-300 font-light mb-3">Cancel Order</h3>
-                    <p className="font-sans text-xs text-zinc-400 mb-4 leading-relaxed">
+                    <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-3">Cancel Order</h3>
+                    <p className="font-sans text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
                       You can cancel before our team starts preparing your order. Once confirmed, cancellation is no longer available.
                     </p>
                     {cancelErr && (
@@ -256,15 +256,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     <button
                       onClick={handleCancel}
                       disabled={cancelling}
-                      className="w-full py-2.5 rounded-full border border-red-200 font-sans text-[11px] tracking-[0.15em] uppercase text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                      className="w-full py-2.5 rounded-full border border-red-200 dark:border-red-900 font-sans text-[11px] tracking-[0.15em] uppercase text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-40"
                     >
                       {cancelling ? "Cancelling…" : "Cancel Order"}
                     </button>
                   </>
                 ) : lockedByAdmin ? (
                   <>
-                    <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-300 font-light mb-2">Cancel Order</h3>
-                    <p className="font-sans text-xs text-zinc-400 leading-relaxed">
+                    <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-2">Cancel Order</h3>
+                    <p className="font-sans text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
                       Your order is being prepared and can no longer be cancelled. Please contact us if you need assistance.
                     </p>
                   </>
@@ -273,7 +273,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             )}
 
             <Link href="/shop"
-              className="block w-full text-center font-sans text-[11px] tracking-[0.18em] uppercase py-3 rounded-full border border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-900 transition-all duration-200">
+              className="block w-full text-center font-sans text-[11px] tracking-[0.18em] uppercase py-3 rounded-full border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-all duration-200">
               Continue Shopping
             </Link>
           </div>

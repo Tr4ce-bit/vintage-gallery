@@ -41,7 +41,7 @@ export default function Footer() {
   const year   = new Date().getFullYear();
 
   return (
-    <footer id="contact" className="bg-white border-t border-zinc-100">
+    <footer id="contact" className="bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800">
       <div ref={ref} className="max-w-7xl mx-auto px-5 md:px-8 pt-16 pb-10">
 
         {/* Top row */}
@@ -56,7 +56,7 @@ export default function Footer() {
           >
             <div className="mb-5 flex flex-col items-start leading-none">
               <span
-                className="font-serif text-zinc-900"
+                className="font-serif text-zinc-900 dark:text-zinc-100"
                 style={{ fontSize: "1.6rem", fontWeight: 700, letterSpacing: "0.08em" }}
               >
                 VG
@@ -69,7 +69,7 @@ export default function Footer() {
               </span>
             </div>
 
-            <p className="font-sans text-sm text-zinc-400 font-light leading-[1.75] max-w-xs mb-7">
+            <p className="font-sans text-sm text-zinc-500 dark:text-zinc-400 font-light leading-[1.75] max-w-xs mb-7">
               Ghana&apos;s premier streetwear destination. Curated drops, premium quality, delivered across Accra and beyond.
             </p>
 
@@ -79,7 +79,7 @@ export default function Footer() {
                   key={label}
                   href={href}
                   aria-label={label}
-                  className="w-9 h-9 rounded-full border border-zinc-100 flex items-center justify-center text-zinc-300 hover:text-zinc-900 hover:border-zinc-200 transition-all duration-200"
+                  className="w-9 h-9 rounded-full border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-500 transition-all duration-200"
                 >
                   <Icon size={14} strokeWidth={1.5} />
                 </a>
@@ -88,7 +88,7 @@ export default function Footer() {
 
             <div className="flex flex-wrap gap-2">
               {["MTN MoMo", "Telecel", "AirtelTigo", "Paystack"].map(m => (
-                <span key={m} className="font-sans text-[8px] tracking-[0.2em] uppercase text-zinc-300 border border-zinc-100 px-2.5 py-1.5 rounded-full font-light">
+                <span key={m} className="font-sans text-[8px] tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 rounded-full font-light">
                   {m}
                 </span>
               ))}
@@ -103,13 +103,13 @@ export default function Footer() {
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: 0.08 + col * 0.07 }}
             >
-              <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-zinc-300 font-medium mb-5">{section}</p>
+              <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-zinc-400 dark:text-zinc-500 font-medium mb-5">{section}</p>
               <ul className="space-y-3">
                 {links.map(link => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="group font-sans text-[13px] text-zinc-400 font-light hover:text-zinc-900 transition-colors duration-150 flex items-center gap-1"
+                      className="group font-sans text-[13px] text-zinc-500 dark:text-zinc-400 font-light hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors duration-150 flex items-center gap-1"
                     >
                       {link.label}
                       <ArrowUpRight size={9} className="opacity-0 group-hover:opacity-40 transition-opacity" />
@@ -122,13 +122,13 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-zinc-100 pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="font-sans text-[11px] text-zinc-300 font-light">
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="font-sans text-[11px] text-zinc-400 dark:text-zinc-500 font-light">
             © {year} Vintage Gallery Store. All rights reserved.
           </p>
           <div className="flex items-center gap-5">
             {["Privacy", "Terms", "Cookies"].map(item => (
-              <a key={item} href="#" className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-300 hover:text-zinc-600 transition-colors font-light">
+              <a key={item} href="#" className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors font-light">
                 {item}
               </a>
             ))}

@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import AuthProvider from "@/components/AuthProvider";
+import ThemeProvider from "@/components/ThemeProvider";
 import NextTopLoader from "nextjs-toploader";
 
 const cormorant = Cormorant_Garamond({
@@ -41,18 +42,20 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <html lang="en" className={`${cormorant.variable} ${inter.variable}`}>
-        <body className="bg-white text-zinc-900 antialiased">
-          <NextTopLoader
-            color="#c9a84c"
-            shadow="0 0 10px #c9a84c,0 0 5px #c9a84c"
-            height={2}
-            showSpinner={false}
-            easing="ease"
-            speed={200}
-          />
-          <Navbar />
-          <main>{children}</main>
+      <html lang="en" className={`${cormorant.variable} ${inter.variable}`} suppressHydrationWarning>
+        <body className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 antialiased transition-colors duration-300">
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+            <NextTopLoader
+              color="#c9a84c"
+              shadow="0 0 10px #c9a84c,0 0 5px #c9a84c"
+              height={2}
+              showSpinner={false}
+              easing="ease"
+              speed={200}
+            />
+            <Navbar />
+            <main>{children}</main>
+          </ThemeProvider>
         </body>
       </html>
     </AuthProvider>

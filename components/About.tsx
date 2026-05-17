@@ -24,7 +24,7 @@ export default function About() {
     <section id="about">
 
       {/* ── 1. Off-white story block ── */}
-      <div className="bg-zinc-50 py-20 md:py-28 px-5 md:px-8">
+      <div className="bg-zinc-50 dark:bg-zinc-900 py-20 md:py-28 px-5 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div ref={s1Ref} className="grid lg:grid-cols-2 gap-16 items-center">
 
@@ -33,7 +33,7 @@ export default function About() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={s1 ? { opacity: 1 } : {}}
-                className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-300 font-light mb-6"
+                className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-6"
               >
                 Our Story
               </motion.p>
@@ -42,7 +42,7 @@ export default function About() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={s1 ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: 0.1 }}
-                className="font-serif text-zinc-900 leading-[1.0] mb-8"
+                className="font-serif text-zinc-900 dark:text-zinc-50 leading-[1.0] mb-8"
                 style={{ fontSize: "clamp(2.8rem, 5vw, 4.5rem)", fontWeight: 300 }}
               >
                 Woven from
@@ -56,7 +56,7 @@ export default function About() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={s1 ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: 0.28 }}
-                className="space-y-5 font-sans text-[15px] text-zinc-500 font-light leading-[1.85] max-w-md"
+                className="space-y-5 font-sans text-[15px] text-zinc-600 dark:text-zinc-400 font-light leading-[1.85] max-w-md"
               >
                 <p>
                   Vintage Gallery was born from a simple belief: Ghanaian streetwear should carry the weight of our culture — the noise of Accra, the elegance of our heritage, the ambition of our generation.
@@ -72,11 +72,11 @@ export default function About() {
                 transition={{ delay: 0.45 }}
                 className="mt-10"
               >
-                <div className="w-10 h-px bg-zinc-200 mb-5" />
-                <p className="font-serif text-2xl text-zinc-700 italic" style={{ fontWeight: 400 }}>
+                <div className="w-10 h-px bg-zinc-200 dark:bg-zinc-700 mb-5" />
+                <p className="font-serif text-2xl text-zinc-700 dark:text-zinc-300 italic" style={{ fontWeight: 400 }}>
                   &ldquo;Wear less. Mean more.&rdquo;
                 </p>
-                <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-300 mt-3 font-light">
+                <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-400 dark:text-zinc-500 mt-3 font-light">
                   — Vintage Gallery, Accra · Est. 2022
                 </p>
               </motion.div>
@@ -89,7 +89,7 @@ export default function About() {
               >
                 <Link
                   href="#collection"
-                  className="inline-flex items-center gap-2.5 bg-zinc-900 text-white font-sans font-medium text-[10px] tracking-[0.18em] uppercase px-7 py-3.5 rounded-full hover:bg-zinc-700 transition-colors group"
+                  className="inline-flex items-center gap-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-sans font-medium text-[10px] tracking-[0.18em] uppercase px-7 py-3.5 rounded-full hover:bg-zinc-700 dark:hover:bg-zinc-100 transition-colors group"
                 >
                   Shop the Collection
                   <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
@@ -125,10 +125,10 @@ export default function About() {
               <motion.div
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -bottom-5 right-4 bg-white rounded-2xl px-5 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.1)]"
+                className="absolute -bottom-5 right-4 bg-white dark:bg-zinc-800 rounded-2xl px-5 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.1)]"
               >
-                <p className="font-serif text-2xl text-zinc-900" style={{ fontWeight: 300 }}>500+</p>
-                <p className="font-sans text-[8px] tracking-[0.3em] uppercase text-zinc-300 font-light mt-0.5">Pieces Sold</p>
+                <p className="font-serif text-2xl text-zinc-900 dark:text-zinc-50" style={{ fontWeight: 300 }}>500+</p>
+                <p className="font-sans text-[8px] tracking-[0.3em] uppercase text-zinc-400 dark:text-zinc-500 font-light mt-0.5">Pieces Sold</p>
               </motion.div>
             </motion.div>
           </div>
@@ -178,7 +178,7 @@ export default function About() {
       </div>
 
       {/* ── 3. Process — white ── */}
-      <div className="bg-white py-20 px-5 md:px-8 border-b border-zinc-100">
+      <div className="bg-white dark:bg-zinc-950 py-20 px-5 md:px-8 border-b border-zinc-100 dark:border-zinc-800">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-0">
             {[
@@ -187,10 +187,10 @@ export default function About() {
               { step: "03", title: "Produce", desc: "Limited runs, quality-checked at every stage." },
               { step: "04", title: "Drop",    desc: "Members get first access. Right piece, right person." },
             ].map((p, i) => (
-              <div key={p.step} className={`py-10 px-8 ${i < 3 ? "border-r border-zinc-100" : ""} border-t border-zinc-100 group hover:bg-zinc-50 transition-colors`}>
-                <p className="font-serif text-[3rem] text-zinc-100 mb-5 leading-none group-hover:text-zinc-200 transition-colors" style={{ fontWeight: 300 }}>{p.step}</p>
-                <h3 className="font-serif text-zinc-900 text-xl mb-3" style={{ fontWeight: 400 }}>{p.title}</h3>
-                <p className="font-sans text-zinc-400 text-[13px] font-light leading-[1.8]">{p.desc}</p>
+              <div key={p.step} className={`py-10 px-8 ${i < 3 ? "border-r border-zinc-100 dark:border-zinc-800" : ""} border-t border-zinc-100 dark:border-zinc-800 group hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors`}>
+                <p className="font-serif text-[3rem] text-zinc-200 dark:text-zinc-800 mb-5 leading-none group-hover:text-zinc-300 dark:group-hover:text-zinc-700 transition-colors" style={{ fontWeight: 300 }}>{p.step}</p>
+                <h3 className="font-serif text-zinc-900 dark:text-zinc-100 text-xl mb-3" style={{ fontWeight: 400 }}>{p.title}</h3>
+                <p className="font-sans text-zinc-500 dark:text-zinc-400 text-[13px] font-light leading-[1.8]">{p.desc}</p>
               </div>
             ))}
           </div>

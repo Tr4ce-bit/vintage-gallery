@@ -53,15 +53,15 @@ export default function ShopClient({ products }: { products: Product[] }) {
 
   return (
     <>
-      <main className="min-h-screen bg-white pt-[60px]">
+      <main className="min-h-screen bg-white dark:bg-zinc-950 pt-[60px]">
 
         {/* Header */}
-        <div className="border-b border-zinc-100 px-5 md:px-8 py-14">
+        <div className="border-b border-zinc-100 dark:border-zinc-800 px-5 md:px-8 py-14">
           <div className="max-w-7xl mx-auto">
-            <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-300 font-light mb-3">
+            <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-3">
               SS&apos;25 — Available Now
             </p>
-            <h1 className="font-serif text-zinc-900 leading-none"
+            <h1 className="font-serif text-zinc-900 dark:text-zinc-50 leading-none"
               style={{ fontSize: "clamp(2.8rem, 6vw, 5rem)", fontWeight: 300 }}>
               The Collection.
             </h1>
@@ -78,14 +78,14 @@ export default function ShopClient({ products }: { products: Product[] }) {
                 onClick={() => setActive(f)}
                 className={`font-sans text-[10px] tracking-[0.2em] uppercase px-5 py-2 rounded-full border transition-all duration-200 font-light ${
                   active === f
-                    ? "bg-zinc-900 text-white border-zinc-900"
-                    : "border-zinc-200 text-zinc-400 hover:border-zinc-400 hover:text-zinc-700"
+                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white"
+                    : "border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200"
                 }`}
               >
                 {f}
               </button>
             ))}
-            <span className="font-sans text-[10px] text-zinc-300 font-light ml-2">
+            <span className="font-sans text-[10px] text-zinc-400 dark:text-zinc-500 font-light ml-2">
               {filtered.length} {filtered.length === 1 ? "piece" : "pieces"}
             </span>
           </div>
@@ -104,7 +104,7 @@ export default function ShopClient({ products }: { products: Product[] }) {
                   className="group relative"
                 >
                   <Link href={`/product/${p.slug}`}
-                    className="block relative overflow-hidden rounded-2xl bg-zinc-100"
+                    className="block relative overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800"
                     style={{ aspectRatio: "3/4" }}>
                     <Image src={p.image} alt={p.name} fill
                       className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.04]" />
@@ -133,17 +133,17 @@ export default function ShopClient({ products }: { products: Product[] }) {
                   </Link>
 
                   <div className="mt-4 px-1">
-                    <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-300 font-light mb-1">{p.collection}</p>
+                    <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-1">{p.collection}</p>
                     <div className="flex items-start justify-between">
                       <Link href={`/product/${p.slug}`}
-                        className="font-serif text-zinc-900 text-xl font-light hover:text-zinc-600 transition-colors">
+                        className="font-serif text-zinc-900 dark:text-zinc-100 text-xl font-light hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
                         {p.name}
                       </Link>
-                      <span className="font-sans text-sm text-zinc-500 font-light mt-1 shrink-0 ml-3">GH₵ {p.price}</span>
+                      <span className="font-sans text-sm text-zinc-500 dark:text-zinc-400 font-light mt-1 shrink-0 ml-3">GH₵ {p.price}</span>
                     </div>
                     <div className="flex items-center gap-1 mt-2.5">
                       {p.sizes.map((s) => (
-                        <span key={s} className="font-sans text-[8px] text-zinc-300 border border-zinc-100 px-2 py-0.5 rounded-full">{s}</span>
+                        <span key={s} className="font-sans text-[8px] text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded-full">{s}</span>
                       ))}
                     </div>
                   </div>
