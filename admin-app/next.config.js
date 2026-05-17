@@ -12,6 +12,11 @@ const nextConfig = {
   // use an externalRequire() mechanism that fails on Amplify WEB_COMPUTE because
   // the Lambda splits node_modules from the app pages. Webpack (the default when
   // `turbopack` is absent) works correctly with Amplify WEB_COMPUTE.
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**.amazonaws.com" },
+    ],
+  },
   poweredByHeader: false,
   compress: true,
   experimental: {

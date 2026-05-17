@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   icons: {
     icon:             "/icon.svg",
     shortcut:         "/icon.svg",
-    apple:            "/asset/logo.png",
+    apple:            "https://vintage-gallery-products.s3.amazonaws.com/branding/logo.png",
   },
 };
 

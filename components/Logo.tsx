@@ -27,7 +27,7 @@ export default function Logo({
       className="relative flex-shrink-0"
     >
       <Image
-        src="/asset/logo.png"
+        src="https://vintage-gallery-products.s3.amazonaws.com/branding/logo.png"
         alt="Vintage Gallery VG mark"
         fill
         className="object-contain"
@@ -109,7 +109,7 @@ export function LogoGold({ size = 80 }: { size?: number }) {
     <div className="flex flex-col items-center gap-4">
       <div style={{ width: size, height: size }} className="relative">
         <Image
-          src="/asset/logo.png"
+          src="https://vintage-gallery-products.s3.amazonaws.com/branding/logo.png"
           alt="Vintage Gallery"
           fill
           className="object-contain"
