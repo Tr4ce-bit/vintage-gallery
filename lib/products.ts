@@ -14,7 +14,8 @@ export interface Product {
   color: string;
   badge?: string;
   featured?: boolean;
-  stock?: number;        // undefined = unlimited (for hardcoded/static products)
+  stock?: number;                           // total stock (sum of all sizes, or global when no sizeStock)
+  sizeStock?: Record<string, number>;       // per-size stock — if present, drives per-size availability
 }
 
 export const PRODUCTS: Product[] = [

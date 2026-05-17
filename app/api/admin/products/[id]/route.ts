@@ -57,6 +57,7 @@ export async function PATCH(
         ...(body.badge       !== undefined && { badge:       body.badge }),
         ...(body.featured    !== undefined && { featured:    body.featured }),
         ...(body.stock       !== undefined && { stock:       Number(body.stock) }),
+        ...(body.sizeStock   !== undefined && { sizeStock:   body.sizeStock }),
         ...(body.isActive    !== undefined && { isActive:    body.isActive }),
         ...(body.sortOrder   !== undefined && { sortOrder:   Number(body.sortOrder) }),
       },

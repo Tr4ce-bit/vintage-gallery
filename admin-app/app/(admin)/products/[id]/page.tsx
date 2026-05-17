@@ -11,7 +11,8 @@ interface ProductData {
   id: string; name: string; slug: string; collection: string;
   basePrice: string; imageUrl: string; images: string; color: string;
   sizes: string[]; badge: string; featured: boolean;
-  description: string; details: string; stock: string; isActive: boolean;
+  description: string; details: string; stock: string;
+  sizeStock: Record<string, string>; isActive: boolean;
 }
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -48,6 +49,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         description: p.description ?? "",
         details:     Array.isArray(p.details) ? p.details.join("\n") : "",
         stock:       String(p.stock),
+        sizeStock:   p.sizeStock
+          ? Object.fromEntries(Object.entries(p.sizeStock as Record<string, number>).map(([k, v]) => [k, String(v)]))
+          : {},
         isActive:    p.isActive,
       });
       setLoading(false);

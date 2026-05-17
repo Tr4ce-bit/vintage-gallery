@@ -46,7 +46,8 @@ model Product {
   sizes       String[] @default(["XS","S","M","L","XL","XXL"])
   badge       String?                         // e.g. "New", "Limited", "Featured"
   featured    Boolean  @default(false)
-  stock       Int      @default(100)
+  stock       Int      @default(100)          // total stock (sum of sizeStock for display)
+  sizeStock   Json?                           // per-size stock e.g. {"XS":5,"S":10,"M":20}
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())

@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
         description: body.description ?? null,
         details:     body.details     ?? [],
         stock:       body.stock       ?? 100,
+        sizeStock:   body.sizeStock   ?? null,
         sortOrder:   body.sortOrder   ?? 0,
         isActive:    body.isActive    ?? true,
       },

@@ -26,6 +26,24 @@ export default function ProductClient({ product, related }: Props) {
   const [authToast, setAuthToast]       = useState(false);
   const addItem                         = useCartStore((s) => s.addItem);
 
+  // Per-size stock helpers
+  const hasSizeStock = !!(product.sizeStock && Object.keys(product.sizeStock).length > 0);
+  const isSizeOutOfStock = (s: string): boolean => {
+    if (hasSizeStock) return (product.sizeStock![s] ?? 0) <= 0;
+    return !!(product.stock !== undefined && product.stock <= 0);
+  };
+  const isProductOutOfStock = hasSizeStock
+    ? product.sizes.every(s => isSizeOutOfStock(s))
+    : (product.stock !== undefined && product.stock <= 0);
+  const sizeStockLabel = (s: string): string | null => {
+    if (!hasSizeStock) return null;
+    const n = product.sizeStock![s] ?? 0;
+    if (n <= 0)  return "Out of stock";
+    if (n <= 3)  return `Only ${n} left`;
+    if (n <= 10) return "Low stock";
+    return null;
+  };
+
   const handleWishlist = () => {
     if (!isSignedIn) {
       setAuthToast(true);
@@ -88,7 +106,7 @@ export default function ProductClient({ product, related }: Props) {
                 {product.badge}
               </span>
             )}
-            {product.stock !== undefined && product.stock <= 0 && (
+            {isProductOutOfStock && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <span className="font-sans text-[11px] tracking-[0.25em] uppercase font-medium bg-white text-zinc-900 px-5 py-2 rounded-full">
                   Sold Out
@@ -132,24 +150,36 @@ export default function ProductClient({ product, related }: Props) {
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {product.sizes.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => { setSelectedSize(s); setSizeError(false); }}
-                    className={`font-sans text-[11px] w-11 h-11 rounded-full border transition-all duration-200 ${
-                      selectedSize === s
-                        ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white"
-                        : "border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+                {product.sizes.map((s) => {
+                  const oos   = isSizeOutOfStock(s);
+                  const label = sizeStockLabel(s);
+                  return (
+                    <div key={s} className="flex flex-col items-center gap-1">
+                      <button
+                        disabled={oos}
+                        onClick={() => { if (!oos) { setSelectedSize(s); setSizeError(false); } }}
+                        title={oos ? "Out of stock" : label ?? s}
+                        className={`font-sans text-[11px] w-11 h-11 rounded-full border transition-all duration-200 relative ${
+                          oos
+                            ? "border-zinc-100 dark:border-zinc-800 text-zinc-300 dark:text-zinc-700 cursor-not-allowed line-through"
+                            : selectedSize === s
+                              ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white"
+                              : "border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                      {label && !oos && (
+                        <span className="font-sans text-[8px] text-amber-500 tracking-tight whitespace-nowrap">{label}</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Qty + Add to cart */}
-            {product.stock !== undefined && product.stock <= 0 ? (
+            {isProductOutOfStock ? (
               <div className="mb-6">
                 <div className="w-full flex items-center justify-center gap-2.5 font-sans font-medium text-[11px] tracking-[0.18em] uppercase py-3.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed mb-3">
                   Out of Stock

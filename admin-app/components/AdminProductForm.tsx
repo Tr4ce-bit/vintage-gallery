@@ -14,7 +14,9 @@ interface ProductData {
   id?: string; name: string; slug: string; collection: string;
   basePrice: string; imageUrl: string; images: string; color: string;
   sizes: string[]; badge: string; featured: boolean;
-  description: string; details: string; stock: string; isActive: boolean;
+  description: string; details: string;
+  sizeStock: Record<string, string>;  // per-size stock as strings for input binding
+  isActive: boolean;
 }
 
 function toSlug(s: string) {
@@ -276,11 +278,22 @@ function MultiImageUploader({ values, onChange, max = 4, getToken }: MultiImageU
 export default function AdminProductForm({ initial, mode }: Props) {
   const router = useRouter();
   const { getAccessToken } = useAuth();
-  const [form, setForm] = useState<ProductData>({
-    name: "", slug: "", collection: "", basePrice: "",
-    imageUrl: "", images: "", color: "White", sizes: ALL_SIZES,
-    badge: "", featured: false, description: "", details: "", stock: "100", isActive: true,
-    ...initial,
+  const defaultSizeStock = Object.fromEntries(ALL_SIZES.map(s => [s, "0"]));
+
+  const [form, setForm] = useState<ProductData>(() => {
+    // Strip sizeStock out of initial so we can set it cleanly
+    const { sizeStock: rawSS, ...rest } = initial ?? {};
+    const parsedSizeStock: Record<string, string> = rawSS
+      ? Object.fromEntries(ALL_SIZES.map(s => [s, String((rawSS as Record<string, string | number>)[s] ?? 0)]))
+      : defaultSizeStock;
+    const base: ProductData = {
+      name: "", slug: "", collection: "", basePrice: "",
+      imageUrl: "", images: "", color: "White", sizes: ALL_SIZES,
+      badge: "", featured: false, description: "", details: "",
+      isActive: true,
+      sizeStock: parsedSizeStock,
+    };
+    return Object.assign({}, base, rest, { sizeStock: parsedSizeStock });
   });
   const [additionalImages, setAdditionalImages] = useState<string[]>(() => {
     if (initial?.images) {
@@ -321,6 +334,13 @@ export default function AdminProductForm({ initial, mode }: Props) {
 
     const token   = await getAccessToken();
     const allImages = [form.imageUrl, ...additionalImages.filter(Boolean)];
+
+    // Convert per-size stock strings → numbers, only for sizes that are active
+    const sizeStockParsed = Object.fromEntries(
+      form.sizes.map(s => [s, Math.max(0, Number(form.sizeStock[s]) || 0)])
+    );
+    const totalStock = Object.values(sizeStockParsed).reduce((a, b) => a + b, 0);
+
     const payload = {
       name:        form.name,
       slug:        form.slug,
@@ -334,7 +354,8 @@ export default function AdminProductForm({ initial, mode }: Props) {
       featured:    form.featured,
       description: form.description,
       details:     form.details.split("\n").map(s => s.trim()).filter(Boolean),
-      stock:       Number(form.stock),
+      stock:       totalStock,
+      sizeStock:   sizeStockParsed,
       isActive:    form.isActive,
     };
 
@@ -415,31 +436,56 @@ export default function AdminProductForm({ initial, mode }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className={labelCls}>Base Color</label>
-          <input className={inputCls} value={form.color} onChange={e => set("color", e.target.value)} placeholder="White" />
-        </div>
-        <div>
-          <label className={labelCls}>Stock</label>
-          <input className={inputCls} type="number" min="0" value={form.stock} onChange={e => set("stock", e.target.value)} />
-        </div>
+      <div>
+        <label className={labelCls}>Base Color</label>
+        <input className={inputCls} value={form.color} onChange={e => set("color", e.target.value)} placeholder="White" />
       </div>
 
-      {/* ── Sizes ─────────────────────────────────────────────────── */}
-      <div>
-        <label className={labelCls}>Available Sizes</label>
-        <div className="flex gap-2 flex-wrap">
-          {ALL_SIZES.map(s => (
-            <button key={s} type="button" onClick={() => toggleSize(s)}
-              className={`font-sans text-xs px-3 py-1.5 rounded-full border transition-all ${
-                form.sizes.includes(s)
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "border-zinc-200 text-zinc-400 hover:border-zinc-400"
-              }`}>
-              {s}
-            </button>
-          ))}
+      {/* ── Sizes + per-size stock ─────────────────────────────────── */}
+      <div className="bg-zinc-50 rounded-2xl p-4 space-y-4">
+        <div>
+          <label className={labelCls}>Available Sizes</label>
+          <p className="font-sans text-[10px] text-zinc-400 font-light mb-2">
+            Toggle which sizes you offer, then set stock for each below.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {ALL_SIZES.map(s => (
+              <button key={s} type="button" onClick={() => toggleSize(s)}
+                className={`font-sans text-xs px-3 py-1.5 rounded-full border transition-all ${
+                  form.sizes.includes(s)
+                    ? "bg-zinc-900 text-white border-zinc-900"
+                    : "border-zinc-200 text-zinc-400 hover:border-zinc-400"
+                }`}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>Stock Per Size</label>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {ALL_SIZES.map(s => {
+              const active = form.sizes.includes(s);
+              return (
+                <div key={s} className={`flex flex-col items-center gap-1 ${!active ? "opacity-30 pointer-events-none" : ""}`}>
+                  <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-500 font-light">{s}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    disabled={!active}
+                    value={form.sizeStock[s] ?? "0"}
+                    onChange={e => setForm(f => ({ ...f, sizeStock: { ...f.sizeStock, [s]: e.target.value } }))}
+                    className="w-full border border-zinc-200 rounded-xl px-2 py-2 font-sans text-sm text-zinc-900 text-center focus:outline-none focus:border-zinc-400 transition-colors bg-white"
+                    placeholder="0"
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <p className="font-sans text-[10px] text-zinc-400 font-light mt-2">
+            Set a size to 0 to mark it as &quot;Out of Stock&quot; — customers won&apos;t be able to select it.
+          </p>
         </div>
       </div>
 

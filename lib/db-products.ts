@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/db";
 import type { Product } from "@/lib/products";
+import type { Prisma } from "@prisma/client";
 
 function mapRow(r: {
   id: string; slug: string; name: string; collection: string;
   basePrice: number; description: string | null; details: string[];
   imageUrl: string; images: string[]; sizes: string[]; color: string;
   badge: string | null; featured: boolean; stock: number;
+  sizeStock: Prisma.JsonValue | null;
 }): Product {
   return {
     id:          r.id,
@@ -22,6 +24,7 @@ function mapRow(r: {
     badge:       r.badge ?? undefined,
     featured:    r.featured,
     stock:       r.stock,
+    sizeStock:   r.sizeStock ? (r.sizeStock as Record<string, number>) : undefined,
   };
 }
 

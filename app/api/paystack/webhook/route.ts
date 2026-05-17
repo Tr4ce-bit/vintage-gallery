@@ -59,15 +59,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    // 4. Mark as PAID + decrement stock — all in one transaction
+    // 4. Mark as PAID + decrement global stock — in one transaction
     try {
       await prisma.$transaction([
-        // Mark order paid
         prisma.order.update({
           where: { paystackReference: reference },
           data:  { status: "PAID" },
         }),
-        // Decrement stock for every item in the order
         ...existing.items.map(item =>
           prisma.product.update({
             where: { id: item.productId },
@@ -75,6 +73,28 @@ export async function POST(req: NextRequest) {
           })
         ),
       ]);
+
+      // 5. Also decrement sizeStock JSON for the specific size on each item
+      for (const item of existing.items) {
+        try {
+          const prod = await prisma.product.findUnique({
+            where:  { id: item.productId },
+            select: { sizeStock: true },
+          });
+          if (prod?.sizeStock) {
+            const ss = { ...(prod.sizeStock as Record<string, number>) };
+            const key = String(item.size);
+            ss[key] = Math.max(0, (ss[key] ?? 0) - item.quantity);
+            await prisma.product.update({
+              where: { id: item.productId },
+              data:  { sizeStock: ss },
+            });
+          }
+        } catch (err) {
+          console.error(`Webhook: sizeStock update failed for product ${item.productId}:`, err);
+        }
+      }
+
       console.log(`Webhook: order ${reference} marked PAID, stock decremented for ${existing.items.length} item(s)`);
     } catch (err) {
       console.error(`Webhook: failed to process order ${reference}:`, err);
@@ -105,7 +125,6 @@ export async function POST(req: NextRequest) {
           where: { paystackReference: transaction_reference },
           data:  { status: "REFUNDED" },
         }),
-        // Restore stock on refund
         ...existing.items.map(item =>
           prisma.product.update({
             where: { id: item.productId },
@@ -113,6 +132,28 @@ export async function POST(req: NextRequest) {
           })
         ),
       ]);
+
+      // Restore sizeStock JSON for each item's size
+      for (const item of existing.items) {
+        try {
+          const prod = await prisma.product.findUnique({
+            where:  { id: item.productId },
+            select: { sizeStock: true },
+          });
+          if (prod?.sizeStock) {
+            const ss = { ...(prod.sizeStock as Record<string, number>) };
+            const key = String(item.size);
+            ss[key] = (ss[key] ?? 0) + item.quantity;
+            await prisma.product.update({
+              where: { id: item.productId },
+              data:  { sizeStock: ss },
+            });
+          }
+        } catch (err) {
+          console.error(`Webhook: sizeStock restore failed for product ${item.productId}:`, err);
+        }
+      }
+
       console.log(`Webhook: order ${transaction_reference} marked REFUNDED, stock restored`);
     } catch (err) {
       console.error(`Webhook: refund update failed for ${transaction_reference}:`, err);
