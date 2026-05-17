@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Menu, X } from "lucide-react";
@@ -48,17 +49,27 @@ export default function Navbar() {
       >
         <div className="max-w-7xl mx-auto px-5 md:px-8 h-[60px] flex items-center justify-between">
 
-          {/* Wordmark */}
-          <Link href="/" className="flex flex-col items-start leading-none">
+          {/* Logo — floats over hero like Netflix, transitions to natural on scroll */}
+          <Link href="/" className="relative flex items-center" style={{ height: 44 }}>
+            <Image
+              src="https://vintage-gallery-products.s3.amazonaws.com/branding/logo.png"
+              alt="Vintage Gallery"
+              width={44}
+              height={44}
+              priority
+              className="object-contain transition-all duration-300"
+              style={{
+                filter: onDark
+                  ? "brightness(0) invert(1)"   // white logo on dark hero
+                  : "none",                      // natural logo on white bg
+                opacity: onDark ? 0.92 : 1,
+              }}
+            />
             <span
-              className={`font-serif transition-colors duration-300 ${onDark ? "text-white" : "text-zinc-900"}`}
-              style={{ fontSize: "1.35rem", fontWeight: 700, letterSpacing: "0.08em" }}
-            >
-              VG
-            </span>
-            <span
-              className={`font-serif transition-colors duration-300 ${onDark ? "text-white/70" : "text-zinc-500"}`}
-              style={{ fontSize: "0.42rem", fontWeight: 600, letterSpacing: "0.38em", textTransform: "uppercase", marginTop: "1px" }}
+              className={`ml-2.5 font-serif tracking-[0.22em] uppercase transition-colors duration-300 ${
+                onDark ? "text-white/90" : "text-zinc-900"
+              }`}
+              style={{ fontSize: "0.8rem", fontWeight: 600, letterSpacing: "0.28em" }}
             >
               Vintage Gallery
             </span>

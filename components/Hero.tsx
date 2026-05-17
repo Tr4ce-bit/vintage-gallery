@@ -76,7 +76,7 @@ export default function Hero() {
         {/* Full-bleed product image — right half */}
         <motion.div style={{ y: imageY }} className="absolute right-0 top-0 bottom-0 w-full md:w-[56%] will-change-transform">
           <Image
-            src="/asset/product-hope.jpg"
+            src="https://vintage-gallery-products.s3.amazonaws.com/products/product-hope.jpg"
             alt="Light in Darkness Tee"
             fill
             priority
