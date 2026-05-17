@@ -100,7 +100,19 @@ export default function ProductsPage() {
                     </td>
                     <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-500">{p.collection}</td>
                     <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-700 font-medium">GH₵ {p.basePrice}</td>
-                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-500">{p.stock}</td>
+                    <td className="px-4 md:px-5 py-3.5">
+                      <span className={`font-sans text-sm font-medium ${
+                        p.stock === 0   ? "text-red-500"    :
+                        p.stock <= 5    ? "text-amber-500"  :
+                        p.stock <= 20   ? "text-yellow-600" :
+                                          "text-zinc-600"
+                      }`}>
+                        {p.stock === 0 ? "Out" : p.stock}
+                      </span>
+                      {p.stock > 0 && p.stock <= 5 && (
+                        <span className="ml-1.5 font-sans text-[9px] uppercase tracking-wide text-amber-400">Low</span>
+                      )}
+                    </td>
                     <td className="px-4 md:px-5 py-3.5">
                       <button onClick={() => toggleActive(p.id, p.isActive)}
                         className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full transition-colors ${

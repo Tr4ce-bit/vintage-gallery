@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Circle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, XCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface OrderItem {
@@ -29,7 +29,6 @@ const STATUS_COLOR: Record<string, string> = {
   REFUNDED:   "bg-zinc-100 text-zinc-500",
 };
 
-// Ordered timeline steps (cancelled/refunded shown separately)
 const TIMELINE = ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
 const TIMELINE_LABELS: Record<string, string> = {
   PENDING:    "Order Placed",
@@ -38,6 +37,9 @@ const TIMELINE_LABELS: Record<string, string> = {
   SHIPPED:    "Out for Delivery",
   DELIVERED:  "Delivered",
 };
+
+// Customer can only cancel before admin confirms (PROCESSING)
+const CUSTOMER_CANCELLABLE = ["PENDING", "PAID"];
 
 function fmt(d: string) {
   return new Date(d).toLocaleDateString("en-GB", {
@@ -50,8 +52,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const router  = useRouter();
   const { isSignedIn, isLoaded, getAccessToken } = useAuth();
-  const [order,   setOrder]   = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [order,      setOrder]      = useState<Order | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelErr,  setCancelErr]  = useState("");
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -70,6 +74,27 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setLoading(false);
   }
 
+  async function handleCancel() {
+    if (!order) return;
+    if (!confirm("Are you sure you want to cancel this order?")) return;
+    setCancelErr("");
+    setCancelling(true);
+    const token = await getAccessToken();
+    const res   = await fetch(`/api/orders/${id}`, {
+      method:  "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body:    JSON.stringify({ action: "cancel" }),
+    });
+    const data = await res.json();
+    setCancelling(false);
+    if (!res.ok) {
+      setCancelErr(data.error ?? "Could not cancel order.");
+    } else {
+      // Refresh order state
+      setOrder(prev => prev ? { ...prev, status: "CANCELLED" } : prev);
+    }
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
@@ -83,9 +108,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     </main>
   );
 
-  const subtotal = order.items.reduce((s, i) => s + i.subtotal, 0);
-  const currentStep = TIMELINE.indexOf(order.status as typeof TIMELINE[number]);
-  const isCancelled = order.status === "CANCELLED" || order.status === "REFUNDED";
+  const subtotal      = order.items.reduce((s, i) => s + i.subtotal, 0);
+  const currentStep   = TIMELINE.indexOf(order.status as typeof TIMELINE[number]);
+  const isCancelled   = order.status === "CANCELLED" || order.status === "REFUNDED";
+  const canCancel     = CUSTOMER_CANCELLABLE.includes(order.status);
+  const lockedByAdmin = !canCancel && !isCancelled;
 
   return (
     <main className="min-h-screen bg-white pt-[60px]">
@@ -115,7 +142,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Status timeline */}
         {!isCancelled && (
-          <div className="bg-white border border-zinc-100 rounded-2xl px-6 py-6 mb-6">
+          <div className="bg-white border border-zinc-100 rounded-2xl px-4 md:px-6 py-6 mb-6">
             <h2 className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-300 font-light mb-5">
               Order Progress
             </h2>
@@ -126,22 +153,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 const isLast    = i === TIMELINE.length - 1;
                 return (
                   <div key={step} className="flex-1 flex flex-col items-center relative">
-                    {/* Connector line */}
                     {!isLast && (
                       <div className={`absolute top-3 left-1/2 w-full h-0.5 ${isDone ? "bg-emerald-400" : "bg-zinc-100"}`} />
                     )}
-                    {/* Dot */}
                     <div className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center mb-2 ${
-                      isDone    ? "bg-emerald-400"  :
-                      isCurrent ? "bg-zinc-900"     : "bg-zinc-100"
+                      isDone ? "bg-emerald-400" : isCurrent ? "bg-zinc-900" : "bg-zinc-100"
                     }`}>
-                      {isDone ? (
-                        <CheckCircle2 size={14} className="text-white" />
-                      ) : (
-                        <Circle size={10} className={isCurrent ? "text-white" : "text-zinc-300"} />
-                      )}
+                      {isDone
+                        ? <CheckCircle2 size={14} className="text-white" />
+                        : <Circle size={10} className={isCurrent ? "text-white" : "text-zinc-300"} />
+                      }
                     </div>
-                    {/* Label */}
                     <p className={`font-sans text-[9px] tracking-[0.1em] uppercase text-center leading-tight ${
                       isDone || isCurrent ? "text-zinc-700" : "text-zinc-300"
                     }`}>
@@ -151,6 +173,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Cancelled notice */}
+        {isCancelled && (
+          <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-2xl px-5 py-4 mb-6">
+            <XCircle size={18} className="text-red-400 shrink-0" />
+            <p className="font-sans text-sm text-red-600">
+              This order was {order.status.toLowerCase()}. If you have any questions, please contact us.
+            </p>
           </div>
         )}
 
@@ -183,7 +215,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   </tbody>
                 </table>
               </div>
-              {/* Financial summary */}
               <div className="px-5 py-4 border-t border-zinc-50 space-y-2">
                 <div className="flex justify-between font-sans text-sm text-zinc-400">
                   <span>Subtotal</span><span>GH₵ {subtotal}</span>
@@ -198,7 +229,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
 
-          {/* Delivery info */}
+          {/* Sidebar: delivery + cancel */}
           <div className="space-y-4">
             <div className="bg-white border border-zinc-100 rounded-2xl px-5 py-5 space-y-2">
               <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-300 font-light mb-3">Delivery Info</h3>
@@ -209,6 +240,37 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <p className="font-sans text-sm text-zinc-400 italic">{order.deliveryNotes}</p>
               )}
             </div>
+
+            {/* Cancel section */}
+            {!isCancelled && (
+              <div className="bg-white border border-zinc-100 rounded-2xl px-5 py-5">
+                {canCancel ? (
+                  <>
+                    <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-300 font-light mb-3">Cancel Order</h3>
+                    <p className="font-sans text-xs text-zinc-400 mb-4 leading-relaxed">
+                      You can cancel before our team starts preparing your order. Once confirmed, cancellation is no longer available.
+                    </p>
+                    {cancelErr && (
+                      <p className="font-sans text-xs text-red-500 mb-3">{cancelErr}</p>
+                    )}
+                    <button
+                      onClick={handleCancel}
+                      disabled={cancelling}
+                      className="w-full py-2.5 rounded-full border border-red-200 font-sans text-[11px] tracking-[0.15em] uppercase text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    >
+                      {cancelling ? "Cancelling…" : "Cancel Order"}
+                    </button>
+                  </>
+                ) : lockedByAdmin ? (
+                  <>
+                    <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-300 font-light mb-2">Cancel Order</h3>
+                    <p className="font-sans text-xs text-zinc-400 leading-relaxed">
+                      Your order is being prepared and can no longer be cancelled. Please contact us if you need assistance.
+                    </p>
+                  </>
+                ) : null}
+              </div>
+            )}
 
             <Link href="/shop"
               className="block w-full text-center font-sans text-[11px] tracking-[0.18em] uppercase py-3 rounded-full border border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-900 transition-all duration-200">

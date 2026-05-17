@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 
 const VALID_STATUSES = ["PENDING","PAID","PROCESSING","SHIPPED","DELIVERED","CANCELLED","REFUNDED"];
 
+// Stock was decremented when order reached PAID; restore it on cancel/refund
+const STOCK_DECREMENTED_STATUSES = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"];
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,9 +44,34 @@ export async function PATCH(
   }
 
   try {
-    const order = await prisma.order.update({
+    const existing = await prisma.order.findUnique({
       where:   { id },
-      data:    { status },
+      include: { items: true },
+    });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const wasPaid    = STOCK_DECREMENTED_STATUSES.includes(existing.status);
+    const isCancelling = status === "CANCELLED" || status === "REFUNDED";
+    const needsStockRestore = isCancelling && wasPaid && existing.status !== "CANCELLED" && existing.status !== "REFUNDED";
+
+    // Run status update + optional stock restore in one transaction
+    await prisma.$transaction([
+      prisma.order.update({
+        where: { id },
+        data:  { status },
+      }),
+      ...(needsStockRestore
+        ? existing.items.map(item =>
+            prisma.product.update({
+              where: { id: item.productId },
+              data:  { stock: { increment: item.quantity } },
+            })
+          )
+        : []),
+    ]);
+
+    const order = await prisma.order.findUnique({
+      where:   { id },
       include: { user: true, items: { include: { product: true } } },
     });
     return NextResponse.json({ order });

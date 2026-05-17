@@ -29,17 +29,16 @@ export async function POST(req: NextRequest) {
 
     // 2. Check order exists + idempotency guard
     const existing = await prisma.order.findUnique({
-      where: { paystackReference: reference },
+      where:   { paystackReference: reference },
+      include: { items: true },
     });
 
     if (!existing) {
       console.warn(`Webhook: no order found for reference ${reference}`);
-      // Return 200 so Paystack stops retrying
       return NextResponse.json({ received: true });
     }
 
     if (existing.status !== "PENDING") {
-      // Already processed — idempotent, no double-update
       console.log(`Webhook: order ${reference} already has status ${existing.status}, skipping`);
       return NextResponse.json({ received: true });
     }
@@ -60,15 +59,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    // 4. Mark as PAID
+    // 4. Mark as PAID + decrement stock — all in one transaction
     try {
-      await prisma.order.update({
-        where: { paystackReference: reference },
-        data:  { status: "PAID" },
-      });
-      console.log(`Webhook: order ${reference} marked as PAID`);
+      await prisma.$transaction([
+        // Mark order paid
+        prisma.order.update({
+          where: { paystackReference: reference },
+          data:  { status: "PAID" },
+        }),
+        // Decrement stock for every item in the order
+        ...existing.items.map(item =>
+          prisma.product.update({
+            where: { id: item.productId },
+            data:  { stock: { decrement: item.quantity } },
+          })
+        ),
+      ]);
+      console.log(`Webhook: order ${reference} marked PAID, stock decremented for ${existing.items.length} item(s)`);
     } catch (err) {
-      console.error(`Webhook: failed to mark order ${reference} as PAID:`, err);
+      console.error(`Webhook: failed to process order ${reference}:`, err);
     }
   }
 
@@ -77,7 +86,8 @@ export async function POST(req: NextRequest) {
     const { transaction_reference } = event.data;
 
     const existing = await prisma.order.findUnique({
-      where: { paystackReference: transaction_reference },
+      where:   { paystackReference: transaction_reference },
+      include: { items: true },
     });
 
     if (!existing) {
@@ -90,11 +100,20 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      await prisma.order.update({
-        where: { paystackReference: transaction_reference },
-        data:  { status: "REFUNDED" },
-      });
-      console.log(`Webhook: order ${transaction_reference} marked as REFUNDED`);
+      await prisma.$transaction([
+        prisma.order.update({
+          where: { paystackReference: transaction_reference },
+          data:  { status: "REFUNDED" },
+        }),
+        // Restore stock on refund
+        ...existing.items.map(item =>
+          prisma.product.update({
+            where: { id: item.productId },
+            data:  { stock: { increment: item.quantity } },
+          })
+        ),
+      ]);
+      console.log(`Webhook: order ${transaction_reference} marked REFUNDED, stock restored`);
     } catch (err) {
       console.error(`Webhook: refund update failed for ${transaction_reference}:`, err);
     }
