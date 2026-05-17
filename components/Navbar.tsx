@@ -49,35 +49,19 @@ export default function Navbar() {
       >
         <div className="max-w-7xl mx-auto px-5 md:px-8 h-[60px] flex items-center justify-between">
 
-          {/* Logo — floats over hero like Netflix, no background box */}
-          <Link href="/" className="flex items-center gap-2.5">
+          {/* Logo — transparent PNG, floats cleanly over any background */}
+          <Link href="/">
             <Image
-              src="https://vintage-gallery-products.s3.amazonaws.com/branding/logo.png"
+              src="https://vintage-gallery-products.s3.amazonaws.com/branding/logo-transparent.png"
               alt="Vintage Gallery"
-              width={44}
-              height={44}
+              width={48}
+              height={48}
               priority
               className="object-contain transition-all duration-300"
-              style={onDark ? {
-                // On dark hero: invert the logo so the mark becomes white,
-                // then screen-blend so the (now black) background disappears into the dark page
-                filter: "invert(1)",
-                mixBlendMode: "screen",
-              } : {
-                // On white background: multiply-blend so the white box in the
-                // PNG disappears into the white page, leaving only the logo mark
-                filter: "none",
-                mixBlendMode: "multiply",
+              style={{
+                filter: onDark ? "brightness(0) invert(1)" : "none",
               }}
             />
-            <span
-              className={`font-serif tracking-[0.22em] uppercase transition-colors duration-300 ${
-                onDark ? "text-white/90" : "text-zinc-900"
-              }`}
-              style={{ fontSize: "0.8rem", fontWeight: 600 }}
-            >
-              Vintage Gallery
-            </span>
           </Link>
 
           {/* Desktop nav */}
