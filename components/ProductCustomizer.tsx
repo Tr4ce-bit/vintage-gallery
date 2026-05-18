@@ -326,9 +326,10 @@ export default function ProductCustomizer() {
   const [rotateY, setRotateY] = useState(0);
   const showingFront = (() => { const m = ((rotateY % 360) + 360) % 360; return m < 90 || m >= 270; })();
 
-  // Rotation drag — use refs to avoid stale-closure bugs
+  // Rotation drag — use refs to avoid stale-closure bugs + DOM-direct writes for 60fps
   const isDraggingRef = useRef(false);
   const dragRef       = useRef({ startX: 0, startRotY: 0 });
+  const rotateYRef    = useRef(0);                          // tracks live rotation without re-renders
   const [isDragging,  setIsDragging] = useState(false); // only for cursor style
 
   // Remote data
@@ -370,19 +371,27 @@ export default function ProductCustomizer() {
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     isDraggingRef.current = true;
-    dragRef.current = { startX: e.clientX, startRotY: rotateY };
+    // Use rotateYRef so this callback needs no deps and never goes stale
+    dragRef.current = { startX: e.clientX, startRotY: rotateYRef.current };
     try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
     setIsDragging(true);
-  }, [rotateY]);
+  }, []);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDraggingRef.current) return;
-    setRotateY(dragRef.current.startRotY + (e.clientX - dragRef.current.startX) * 1.8);
+    const newY = dragRef.current.startRotY + (e.clientX - dragRef.current.startX) * 3.0;
+    rotateYRef.current = newY;
+    // Write directly to DOM — zero React re-render overhead, butter-smooth on mobile
+    document.querySelectorAll<HTMLElement>("[data-shirt-rotate]").forEach(el => {
+      el.style.transform = `rotateY(${newY}deg)`;
+    });
   }, []);
 
   const onPointerUp = useCallback(() => {
     isDraggingRef.current = false;
     setIsDragging(false);
+    // Sync React state now so showingFront indicator and side-auto-switch update
+    setRotateY(rotateYRef.current);
   }, []);
 
   // ── Cart ─────────────────────────────────────────────────────────────────────
@@ -414,6 +423,7 @@ export default function ProductCustomizer() {
     setFrontDesign({ ...BLANK_DESIGN });
     setBackDesign({ ...BLANK_DESIGN });
     setQuantity(1);
+    rotateYRef.current = 0;
     setRotateY(0);
   };
 
@@ -570,15 +580,17 @@ export default function ProductCustomizer() {
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerLeave={onPointerUp}
       className={isDragging ? "cursor-grabbing select-none" : "cursor-grab select-none"}
     >
-      <div style={{
-        width: `${w}px`, height: `${h}px`,
-        transformStyle: "preserve-3d",
-        transform: `rotateY(${rotateY}deg)`,
-        transition: isDragging ? "none" : "transform 0.05s linear",
-      }}>
+      <div
+        data-shirt-rotate
+        style={{
+          width: `${w}px`, height: `${h}px`,
+          transformStyle: "preserve-3d",
+          transform: `rotateY(${rotateY}deg)`,
+          transition: isDragging ? "none" : "transform 0.05s linear",
+        }}
+      >
         {/* Front */}
         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
           <ShirtCanvas color={color} side="front">
