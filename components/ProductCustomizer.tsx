@@ -68,78 +68,131 @@ function loadShirtImage(): Promise<HTMLImageElement> {
 // ─── Canvas shirt ─────────────────────────────────────────────────────────────
 
 function ShirtCanvas({
-  color, flip = false, children,
+  color, side = "front", children,
 }: {
   color:     ShirtColor;
-  flip?:     boolean;
+  side?:     "front" | "back";
   children?: React.ReactNode;
 }) {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const colorRef   = useRef(color);
   colorRef.current = color;
-  const flipRef    = useRef(flip);
-  flipRef.current  = flip;
+  const sideRef    = useRef(side);
+  sideRef.current  = side;
 
   const [ready,    setReady]    = useState(false);
   const [fallback, setFallback] = useState(false);
 
-  const paint = useCallback((img: HTMLImageElement, c: ShirtColor, mirrored: boolean) => {
+  const paint = useCallback((img: HTMLImageElement, c: ShirtColor, view: "front" | "back") => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
-    canvas.width  = img.naturalWidth;
-    canvas.height = img.naturalHeight;
+    const W = img.naturalWidth;
+    const H = img.naturalHeight;
+    canvas.width  = W;
+    canvas.height = H;
 
-    if (mirrored) {
-      ctx.save();
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(img, 0, 0);
-      ctx.restore();
-    } else {
-      ctx.drawImage(img, 0, 0);
-    }
+    // Always draw front photo straight — back will be treated in pixel pass
+    ctx.drawImage(img, 0, 0);
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, W, H);
     const data      = imageData.data;
 
     const tr = parseInt(c.hex.slice(1, 3), 16);
     const tg = parseInt(c.hex.slice(3, 5), 16);
     const tb = parseInt(c.hex.slice(5, 7), 16);
 
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    // Centre column for the back crease shadow
+    const cx  = W / 2;
+    const isBack = view === "back";
 
-      // Background → transparent
-      if (lum > 0.88) { data[i + 3] = 0; continue; }
+    for (let py = 0; py < H; py++) {
+      for (let px = 0; px < W; px++) {
+        const i   = (py * W + px) * 4;
+        const r   = data[i], g = data[i + 1], b = data[i + 2];
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-      // Remap shirt pixel to target colour preserving fabric shading
-      const t      = Math.min(lum / 0.45, 1.0);
-      const factor = 0.18 + 0.82 * t;
-      data[i]     = Math.min(255, Math.round(tr * factor));
-      data[i + 1] = Math.min(255, Math.round(tg * factor));
-      data[i + 2] = Math.min(255, Math.round(tb * factor));
+        // Background → transparent
+        if (lum > 0.88) { data[i + 3] = 0; continue; }
+
+        // ── colour remap ───────────────────────────────────────────────────────
+        const t      = Math.min(lum / 0.45, 1.0);
+        let factor   = 0.18 + 0.82 * t;
+
+        if (isBack) {
+          // Back view: overall 10 % darker (back flat-lay has less direct light)
+          factor *= 0.90;
+
+          // Centre-back seam/crease — a soft shadow in the middle vertical zone
+          // Runs from just below the collar (~12 % from top) to the hem (~92 %)
+          const inBodyV = py > H * 0.12 && py < H * 0.92;
+          if (inBodyV) {
+            const dist    = Math.abs(px - cx);
+            const creaseW = W * 0.018;          // crease is ~1.8 % of width wide
+            if (dist < creaseW) {
+              const creaseFactor = 1 - 0.18 * (1 - dist / creaseW); // max 18 % darker at centre
+              factor *= creaseFactor;
+            }
+          }
+
+          // Back neck fill: make the neckline shallower by filling the front-neck
+          // dip with shirt-coloured pixels.  The front neck opening sits in
+          // roughly the top 9–16 % of the image, centred.
+          const relY = py / H;
+          if (relY > 0.09 && relY < 0.165) {
+            const relX  = (px - W * 0.28) / (W * 0.44); // 0→1 across collar width
+            // Parabolic mask: anything inside the V gets filled with solid shirt colour
+            const vDepth = 0.5 - 2.2 * Math.pow(relX - 0.5, 2); // 0 at edges, 0.5 at centre
+            const normV  = (relY - 0.09) / 0.075;               // 0 at top, 1 at bottom
+            if (normV < vDepth && relX > 0 && relX < 1) {
+              // Replace with solid target colour at the highlight luminance level
+              factor = 0.70;
+            }
+          }
+        }
+
+        data[i]     = Math.min(255, Math.round(tr * factor));
+        data[i + 1] = Math.min(255, Math.round(tg * factor));
+        data[i + 2] = Math.min(255, Math.round(tb * factor));
+      }
     }
 
     ctx.putImageData(imageData, 0, 0);
+
+    // ── Back: draw a woven label at centre-back neck ─────────────────────────
+    if (isBack) {
+      const lw = W * 0.075, lh = H * 0.028;
+      const lx = cx - lw / 2, ly = H * 0.06;
+      const lb = c.light ? "rgba(255,255,255,0.80)" : "rgba(255,255,255,0.88)";
+      ctx.fillStyle = lb;
+      ctx.beginPath();
+      (ctx as CanvasRenderingContext2D).roundRect(lx, ly, lw, lh, 3);
+      ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.font      = `600 ${H * 0.009}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.letterSpacing = "2px";
+      ctx.fillText("VINTAGE", cx, ly + lh * 0.44);
+      ctx.fillText("GALLERY", cx, ly + lh * 0.85);
+    }
+
     setReady(true);
   }, []);
 
   useEffect(() => {
     loadShirtImage()
-      .then(img => paint(img, colorRef.current, flipRef.current))
+      .then(img => paint(img, colorRef.current, sideRef.current))
       .catch(() => setFallback(true));
   }, [paint]);
 
   useEffect(() => {
     if (!_cachedImg) return;
-    paint(_cachedImg, color, flip);
-  }, [color, flip, paint]);
+    paint(_cachedImg, color, side);
+  }, [color, side, paint]);
 
-  if (fallback) return <FallbackShirt color={color.hex} light={color.light} flip={flip}>{children}</FallbackShirt>;
+  if (fallback) return <FallbackShirt color={color.hex} light={color.light} flip={side === "back"}>{children}</FallbackShirt>;
 
   return (
     <div className="relative w-full h-full">
@@ -382,7 +435,7 @@ export default function ProductCustomizer() {
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDraggingRef.current) return;
-    setRotateY(dragRef.current.startRotY + (e.clientX - dragRef.current.startX) * 0.55);
+    setRotateY(dragRef.current.startRotY + (e.clientX - dragRef.current.startX) * 1.8);
   }, []);
 
   const onPointerUp = useCallback(() => {
@@ -586,13 +639,13 @@ export default function ProductCustomizer() {
       }}>
         {/* Front */}
         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
-          <ShirtCanvas color={color}>
+          <ShirtCanvas color={color} side="front">
             <PrintZone light={color.light} design={frontDesign} />
           </ShirtCanvas>
         </div>
         {/* Back */}
         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-          <ShirtCanvas color={color} flip>
+          <ShirtCanvas color={color} side="back">
             <PrintZone light={color.light} design={backDesign} />
           </ShirtCanvas>
         </div>
