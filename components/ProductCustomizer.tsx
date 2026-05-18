@@ -23,6 +23,12 @@ interface ShirtColor {
   light: boolean;
 }
 
+interface SideDesign {
+  type:    string;           // "none" | "text" | "graphic"
+  text:    string;
+  graphic: StudioDesign | null;
+}
+
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
 const SHIRT_COLORS: ShirtColor[] = [
@@ -42,6 +48,8 @@ const DESIGN_TYPES = [
   { id: "graphic", label: "Graphic" },
 ];
 
+const BLANK_DESIGN: SideDesign = { type: "none", text: "", graphic: null };
+
 // ─── Shared image cache ───────────────────────────────────────────────────────
 
 let _cachedImg: HTMLImageElement | null = null;
@@ -49,19 +57,15 @@ let _cachedImg: HTMLImageElement | null = null;
 function loadShirtImage(): Promise<HTMLImageElement> {
   if (_cachedImg) return Promise.resolve(_cachedImg);
   return new Promise((resolve, reject) => {
-    const img      = new window.Image();
+    const img       = new window.Image();
     img.crossOrigin = "anonymous";
-    img.onload     = () => { _cachedImg = img; resolve(img); };
-    img.onerror    = reject;
-    img.src        = "/shirt-base.png";
+    img.onload      = () => { _cachedImg = img; resolve(img); };
+    img.onerror     = reject;
+    img.src         = "/shirt-base.png";
   });
 }
 
 // ─── Canvas shirt ─────────────────────────────────────────────────────────────
-// Renders the real flat-lay photo with:
-//   • background pixels made fully transparent
-//   • shirt pixels remapped to target colour preserving luminance shading
-//   • flip=true mirrors horizontally for the back face
 
 function ShirtCanvas({
   color, flip = false, children,
@@ -79,7 +83,6 @@ function ShirtCanvas({
   const [ready,    setReady]    = useState(false);
   const [fallback, setFallback] = useState(false);
 
-  // ── pixel recolour ───────────────────────────────────────────────────────────
   const paint = useCallback((img: HTMLImageElement, c: ShirtColor, mirrored: boolean) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -89,7 +92,6 @@ function ShirtCanvas({
     canvas.width  = img.naturalWidth;
     canvas.height = img.naturalHeight;
 
-    // Draw — mirrored for back face
     if (mirrored) {
       ctx.save();
       ctx.translate(canvas.width, 0);
@@ -111,17 +113,12 @@ function ShirtCanvas({
       const r = data[i], g = data[i + 1], b = data[i + 2];
       const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-      // White / near-white → transparent background
-      if (lum > 0.88) {
-        data[i + 3] = 0;
-        continue;
-      }
+      // Background → transparent
+      if (lum > 0.88) { data[i + 3] = 0; continue; }
 
-      // Shirt pixel — map luminance to target colour
-      // Source shirt is black: lum ≈ 0 (deep shadow) → ≈ 0.45 (fabric highlight)
+      // Remap shirt pixel to target colour preserving fabric shading
       const t      = Math.min(lum / 0.45, 1.0);
       const factor = 0.18 + 0.82 * t;
-
       data[i]     = Math.min(255, Math.round(tr * factor));
       data[i + 1] = Math.min(255, Math.round(tg * factor));
       data[i + 2] = Math.min(255, Math.round(tb * factor));
@@ -131,14 +128,12 @@ function ShirtCanvas({
     setReady(true);
   }, []);
 
-  // Load image once, paint immediately
   useEffect(() => {
     loadShirtImage()
       .then(img => paint(img, colorRef.current, flipRef.current))
       .catch(() => setFallback(true));
   }, [paint]);
 
-  // Repaint on colour change
   useEffect(() => {
     if (!_cachedImg) return;
     paint(_cachedImg, color, flip);
@@ -151,11 +146,13 @@ function ShirtCanvas({
       <canvas
         ref={canvasRef}
         style={{
-          width: "100%", height: "100%",
-          objectFit: "contain",
+          width: "100%", height: "100%", objectFit: "contain",
           opacity: ready ? 1 : 0,
           transition: "opacity 0.3s ease",
-          filter: "drop-shadow(0 12px 40px rgba(0,0,0,0.70)) drop-shadow(0 3px 12px rgba(0,0,0,0.45))",
+          // For very dark shirts add a subtle outer glow so they're visible against the dark bg
+          filter: color.light
+            ? "drop-shadow(0 14px 44px rgba(0,0,0,0.65)) drop-shadow(0 3px 12px rgba(0,0,0,0.4))"
+            : "drop-shadow(0 14px 44px rgba(0,0,0,0.7)) drop-shadow(0 0 28px rgba(255,255,255,0.07)) drop-shadow(0 3px 12px rgba(0,0,0,0.5))",
         }}
       />
       {!ready && (
@@ -168,7 +165,7 @@ function ShirtCanvas({
   );
 }
 
-// ─── Fallback SVG (used if image hasn't been added yet) ───────────────────────
+// ─── Fallback SVG ─────────────────────────────────────────────────────────────
 
 function FallbackShirt({ color, light, flip = false, children }: {
   color: string; light: boolean; flip?: boolean; children?: React.ReactNode;
@@ -176,37 +173,29 @@ function FallbackShirt({ color, light, flip = false, children }: {
   const sA  = light ? "rgba(0,0,0,0.11)" : "rgba(0,0,0,0.28)";
   const sB  = light ? "rgba(0,0,0,0.07)" : "rgba(0,0,0,0.20)";
   const hi  = light ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.06)";
-  const sm  = light ? "rgba(0,0,0,0.07)" : "rgba(0,0,0,0.18)";
-  const hem = light ? "rgba(0,0,0,0.09)" : "rgba(0,0,0,0.22)";
+  const sm  = light ? "rgba(0,0,0,0.07)"  : "rgba(0,0,0,0.18)";
+  const hem = light ? "rgba(0,0,0,0.09)"  : "rgba(0,0,0,0.22)";
   const lb  = light ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.90)";
-
-  // Back neckline is shallower
-  const neckClose = flip
+  const nk  = flip
     ? "C 366,74 330,82 280,82 C 230,82 194,74 172,64 Z"
     : "C 366,96 336,118 280,118 C 224,118 194,96 172,64 Z";
-
-  const BODY = `M 172,64 C 142,70 86,85 74,97 L 4,183
-    C 18,204 43,218 63,221 C 83,215 110,204 117,196
-    L 117,493 Q 117,509 134,511 L 426,511 Q 443,509 443,493
-    L 443,196 C 450,204 477,215 497,221 C 517,218 542,204 556,183
-    L 486,97 C 474,85 418,70 388,64 ${neckClose}`;
-
+  const BODY = `M 172,64 C 142,70 86,85 74,97 L 4,183 C 18,204 43,218 63,221 C 83,215 110,204 117,196 L 117,493 Q 117,509 134,511 L 426,511 Q 443,509 443,493 L 443,196 C 450,204 477,215 497,221 C 517,218 542,204 556,183 L 486,97 C 474,85 418,70 388,64 ${nk}`;
+  const uid = flip ? "b" : "f";
   return (
     <div className="relative w-full h-full">
       <svg viewBox="0 0 560 560" fill="none" className="w-full h-full"
         style={{ filter: "drop-shadow(0 6px 28px rgba(0,0,0,0.5))" }}>
         <defs>
-          <radialGradient id={`fe-${flip ? "b" : "f"}`} cx="280" cy="290" r="260" gradientUnits="userSpaceOnUse">
-            <stop offset="62%" stopColor="rgba(0,0,0,0)" />
-            <stop offset="100%" stopColor={sA} />
+          <radialGradient id={`fe-${uid}`} cx="280" cy="290" r="260" gradientUnits="userSpaceOnUse">
+            <stop offset="62%" stopColor="rgba(0,0,0,0)" /><stop offset="100%" stopColor={sA} />
           </radialGradient>
-          <linearGradient id={`fl-${flip ? "b" : "f"}`} x1="280" y1="64" x2="280" y2="511" gradientUnits="userSpaceOnUse">
+          <linearGradient id={`fl-${uid}`} x1="280" y1="64" x2="280" y2="511" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor={hi} /><stop offset="30%" stopColor="rgba(0,0,0,0)" /><stop offset="100%" stopColor={sB} />
           </linearGradient>
         </defs>
         <path d={BODY} fill={color} />
-        <path d={BODY} fill={`url(#fe-${flip ? "b" : "f"})`} />
-        <path d={BODY} fill={`url(#fl-${flip ? "b" : "f"})`} />
+        <path d={BODY} fill={`url(#fe-${uid})`} />
+        <path d={BODY} fill={`url(#fl-${uid})`} />
         <g transform="translate(251,100)">
           <rect width="58" height="20" rx="2" fill={lb} />
           <text x="29" y="8" textAnchor="middle" fill="rgba(0,0,0,0.55)" fontSize="4.2" fontFamily="sans-serif" letterSpacing="0.9" fontWeight="600">VINTAGE</text>
@@ -221,41 +210,38 @@ function FallbackShirt({ color, light, flip = false, children }: {
   );
 }
 
-// ─── Print zone (chest area of real photo) ────────────────────────────────────
+// ─── Print zone ───────────────────────────────────────────────────────────────
 
-function PrintZone({ light, designType, customText, selectedDesign }: {
-  light: boolean; designType: string; customText: string; selectedDesign: StudioDesign | null;
-}) {
-  if (designType === "none") return null;
-  const textCol   = light ? "rgba(0,0,0,0.80)"   : "rgba(255,255,255,0.92)";
-  const borderCol = light ? "rgba(0,0,0,0.16)"   : "rgba(255,255,255,0.20)";
-
+function PrintZone({ light, design }: { light: boolean; design: SideDesign }) {
+  if (design.type === "none") return null;
+  const textCol   = light ? "rgba(0,0,0,0.80)"  : "rgba(255,255,255,0.92)";
+  const borderCol = light ? "rgba(0,0,0,0.16)"  : "rgba(255,255,255,0.20)";
   return (
     <div className="absolute pointer-events-none flex items-center justify-center"
       style={{ left: "26%", right: "26%", top: "36%", height: "26%" }}>
-      {designType === "text" && customText && (
-        <motion.span key={customText} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+      {design.type === "text" && design.text && (
+        <motion.span key={design.text} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.2 }} className="font-serif text-center leading-tight break-words w-full"
           style={{ fontSize: "clamp(0.8rem,3vw,1.3rem)", fontWeight: 600,
             letterSpacing: "0.12em", textTransform: "uppercase", color: textCol,
             textShadow: light ? "0 1px 4px rgba(255,255,255,0.5)" : "0 1px 4px rgba(0,0,0,0.6)" }}>
-          {customText}
+          {design.text}
         </motion.span>
       )}
-      {designType === "text" && !customText && (
+      {design.type === "text" && !design.text && (
         <span className="font-sans text-center"
           style={{ fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: borderCol }}>
           Your text here
         </span>
       )}
-      {designType === "graphic" && selectedDesign && (
-        <motion.div key={selectedDesign.id} initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }}
+      {design.type === "graphic" && design.graphic && (
+        <motion.div key={design.graphic.id} initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.25 }} className="relative w-full h-full">
-          <Image src={selectedDesign.imageUrl} alt={selectedDesign.name} fill
+          <Image src={design.graphic.imageUrl} alt={design.graphic.name} fill
             className="object-contain" style={{ mixBlendMode: light ? "multiply" : "screen" }} unoptimized />
         </motion.div>
       )}
-      {designType === "graphic" && !selectedDesign && (
+      {design.type === "graphic" && !design.graphic && (
         <div className="w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center"
           style={{ borderColor: borderCol }}>
           <span style={{ fontSize: "0.65rem", letterSpacing: "0.2em", textTransform: "uppercase", color: borderCol, fontFamily: "sans-serif" }}>
@@ -267,15 +253,31 @@ function PrintZone({ light, designType, customText, selectedDesign }: {
   );
 }
 
+// ─── Stage spotlight (helps dark shirts stand out) ────────────────────────────
+
+function StageLight({ light }: { light: boolean }) {
+  if (light) return null; // only needed for dark colours
+  return (
+    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+      {/* Soft radial highlight centred on the shirt */}
+      <div className="absolute left-1/2 top-[30%] -translate-x-1/2 -translate-y-1/2 w-[70%] h-[55%] rounded-full"
+        style={{ background: "radial-gradient(ellipse at center, rgba(255,255,255,0.055) 0%, transparent 70%)" }} />
+    </div>
+  );
+}
+
 // ─── Ambient glow ─────────────────────────────────────────────────────────────
 
-function AmbientGlow({ hex }: { hex: string }) {
+function AmbientGlow({ hex, light }: { hex: string; light: boolean }) {
+  // For dark colours, use a muted grey hint so we don't darken the already-dark bg
+  const glowHex = light ? hex : "#3a3a3a";
+  const opacity = light ? (hex === "#FAFAF8" ? 0.13 : 0.18) : 0.10;
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       <div className="absolute top-[8%] left-[18%] w-[64%] h-[58%] rounded-full blur-[90px] transition-all duration-700"
-        style={{ background: hex, opacity: hex === "#FAFAF8" ? 0.14 : 0.20 }} />
+        style={{ background: glowHex, opacity }} />
       <div className="absolute bottom-0 left-[28%] w-[44%] h-[28%] rounded-full blur-[70px] transition-all duration-700"
-        style={{ background: hex, opacity: 0.09 }} />
+        style={{ background: glowHex, opacity: opacity * 0.6 }} />
     </div>
   );
 }
@@ -316,17 +318,23 @@ export default function ProductCustomizer() {
   const { isSignedIn } = useAuth();
   const addItem        = useCartStore((s) => s.addItem);
 
-  const [color,          setColor]          = useState<ShirtColor>(SHIRT_COLORS[1]); // Black = matches source
-  const [size,           setSize]           = useState("M");
-  const [designType,     setDesignType]     = useState("none");
-  const [customText,     setCustomText]     = useState("");
-  const [quantity,       setQuantity]       = useState(1);
-  const [selectedDesign, setSelectedDesign] = useState<StudioDesign | null>(null);
+  const [color,      setColor]      = useState<ShirtColor>(SHIRT_COLORS[1]);
+  const [size,       setSize]       = useState("M");
+  const [quantity,   setQuantity]   = useState(1);
 
-  // 3D rotation state
-  const [rotateY,    setRotateY]    = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startRotY: 0 });
+  // Per-side design state
+  const [frontDesign, setFrontDesign] = useState<SideDesign>({ ...BLANK_DESIGN });
+  const [backDesign,  setBackDesign]  = useState<SideDesign>({ ...BLANK_DESIGN });
+  const [activeSide,  setActiveSide]  = useState<"front" | "back">("front");
+
+  // Which side is facing us — derived from rotateY
+  const [rotateY, setRotateY] = useState(0);
+  const showingFront = (() => { const m = ((rotateY % 360) + 360) % 360; return m < 90 || m >= 270; })();
+
+  // Rotation drag — use refs to avoid stale-closure bugs
+  const isDraggingRef = useRef(false);
+  const dragRef       = useRef({ startX: 0, startRotY: 0 });
+  const [isDragging,  setIsDragging] = useState(false); // only for cursor style
 
   // Remote data
   const [designs,        setDesigns]        = useState<StudioDesign[]>([]);
@@ -355,34 +363,45 @@ export default function ProductCustomizer() {
     }).catch(() => setDesignsLoaded(true));
   }, []);
 
-  const price = designType === "none" ? basePriceGHS : basePriceGHS + designAddonGHS;
+  const hasAnyDesign = frontDesign.type !== "none" || backDesign.type !== "none";
+  const price        = hasAnyDesign ? basePriceGHS + designAddonGHS : basePriceGHS;
 
-  // ── Drag to spin ──────────────────────────────────────────────────────────────
+  // Auto-switch active side when the user rotates to the back
+  useEffect(() => {
+    setActiveSide(showingFront ? "front" : "back");
+  }, [showingFront]);
+
+  // ── Drag handlers (ref-based — no stale closures) ────────────────────────────
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
+    isDraggingRef.current = true;
     dragRef.current = { startX: e.clientX, startRotY: rotateY };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
     setIsDragging(true);
   }, [rotateY]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDragging) return;
-    setRotateY(dragRef.current.startRotY + (e.clientX - dragRef.current.startX) * 0.5);
-  }, [isDragging]);
+    if (!isDraggingRef.current) return;
+    setRotateY(dragRef.current.startRotY + (e.clientX - dragRef.current.startX) * 0.55);
+  }, []);
 
   const onPointerUp = useCallback(() => {
+    isDraggingRef.current = false;
     setIsDragging(false);
   }, []);
 
-  // ── Cart ──────────────────────────────────────────────────────────────────────
+  // ── Cart ─────────────────────────────────────────────────────────────────────
 
   const handleAddToCart = () => {
     if (!size) { setSizeError(true); return; }
     setSizeError(false);
+    const frontDesc = frontDesign.type !== "none" ? `Front: ${frontDesign.text || frontDesign.graphic?.name || ""}` : "";
+    const backDesc  = backDesign.type  !== "none" ? `Back: ${backDesign.text  || backDesign.graphic?.name  || ""}` : "";
+    const desc      = [frontDesc, backDesc].filter(Boolean).join(" · ");
     addItem({
       productId: `custom-${color.name}-${size}`,
       slug:       "custom-tee",
-      name:       `Custom Tee — ${color.name}${customText ? ` · "${customText}"` : ""}${selectedDesign ? ` · ${selectedDesign.name}` : ""}`,
+      name:       `Custom Tee — ${color.name}${desc ? ` · ${desc}` : ""}`,
       collection: "Custom Studio",
       price,
       image:      "/shirt-base.png",
@@ -397,25 +416,29 @@ export default function ProductCustomizer() {
   const handleReset = () => {
     setColor(SHIRT_COLORS[1]);
     setSize("M");
-    setDesignType("none");
-    setCustomText("");
-    setSelectedDesign(null);
+    setFrontDesign({ ...BLANK_DESIGN });
+    setBackDesign({ ...BLANK_DESIGN });
     setQuantity(1);
     setRotateY(0);
   };
 
-  // ── Colour panel ──────────────────────────────────────────────────────────────
+  // ── Active side helpers ──────────────────────────────────────────────────────
+
+  const activeDesign    = activeSide === "front" ? frontDesign    : backDesign;
+  const setActiveDesign = activeSide === "front" ? setFrontDesign : setBackDesign;
+
+  // ── Colour panel ─────────────────────────────────────────────────────────────
 
   const ColorControls = () => (
     <div className="p-5 space-y-5">
       <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-zinc-400 font-light">Shirt Colour</p>
       <div className="grid grid-cols-3 gap-3">
         {SHIRT_COLORS.map(c => (
-          <button key={c.hex} onClick={() => setColor(c)}
+          <button key={c.hex} onClick={() => setColor(c)} style={{ touchAction: "manipulation" }}
             className={`flex flex-col items-center gap-2 p-2 rounded-xl transition-all duration-200 ${
               color.hex === c.hex ? "ring-2 ring-white ring-offset-2 ring-offset-black" : "hover:bg-white/5"
             }`}>
-            <div className="w-10 h-10 rounded-full transition-transform duration-200 hover:scale-110"
+            <div className="w-10 h-10 rounded-full"
               style={{
                 backgroundColor: c.hex,
                 boxShadow: c.hex === "#FAFAF8"
@@ -437,18 +460,44 @@ export default function ProductCustomizer() {
     </div>
   );
 
-  // ── Design panel ──────────────────────────────────────────────────────────────
+  // ── Design panel ─────────────────────────────────────────────────────────────
 
   const DesignControls = () => (
-    <div className="p-5 space-y-5 overflow-y-auto max-h-[70vh]">
+    <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
+
+      {/* Front / Back toggle */}
       <div>
-        <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-zinc-400 font-light mb-3">Customisation</p>
+        <p className="font-sans text-[9px] tracking-[0.35em] uppercase text-zinc-400 font-light mb-2">Customise</p>
+        <div className="flex gap-1.5 mb-4">
+          {(["front", "back"] as const).map(side => (
+            <button key={side} onClick={() => setActiveSide(side)} style={{ touchAction: "manipulation" }}
+              className={`flex-1 py-2.5 rounded-xl font-sans text-[10px] tracking-[0.12em] uppercase font-light border transition-all duration-200 ${
+                activeSide === side
+                  ? "bg-white/12 border-white/40 text-white"
+                  : "border-white/08 text-zinc-600 hover:border-white/20 hover:text-zinc-400"
+              }`}>
+              {side}
+              {/* dot if side has a design */}
+              {((side === "front" && frontDesign.type !== "none") || (side === "back" && backDesign.type !== "none")) && (
+                <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-white align-middle" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Design type */}
         <div className="flex gap-1.5">
           {DESIGN_TYPES.map(dt => (
-            <button key={dt.id}
-              onClick={() => { setDesignType(dt.id); if (dt.id !== "text") setCustomText(""); if (dt.id !== "graphic") setSelectedDesign(null); }}
+            <button key={dt.id} style={{ touchAction: "manipulation" }}
+              onClick={() => setActiveDesign(d => ({
+                ...d, type: dt.id,
+                text:    dt.id === "text"    ? d.text    : "",
+                graphic: dt.id === "graphic" ? d.graphic : null,
+              }))}
               className={`flex-1 py-2.5 rounded-xl font-sans text-[10px] tracking-[0.1em] uppercase font-light border transition-all duration-200 ${
-                designType === dt.id ? "bg-white text-zinc-900 border-white" : "border-white/10 text-zinc-500 hover:border-white/25 hover:text-zinc-200"
+                activeDesign.type === dt.id
+                  ? "bg-white text-zinc-900 border-white"
+                  : "border-white/10 text-zinc-500 hover:border-white/25 hover:text-zinc-200"
               }`}>
               {dt.label}
             </button>
@@ -457,23 +506,27 @@ export default function ProductCustomizer() {
       </div>
 
       <AnimatePresence>
-        {designType === "text" && (
+        {activeDesign.type === "text" && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }} className="overflow-hidden space-y-2">
-            <p className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-500 font-light">Your Text · max 20 chars</p>
-            <input type="text" value={customText}
-              onChange={e => setCustomText(e.target.value.slice(0, 20).toUpperCase())}
+            <p className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-500 font-light">
+              {activeSide === "front" ? "Front" : "Back"} Text · max 20 chars
+            </p>
+            <input type="text" value={activeDesign.text}
+              onChange={e => setActiveDesign(d => ({ ...d, text: e.target.value.slice(0, 20).toUpperCase() }))}
               placeholder="E.G. ACCRA"
               className="w-full rounded-xl px-4 py-3 font-serif text-white text-center tracking-[0.3em] uppercase placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/30 transition-all"
               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
-            <p className="font-sans text-[9px] text-zinc-600 font-light">Screen-printed on chest · updates live</p>
+            <p className="font-sans text-[9px] text-zinc-600 font-light">Screen-printed · updates live</p>
           </motion.div>
         )}
 
-        {designType === "graphic" && (
+        {activeDesign.type === "graphic" && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }} className="overflow-hidden space-y-3">
-            <p className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-500 font-light">Choose a Graphic</p>
+            <p className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-500 font-light">
+              {activeSide === "front" ? "Front" : "Back"} Graphic
+            </p>
             {!designsLoaded ? (
               <div className="flex items-center gap-2 py-3">
                 <div className="w-4 h-4 border-2 border-zinc-700 border-t-zinc-300 rounded-full animate-spin" />
@@ -482,27 +535,30 @@ export default function ProductCustomizer() {
             ) : designs.length === 0 ? (
               <div className="rounded-xl py-6 text-center" style={{ border: "1px dashed rgba(255,255,255,0.1)" }}>
                 <p className="font-sans text-xs text-zinc-500 font-light">No graphics yet.</p>
-                <p className="font-sans text-[10px] text-zinc-700 mt-1">DM us your design on Instagram.</p>
+                <p className="font-sans text-[10px] text-zinc-700 mt-1">DM us on Instagram.</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {designs.map(d => {
-                  const active = selectedDesign?.id === d.id;
+                  const active = activeDesign.graphic?.id === d.id;
                   return (
-                    <button key={d.id} onClick={() => setSelectedDesign(active ? null : d)} title={d.name}
+                    <button key={d.id} onClick={() => setActiveDesign(sd => ({ ...sd, graphic: active ? null : d }))}
+                      title={d.name}
                       className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
                         active ? "border-white" : "border-transparent hover:border-white/30"
-                      }`} style={{ background: "rgba(255,255,255,0.05)" }}>
+                      }`} style={{ background: "rgba(255,255,255,0.05)", touchAction: "manipulation" }}>
                       <Image src={d.imageUrl} alt={d.name} fill className="object-contain p-1.5" unoptimized />
                     </button>
                   );
                 })}
               </div>
             )}
-            {selectedDesign && (
+            {activeDesign.graphic && (
               <p className="font-sans text-[10px] text-zinc-400">
-                {selectedDesign.name}
-                <button onClick={() => setSelectedDesign(null)} className="ml-2 text-zinc-600 hover:text-zinc-300 underline underline-offset-2">Clear</button>
+                {activeDesign.graphic.name}
+                <button onClick={() => setActiveDesign(d => ({ ...d, graphic: null }))}
+                  style={{ touchAction: "manipulation" }}
+                  className="ml-2 text-zinc-600 hover:text-zinc-300 underline underline-offset-2">Clear</button>
               </p>
             )}
           </motion.div>
@@ -511,7 +567,7 @@ export default function ProductCustomizer() {
     </div>
   );
 
-  // ── 3-D shirt container (reused in desktop + mobile) ─────────────────────────
+  // ── 3-D shirt container ───────────────────────────────────────────────────────
 
   const shirtContainer = (w: number, h: number) => (
     <div
@@ -526,17 +582,19 @@ export default function ProductCustomizer() {
         width: `${w}px`, height: `${h}px`,
         transformStyle: "preserve-3d",
         transform: `rotateY(${rotateY}deg)`,
+        transition: isDragging ? "none" : "transform 0.05s linear",
       }}>
         {/* Front */}
         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
           <ShirtCanvas color={color}>
-            <PrintZone light={color.light} designType={designType}
-              customText={customText} selectedDesign={selectedDesign} />
+            <PrintZone light={color.light} design={frontDesign} />
           </ShirtCanvas>
         </div>
-        {/* Back — same photo, mirrored */}
+        {/* Back */}
         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-          <ShirtCanvas color={color} flip />
+          <ShirtCanvas color={color} flip>
+            <PrintZone light={color.light} design={backDesign} />
+          </ShirtCanvas>
         </div>
       </div>
     </div>
@@ -546,13 +604,14 @@ export default function ProductCustomizer() {
 
   return (
     <section className="relative min-h-screen overflow-hidden"
-      style={{ background: "linear-gradient(160deg,#0a0a0f 0%,#030303 60%,#050508 100%)", touchAction: "manipulation" }}>
+      style={{ background: "linear-gradient(160deg,#0c0c14 0%,#050508 55%,#08080f 100%)", touchAction: "manipulation" }}>
 
-      <AmbientGlow hex={color.hex} />
+      <AmbientGlow hex={color.hex} light={color.light} />
       <GridFloor />
+      <StageLight light={color.light} />
 
       <div className="absolute top-0 left-0 right-0 h-[35%] pointer-events-none"
-        style={{ background: "linear-gradient(to bottom,rgba(0,0,0,0.5),transparent)" }} />
+        style={{ background: "linear-gradient(to bottom,rgba(0,0,0,0.45),transparent)" }} />
 
       {/* Header */}
       <div className="relative z-10 pt-[72px] pb-6 px-6 flex items-end justify-between">
@@ -562,13 +621,17 @@ export default function ProductCustomizer() {
             style={{ fontSize: "clamp(1.6rem,4vw,2.8rem)", fontWeight: 300 }}>Custom Studio</h1>
         </div>
         <div className="flex items-center gap-3">
+          {/* Viewing indicator */}
+          <span className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-600 font-light">
+            {showingFront ? "Front" : "Back"}
+          </span>
           {pricesLoaded && (
             <motion.div key={price} initial={{ y: -4, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
               className="font-sans text-sm text-white/60 font-light">GH₵ {price}</motion.div>
           )}
           <button onClick={handleReset} title="Reset"
             className="w-9 h-9 rounded-full flex items-center justify-center text-white/30 hover:text-white/70 transition-colors"
-            style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+            style={{ border: "1px solid rgba(255,255,255,0.08)", touchAction: "manipulation" }}>
             <RotateCcw size={13} />
           </button>
         </div>
@@ -578,16 +641,14 @@ export default function ProductCustomizer() {
       <div className="hidden lg:flex relative z-10 items-start justify-center gap-6 px-8 pb-8"
         style={{ minHeight: "calc(100vh - 170px)" }}>
 
-        {/* Left — colours */}
         <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.15, duration: 0.7 }} className="w-[230px] shrink-0 mt-6 sticky top-6">
           <GlassPanel><ColorControls /></GlassPanel>
           <p className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-700 font-light text-center mt-4">
-            drag to spin · auto-rotating
+            drag shirt to rotate
           </p>
         </motion.div>
 
-        {/* Centre — shirt */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.8 }}
           className="flex-1 flex flex-col items-center justify-center py-6 max-w-[440px]">
@@ -607,7 +668,7 @@ export default function ProductCustomizer() {
             </div>
             <div className="flex gap-2 flex-wrap justify-center">
               {SIZES.map(s => (
-                <button key={s} onClick={() => { setSize(s); setSizeError(false); }}
+                <button key={s} onClick={() => { setSize(s); setSizeError(false); }} style={{ touchAction: "manipulation" }}
                   className={`w-11 h-11 rounded-full font-sans text-[11px] border transition-all duration-200 ${
                     size === s ? "bg-white text-zinc-900 border-white" : "border-white/15 text-zinc-500 hover:border-white/40 hover:text-zinc-200"
                   }`}>{s}</button>
@@ -620,17 +681,16 @@ export default function ProductCustomizer() {
             <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-500 font-light">Qty</p>
             <div className="flex items-center rounded-full overflow-hidden"
               style={{ border: "1px solid rgba(255,255,255,0.10)" }}>
-              <button onClick={() => setQuantity(q => Math.max(1, q - 1))}
+              <button onClick={() => setQuantity(q => Math.max(1, q - 1))} style={{ touchAction: "manipulation" }}
                 className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-white transition-colors text-lg font-light">−</button>
               <span className="w-8 text-center font-sans text-sm text-zinc-300">{quantity}</span>
-              <button onClick={() => setQuantity(q => Math.min(10, q + 1))}
+              <button onClick={() => setQuantity(q => Math.min(10, q + 1))} style={{ touchAction: "manipulation" }}
                 className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-white transition-colors text-lg font-light">+</button>
             </div>
             <span className="font-sans text-[9px] text-zinc-700 font-light">max 10</span>
           </div>
         </motion.div>
 
-        {/* Right — design + actions */}
         <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.7 }}
           className="w-[240px] shrink-0 mt-6 space-y-4 sticky top-6">
@@ -644,16 +704,16 @@ export default function ProductCustomizer() {
                 className="font-serif text-white text-3xl font-light">
                 {pricesLoaded ? `GH₵ ${price * quantity}` : "—"}
               </motion.p>
-              {designType !== "none" && (
+              {hasAnyDesign && (
                 <p className="font-sans text-[9px] text-zinc-600 font-light">
-                  Base GH₵{basePriceGHS} + design GH₵{designAddonGHS}
+                  Base GH₵{basePriceGHS} + print GH₵{designAddonGHS}
                 </p>
               )}
             </div>
           </GlassPanel>
 
           <div className="space-y-2">
-            <button onClick={handleAddToCart} disabled={!pricesLoaded}
+            <button onClick={handleAddToCart} disabled={!pricesLoaded} style={{ touchAction: "manipulation" }}
               className="w-full flex items-center justify-center gap-2.5 bg-white text-zinc-900 font-sans font-medium text-[11px] tracking-[0.15em] uppercase py-4 rounded-full hover:bg-zinc-100 transition-colors disabled:opacity-40">
               {addedToCart ? <><Check size={14} /> Added!</> : <><ShoppingBag size={14} /> Add to Cart</>}
             </button>
@@ -661,7 +721,7 @@ export default function ProductCustomizer() {
               <button
                 onClick={() => { if (!isSignedIn) { setAuthToast(true); setTimeout(() => setAuthToast(false), 3000); return; } setWishlisted(w => !w); }}
                 className="flex-1 flex items-center justify-center gap-2 font-sans text-[10px] tracking-[0.12em] uppercase py-3 rounded-full transition-all"
-                style={{ border: "1px solid rgba(255,255,255,0.10)", color: wishlisted ? "#fff" : "rgba(255,255,255,0.4)" }}>
+                style={{ border: "1px solid rgba(255,255,255,0.10)", color: wishlisted ? "#fff" : "rgba(255,255,255,0.4)", touchAction: "manipulation" }}>
                 <Heart size={12} className={wishlisted ? "fill-white" : ""} />
                 {wishlisted ? "Saved" : "Wishlist"}
               </button>
@@ -690,20 +750,18 @@ export default function ProductCustomizer() {
 
       {/* ── MOBILE ───────────────────────────────────────────────────────────── */}
       <div className="lg:hidden relative z-10 pb-36">
-
         <div className="flex flex-col items-center pt-2 pb-4">
           {shirtContainer(250, 310)}
           <p className="font-sans text-[8px] tracking-[0.2em] uppercase text-zinc-700 font-light mt-3">
-            auto-rotating · drag to control
+            swipe to rotate · viewing {showingFront ? "front" : "back"}
           </p>
         </div>
 
-        {/* Tabs */}
         <div className="px-4 mb-3">
           <div className="flex rounded-xl overflow-hidden"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
             {(["color", "design"] as const).map(tab => (
-              <button key={tab} onClick={() => setMobileTab(tab)}
+              <button key={tab} onClick={() => setMobileTab(tab)} style={{ touchAction: "manipulation" }}
                 className={`flex-1 py-2.5 font-sans text-[10px] tracking-[0.15em] uppercase transition-all duration-200 ${
                   mobileTab === tab ? "bg-white text-zinc-900" : "text-zinc-500"
                 }`}>
@@ -717,7 +775,6 @@ export default function ProductCustomizer() {
           <GlassPanel>{mobileTab === "color" ? <ColorControls /> : <DesignControls />}</GlassPanel>
         </div>
 
-        {/* Size + qty */}
         <div className="px-4 mt-4">
           <GlassPanel>
             <div className="p-4 space-y-3">
@@ -725,13 +782,14 @@ export default function ProductCustomizer() {
                 <p className={`font-sans text-[9px] tracking-[0.3em] uppercase font-light ${sizeError ? "text-red-400" : "text-zinc-500"}`}>
                   {sizeError ? "Select a size" : "Size"}
                 </p>
-                <Link href="/sizing-guide" className="font-sans text-[9px] uppercase tracking-[0.1em] text-zinc-700 underline underline-offset-2">
+                <Link href="/sizing-guide"
+                  className="font-sans text-[9px] uppercase tracking-[0.1em] text-zinc-700 underline underline-offset-2">
                   Size Guide
                 </Link>
               </div>
               <div className="flex gap-2 flex-wrap">
                 {SIZES.map(s => (
-                  <button key={s} onClick={() => { setSize(s); setSizeError(false); }}
+                  <button key={s} onClick={() => { setSize(s); setSizeError(false); }} style={{ touchAction: "manipulation" }}
                     className={`w-10 h-10 rounded-full font-sans text-[11px] border transition-all duration-200 ${
                       size === s ? "bg-white text-zinc-900 border-white" : "border-white/15 text-zinc-500 hover:border-white/40"
                     }`}>{s}</button>
@@ -741,10 +799,10 @@ export default function ProductCustomizer() {
                 <p className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-500 font-light">Qty</p>
                 <div className="flex items-center rounded-full overflow-hidden"
                   style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
-                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} style={{ touchAction: "manipulation" }}
                     className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white text-lg font-light">−</button>
                   <span className="w-7 text-center font-sans text-sm text-zinc-300">{quantity}</span>
-                  <button onClick={() => setQuantity(q => Math.min(10, q + 1))}
+                  <button onClick={() => setQuantity(q => Math.min(10, q + 1))} style={{ touchAction: "manipulation" }}
                     className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white text-lg font-light">+</button>
                 </div>
               </div>
@@ -753,7 +811,7 @@ export default function ProductCustomizer() {
         </div>
       </div>
 
-      {/* Mobile sticky CTA */}
+      {/* Mobile CTA */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-4"
         style={{ background: "linear-gradient(to top,rgba(3,3,3,0.98),transparent)" }}>
         <div className="flex gap-3">
@@ -762,20 +820,19 @@ export default function ProductCustomizer() {
             <p className="font-sans text-[8px] tracking-[0.2em] uppercase text-zinc-600">Total</p>
             <p className="font-serif text-white text-xl font-light">{pricesLoaded ? `GH₵${price * quantity}` : "—"}</p>
           </div>
-          <button onClick={handleAddToCart} disabled={!pricesLoaded}
+          <button onClick={handleAddToCart} disabled={!pricesLoaded} style={{ touchAction: "manipulation" }}
             className="flex-1 flex items-center justify-center gap-2 bg-white text-zinc-900 font-sans font-medium text-[11px] tracking-[0.15em] uppercase rounded-2xl h-14 hover:bg-zinc-100 transition-colors disabled:opacity-40">
             {addedToCart ? <><Check size={14} /> Added!</> : <><ShoppingBag size={14} /> Add to Cart</>}
           </button>
           <button
             onClick={() => { if (!isSignedIn) { setAuthToast(true); setTimeout(() => setAuthToast(false), 3000); return; } setWishlisted(w => !w); }}
             className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+            style={{ border: "1px solid rgba(255,255,255,0.1)", touchAction: "manipulation" }}>
             <Heart size={16} className={wishlisted ? "fill-white text-white" : "text-zinc-500"} />
           </button>
         </div>
       </div>
 
-      {/* Auth toast */}
       <AnimatePresence>
         {authToast && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
