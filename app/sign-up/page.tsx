@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff, ShieldAlert, CheckCircle2, Circle } from "lucide-react";
@@ -28,7 +28,9 @@ function friendlyError(err: unknown): string {
 }
 
 export default function SignUpPage() {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const redirect     = searchParams.get("redirect") || "/";
   const [name,          setName]          = useState("");
   const [email,         setEmail]         = useState("");
   const [password,      setPassword]      = useState("");
@@ -60,7 +62,8 @@ export default function SignUpPage() {
           autoSignIn: true,
         },
       });
-      router.push(`/verify?email=${encodeURIComponent(email)}`);
+      const verifyUrl = `/verify?email=${encodeURIComponent(email)}${redirect !== "/" ? `&redirect=${encodeURIComponent(redirect)}` : ""}`;
+      router.push(verifyUrl);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -238,7 +241,8 @@ export default function SignUpPage() {
 
           <p className="mt-6 font-sans text-sm text-zinc-400 font-light text-center">
             Already have an account?{" "}
-            <Link href="/sign-in" className="text-zinc-900 font-medium hover:text-zinc-600">
+            <Link href={`/sign-in${redirect !== "/" ? `?redirect=${encodeURIComponent(redirect)}` : ""}`}
+              className="text-zinc-900 font-medium hover:text-zinc-600">
               Sign in
             </Link>
           </p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff, ShieldAlert } from "lucide-react";
@@ -29,7 +29,9 @@ function friendlyError(err: unknown): string {
 }
 
 export default function SignInPage() {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const redirect     = searchParams.get("redirect") || "/";
 
   // Step 1 — credentials
   const [email,         setEmail]         = useState("");
@@ -54,7 +56,7 @@ export default function SignInPage() {
 
       if (isSignedIn) {
         if (rememberMe) await rememberDevice();
-        router.push("/");
+        router.push(redirect);
         return;
       }
 
@@ -87,7 +89,7 @@ export default function SignInPage() {
       const { isSignedIn } = await confirmSignIn({ challengeResponse: mfaCode.trim() });
       if (isSignedIn) {
         if (rememberMe) await rememberDevice();
-        router.push("/");
+        router.push(redirect);
       } else {
         setError("Code not accepted. Please try again.");
       }
@@ -228,7 +230,8 @@ export default function SignInPage() {
 
               <p className="mt-6 font-sans text-sm text-zinc-400 font-light text-center">
                 Don&apos;t have an account?{" "}
-                <Link href="/sign-up" className="text-zinc-900 font-medium hover:text-zinc-600">
+                <Link href={`/sign-up${redirect !== "/" ? `?redirect=${encodeURIComponent(redirect)}` : ""}`}
+                  className="text-zinc-900 font-medium hover:text-zinc-600">
                   Join Vintage Gallery
                 </Link>
               </p>

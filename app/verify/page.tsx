@@ -9,6 +9,7 @@ function VerifyForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const email        = searchParams.get("email") ?? "";
+  const redirect     = searchParams.get("redirect") || "/";
 
   const [code,     setCode]     = useState("");
   const [error,    setError]    = useState("");
@@ -29,7 +30,7 @@ function VerifyForm() {
       if (isSignUpComplete) {
         // Try auto sign-in (only works if autoSignIn was enabled at sign-up)
         try { await autoSignIn(); } catch { /* ignore — user can sign in manually */ }
-        router.push("/");
+        router.push(redirect);
         return;
       }
 
