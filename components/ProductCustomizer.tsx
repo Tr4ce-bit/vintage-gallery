@@ -52,16 +52,16 @@ const BLANK_DESIGN: SideDesign = { type: "none", text: "", graphic: null };
 
 // ─── Shared image cache ───────────────────────────────────────────────────────
 
-let _cachedImg: HTMLImageElement | null = null;
+const _cache: Record<string, HTMLImageElement> = {};
 
-function loadShirtImage(): Promise<HTMLImageElement> {
-  if (_cachedImg) return Promise.resolve(_cachedImg);
+function loadImg(src: string): Promise<HTMLImageElement> {
+  if (_cache[src]) return Promise.resolve(_cache[src]);
   return new Promise((resolve, reject) => {
     const img       = new window.Image();
     img.crossOrigin = "anonymous";
-    img.onload      = () => { _cachedImg = img; resolve(img); };
+    img.onload      = () => { _cache[src] = img; resolve(img); };
     img.onerror     = reject;
-    img.src         = "/shirt-base.png";
+    img.src         = src;
   });
 }
 
@@ -74,123 +74,66 @@ function ShirtCanvas({
   side?:     "front" | "back";
   children?: React.ReactNode;
 }) {
+  const src        = side === "back" ? "/shirt-back.png" : "/shirt-base.png";
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const colorRef   = useRef(color);
   colorRef.current = color;
-  const sideRef    = useRef(side);
-  sideRef.current  = side;
 
   const [ready,    setReady]    = useState(false);
   const [fallback, setFallback] = useState(false);
 
-  const paint = useCallback((img: HTMLImageElement, c: ShirtColor, view: "front" | "back") => {
+  // ── Recolour: background → transparent, shirt pixels → target colour ────────
+  const paint = useCallback((img: HTMLImageElement, c: ShirtColor) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
-    const W = img.naturalWidth;
-    const H = img.naturalHeight;
-    canvas.width  = W;
-    canvas.height = H;
-
-    // Always draw front photo straight — back will be treated in pixel pass
+    canvas.width  = img.naturalWidth;
+    canvas.height = img.naturalHeight;
     ctx.drawImage(img, 0, 0);
 
-    const imageData = ctx.getImageData(0, 0, W, H);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data      = imageData.data;
 
     const tr = parseInt(c.hex.slice(1, 3), 16);
     const tg = parseInt(c.hex.slice(3, 5), 16);
     const tb = parseInt(c.hex.slice(5, 7), 16);
 
-    // Centre column for the back crease shadow
-    const cx  = W / 2;
-    const isBack = view === "back";
+    for (let i = 0; i < data.length; i += 4) {
+      // Skip already-transparent pixels (back PNG has pre-baked alpha)
+      if (data[i + 3] < 10) continue;
 
-    for (let py = 0; py < H; py++) {
-      for (let px = 0; px < W; px++) {
-        const i   = (py * W + px) * 4;
-        const r   = data[i], g = data[i + 1], b = data[i + 2];
-        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      const r   = data[i], g = data[i + 1], b = data[i + 2];
+      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-        // Background → transparent
-        if (lum > 0.88) { data[i + 3] = 0; continue; }
+      // Near-white → transparent background
+      if (lum > 0.88) { data[i + 3] = 0; continue; }
 
-        // ── colour remap ───────────────────────────────────────────────────────
-        const t      = Math.min(lum / 0.45, 1.0);
-        let factor   = 0.18 + 0.82 * t;
-
-        if (isBack) {
-          // Back view: overall 10 % darker (back flat-lay has less direct light)
-          factor *= 0.90;
-
-          // Centre-back seam/crease — a soft shadow in the middle vertical zone
-          // Runs from just below the collar (~12 % from top) to the hem (~92 %)
-          const inBodyV = py > H * 0.12 && py < H * 0.92;
-          if (inBodyV) {
-            const dist    = Math.abs(px - cx);
-            const creaseW = W * 0.018;          // crease is ~1.8 % of width wide
-            if (dist < creaseW) {
-              const creaseFactor = 1 - 0.18 * (1 - dist / creaseW); // max 18 % darker at centre
-              factor *= creaseFactor;
-            }
-          }
-
-          // Back neck fill: make the neckline shallower by filling the front-neck
-          // dip with shirt-coloured pixels.  The front neck opening sits in
-          // roughly the top 9–16 % of the image, centred.
-          const relY = py / H;
-          if (relY > 0.09 && relY < 0.165) {
-            const relX  = (px - W * 0.28) / (W * 0.44); // 0→1 across collar width
-            // Parabolic mask: anything inside the V gets filled with solid shirt colour
-            const vDepth = 0.5 - 2.2 * Math.pow(relX - 0.5, 2); // 0 at edges, 0.5 at centre
-            const normV  = (relY - 0.09) / 0.075;               // 0 at top, 1 at bottom
-            if (normV < vDepth && relX > 0 && relX < 1) {
-              // Replace with solid target colour at the highlight luminance level
-              factor = 0.70;
-            }
-          }
-        }
-
-        data[i]     = Math.min(255, Math.round(tr * factor));
-        data[i + 1] = Math.min(255, Math.round(tg * factor));
-        data[i + 2] = Math.min(255, Math.round(tb * factor));
-      }
+      // Shirt pixel: map luminance of source (black shirt, 0–0.45 range) to
+      // target colour, preserving fabric shadow/highlight shading
+      const t      = Math.min(lum / 0.45, 1.0);
+      const factor = 0.18 + 0.82 * t;
+      data[i]     = Math.min(255, Math.round(tr * factor));
+      data[i + 1] = Math.min(255, Math.round(tg * factor));
+      data[i + 2] = Math.min(255, Math.round(tb * factor));
     }
 
     ctx.putImageData(imageData, 0, 0);
-
-    // ── Back: draw a woven label at centre-back neck ─────────────────────────
-    if (isBack) {
-      const lw = W * 0.075, lh = H * 0.028;
-      const lx = cx - lw / 2, ly = H * 0.06;
-      const lb = c.light ? "rgba(255,255,255,0.80)" : "rgba(255,255,255,0.88)";
-      ctx.fillStyle = lb;
-      ctx.beginPath();
-      (ctx as CanvasRenderingContext2D).roundRect(lx, ly, lw, lh, 3);
-      ctx.fill();
-      ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.font      = `600 ${H * 0.009}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.letterSpacing = "2px";
-      ctx.fillText("VINTAGE", cx, ly + lh * 0.44);
-      ctx.fillText("GALLERY", cx, ly + lh * 0.85);
-    }
-
     setReady(true);
   }, []);
 
   useEffect(() => {
-    loadShirtImage()
-      .then(img => paint(img, colorRef.current, sideRef.current))
+    loadImg(src)
+      .then(img => paint(img, colorRef.current))
       .catch(() => setFallback(true));
-  }, [paint]);
+  }, [src, paint]);
 
   useEffect(() => {
-    if (!_cachedImg) return;
-    paint(_cachedImg, color, side);
-  }, [color, side, paint]);
+    const img = _cache[src];
+    if (!img) return;
+    paint(img, color);
+  }, [color, src, paint]);
 
   if (fallback) return <FallbackShirt color={color.hex} light={color.light} flip={side === "back"}>{children}</FallbackShirt>;
 
@@ -309,12 +252,11 @@ function PrintZone({ light, design }: { light: boolean; design: SideDesign }) {
 // ─── Stage spotlight (helps dark shirts stand out) ────────────────────────────
 
 function StageLight({ light }: { light: boolean }) {
-  if (light) return null; // only needed for dark colours
+  // Soft overhead spotlight always visible; stronger for dark shirts
   return (
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-      {/* Soft radial highlight centred on the shirt */}
-      <div className="absolute left-1/2 top-[30%] -translate-x-1/2 -translate-y-1/2 w-[70%] h-[55%] rounded-full"
-        style={{ background: "radial-gradient(ellipse at center, rgba(255,255,255,0.055) 0%, transparent 70%)" }} />
+      <div className="absolute left-1/2 top-[25%] -translate-x-1/2 -translate-y-1/2 w-[75%] h-[60%] rounded-full transition-all duration-700"
+        style={{ background: `radial-gradient(ellipse at center, rgba(255,255,255,${light ? "0.035" : "0.07"}) 0%, transparent 68%)` }} />
     </div>
   );
 }
@@ -655,9 +597,16 @@ export default function ProductCustomizer() {
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
+  // Background shifts to dark-slate for dark shirts so the eye can pick them out
   return (
     <section className="relative min-h-screen overflow-hidden"
-      style={{ background: "linear-gradient(160deg,#0c0c14 0%,#050508 55%,#08080f 100%)", touchAction: "manipulation" }}>
+      style={{
+        background: color.light
+          ? "linear-gradient(160deg,#0c0c14 0%,#050508 55%,#08080f 100%)"
+          : "linear-gradient(160deg,#25253a 0%,#1a1a2b 50%,#1f1f30 100%)",
+        transition: "background 0.6s ease",
+        touchAction: "manipulation",
+      }}>
 
       <AmbientGlow hex={color.hex} light={color.light} />
       <GridFloor />
