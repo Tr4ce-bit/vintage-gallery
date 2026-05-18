@@ -326,9 +326,7 @@ export default function ProductCustomizer() {
   // 3D rotation state
   const [rotateY,    setRotateY]    = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const dragRef  = useRef({ startX: 0, startRotY: 0 });
-  const rafRef   = useRef<number>(0);
-  const lastTRef = useRef(0);
+  const dragRef = useRef({ startX: 0, startRotY: 0 });
 
   // Remote data
   const [designs,        setDesigns]        = useState<StudioDesign[]>([]);
@@ -343,21 +341,6 @@ export default function ProductCustomizer() {
   const [authToast,   setAuthToast]   = useState(false);
   const [sizeError,   setSizeError]   = useState(false);
   const [mobileTab,   setMobileTab]   = useState<"color" | "design">("color");
-
-  // ── Continuous 360° auto-rotation ────────────────────────────────────────────
-  useEffect(() => {
-    if (isDragging) { lastTRef.current = 0; return; }
-
-    const tick = (t: number) => {
-      if (lastTRef.current) {
-        setRotateY(y => y + ((t - lastTRef.current) / 1000) * 28); // 28°/s ≈ 1 rotation per 13 s
-      }
-      lastTRef.current = t;
-      rafRef.current   = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(rafRef.current); lastTRef.current = 0; };
-  }, [isDragging]);
 
   useEffect(() => {
     fetch("/api/studio").then(r => r.json()).then(d => {
@@ -532,7 +515,7 @@ export default function ProductCustomizer() {
 
   const shirtContainer = (w: number, h: number) => (
     <div
-      style={{ perspective: "1000px" }}
+      style={{ perspective: "1000px", touchAction: "none" }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -563,7 +546,7 @@ export default function ProductCustomizer() {
 
   return (
     <section className="relative min-h-screen overflow-hidden"
-      style={{ background: "linear-gradient(160deg,#0a0a0f 0%,#030303 60%,#050508 100%)" }}>
+      style={{ background: "linear-gradient(160deg,#0a0a0f 0%,#030303 60%,#050508 100%)", touchAction: "manipulation" }}>
 
       <AmbientGlow hex={color.hex} />
       <GridFloor />
