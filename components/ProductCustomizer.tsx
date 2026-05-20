@@ -32,12 +32,12 @@ interface SideDesign {
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
 const SHIRT_COLORS: ShirtColor[] = [
-  { name: "White",        hex: "#FAFAF8", light: true  },
+  { name: "White",        hex: "#F5F5F0", light: true  }, // warm off-white — shadow reads as light grey
   { name: "Black",        hex: "#111111", light: false },
-  { name: "Dark Grey",    hex: "#2E2E2E", light: false },
-  { name: "Cream",        hex: "#EDE8D8", light: true  },
+  { name: "Dark Grey",    hex: "#4A4A4A", light: false }, // raised from #2E2E2E so it reads clearly as grey, not black
+  { name: "Cream",        hex: "#E8D5A0", light: true  }, // golden cream — visually distinct from white
   { name: "Coffee Brown", hex: "#5C3317", light: false },
-  { name: "Pink",         hex: "#F5B8C8", light: true  },
+  { name: "Pink",         hex: "#F0A0BA", light: true  }, // slightly richer pink — shadow reads as deep rose
 ];
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
@@ -100,6 +100,12 @@ function ShirtCanvas({
     const tg = parseInt(c.hex.slice(3, 5), 16);
     const tb = parseInt(c.hex.slice(5, 7), 16);
 
+    // Shadow floor scales with the target colour's own brightness.
+    // Light colours (white, cream, pink) stay visibly coloured even in deep shadow.
+    // Dark colours (black, grey) can get very close to black in shadow.
+    const targetLum  = (0.299 * tr + 0.587 * tg + 0.114 * tb) / 255;
+    const shadowBase = 0.14 + targetLum * 0.42; // white≈0.55, pink≈0.43, dark-grey≈0.22, black≈0.15
+
     for (let i = 0; i < data.length; i += 4) {
       // Skip already-transparent pixels (back PNG has pre-baked alpha)
       if (data[i + 3] < 10) continue;
@@ -110,10 +116,10 @@ function ShirtCanvas({
       // Near-white → transparent background
       if (lum > 0.88) { data[i + 3] = 0; continue; }
 
-      // Shirt pixel: map luminance of source (black shirt, 0–0.45 range) to
-      // target colour, preserving fabric shadow/highlight shading
+      // Map source luminance (black shirt, 0–0.45 range) to 0–1, then blend
+      // from shadowBase up to 1.0 so highlights show the full target colour.
       const t      = Math.min(lum / 0.45, 1.0);
-      const factor = 0.18 + 0.82 * t;
+      const factor = shadowBase + (1.0 - shadowBase) * t;
       data[i]     = Math.min(255, Math.round(tr * factor));
       data[i + 1] = Math.min(255, Math.round(tg * factor));
       data[i + 2] = Math.min(255, Math.round(tb * factor));
@@ -145,10 +151,6 @@ function ShirtCanvas({
           width: "100%", height: "100%", objectFit: "contain",
           opacity: ready ? 1 : 0,
           transition: "opacity 0.3s ease",
-          // For very dark shirts add a subtle outer glow so they're visible against the dark bg
-          filter: color.light
-            ? "drop-shadow(0 14px 44px rgba(0,0,0,0.65)) drop-shadow(0 3px 12px rgba(0,0,0,0.4))"
-            : "drop-shadow(0 14px 44px rgba(0,0,0,0.7)) drop-shadow(0 0 28px rgba(255,255,255,0.07)) drop-shadow(0 3px 12px rgba(0,0,0,0.5))",
         }}
       />
       {!ready && (
@@ -179,8 +181,7 @@ function FallbackShirt({ color, light, flip = false, children }: {
   const uid = flip ? "b" : "f";
   return (
     <div className="relative w-full h-full">
-      <svg viewBox="0 0 560 560" fill="none" className="w-full h-full"
-        style={{ filter: "drop-shadow(0 6px 28px rgba(0,0,0,0.5))" }}>
+      <svg viewBox="0 0 560 560" fill="none" className="w-full h-full">
         <defs>
           <radialGradient id={`fe-${uid}`} cx="280" cy="290" r="260" gradientUnits="userSpaceOnUse">
             <stop offset="62%" stopColor="rgba(0,0,0,0)" /><stop offset="100%" stopColor={sA} />
