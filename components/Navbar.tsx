@@ -11,10 +11,11 @@ import NavbarAuth from "@/components/NavbarAuth";
 import { useCartStore } from "@/lib/store";
 
 const NAV_LINKS = [
-  { label: "Shop",    href: "/shop"      },
-  { label: "Studio",  href: "/customize" },
-  { label: "About",   href: "/#about"   },
-  { label: "Contact", href: "/#contact" },
+  { label: "Shop",        href: "/shop"      },
+  { label: "Studio",      href: "/customize" },
+  { label: "Track Order", href: "/track"     },
+  { label: "About",       href: "/#about"   },
+  { label: "Contact",     href: "/#contact" },
 ];
 
 export default function Navbar() {
