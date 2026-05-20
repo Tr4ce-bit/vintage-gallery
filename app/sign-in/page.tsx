@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -28,7 +28,7 @@ function friendlyError(err: unknown): string {
   return msg;
 }
 
-export default function SignInPage() {
+function SignInForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   // safeRedirect: only allow relative paths — blocks open-redirect attacks
@@ -296,5 +296,13 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
   );
 }

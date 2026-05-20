@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,7 +27,7 @@ function friendlyError(err: unknown): string {
   return msg;
 }
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   // safeRedirect: only allow relative paths — blocks open-redirect attacks
@@ -251,5 +251,13 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
   );
 }
