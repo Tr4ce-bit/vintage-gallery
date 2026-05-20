@@ -21,12 +21,13 @@ const NAV = [
 ];
 
 export default function AdminShellLayout({ children }: { children: React.ReactNode }) {
-  const { isLoaded, isSignedIn, user, signOut } = useAuth();
+  const { isLoaded, isSignedIn, user, signOut, getAccessToken } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
   const router   = useRouter();
   const pathname = usePathname();
-  const [checked,     setChecked]     = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [checked,      setChecked]      = useState(false);
+  const [sidebarOpen,  setSidebarOpen]  = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -35,6 +36,38 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
     if (!isAdmin) { router.replace("/denied"); return; }
     setChecked(true);
   }, [isLoaded, isSignedIn, user, router]);
+
+  // Fetch pending order count — called on mount + every 60 s
+  useEffect(() => {
+    if (!checked) return;
+    async function fetchPending() {
+      try {
+        const token = await getAccessToken();
+        const res   = await fetch("/api/admin/orders?status=PENDING&limit=1", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setPendingCount(data.total ?? 0);
+      } catch { /* silently ignore network errors */ }
+    }
+    fetchPending();
+    const id = setInterval(fetchPending, 60_000);
+    return () => clearInterval(id);
+  }, [checked]); // eslint-disable-line
+
+  // Refresh pending count whenever the user navigates away from /orders
+  useEffect(() => {
+    if (!checked || pathname.startsWith("/orders")) return;
+    getAccessToken().then(token =>
+      fetch("/api/admin/orders?status=PENDING&limit=1", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d && setPendingCount(d.total ?? 0))
+        .catch(() => {})
+    );
+  }, [pathname]); // eslint-disable-line
 
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
@@ -79,6 +112,7 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {NAV.map(({ label, href, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const showBadge = label === "Orders" && pendingCount > 0;
           return (
             <Link key={href} href={href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-sans text-sm transition-colors ${
@@ -87,7 +121,12 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
                   : "text-zinc-400 hover:text-white hover:bg-white/5"
               }`}>
               <Icon size={15} strokeWidth={active ? 2 : 1.5} />
-              {label}
+              <span className="flex-1">{label}</span>
+              {showBadge && (
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white font-sans text-[10px] font-semibold flex items-center justify-center leading-none">
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
             </Link>
           );
         })}
