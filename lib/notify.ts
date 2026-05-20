@@ -1,17 +1,17 @@
 /**
  * Admin notifications — fired when a new order is paid.
- * Sends an email via Gmail SMTP (nodemailer) and an SMS via AWS SNS.
+ * Sends an email via Gmail SMTP (nodemailer) and an SMS via Africa's Talking.
  *
  * Required env vars:
  *   GMAIL_USER         — vintagegallerystore@gmail.com
- *   GMAIL_APP_PASSWORD — 16-char App Password from Google Account → Security → App Passwords
- *   ADMIN_EMAILS       — comma-separated admin emails (notifications go to ALL of them)
- *   ADMIN_PHONE        — admin phone in E.164 format, e.g. +233503662903  (SMS)
- *   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — must have sns:Publish permission (SMS only)
+ *   GMAIL_APP_PASSWORD — 16-char App Password (Google Account → Security → App Passwords)
+ *   ADMIN_EMAILS       — comma-separated admin emails
+ *   ADMIN_PHONE        — admin phone with country code, e.g. +233503662903
+ *   AT_USERNAME        — Africa's Talking username  ("sandbox" for testing, your username in prod)
+ *   AT_API_KEY         — Africa's Talking API key
  */
 
-import nodemailer              from "nodemailer";
-import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
+import nodemailer from "nodemailer";
 
 // ── Gmail SMTP transporter ───────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
@@ -22,14 +22,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// ── SNS client for SMS (us-east-1 for global delivery) ───────────────────────
-const sns = new SNSClient({
-  region: "us-east-1",
-  credentials: {
-    accessKeyId:     process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,7 +135,9 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
   const gmailPass   = process.env.GMAIL_APP_PASSWORD;
   const adminEmails = (process.env.ADMIN_EMAILS ?? "")
     .split(",").map(e => e.trim()).filter(Boolean);
-  const adminPhone  = process.env.ADMIN_PHONE; // E.164, e.g. +233503662903
+  const adminPhone  = process.env.ADMIN_PHONE;     // e.g. +233503662903
+  const atUsername  = process.env.AT_USERNAME;     // "sandbox" or your AT username
+  const atApiKey    = process.env.AT_API_KEY;
 
   const shortRef = order.paystackReference.slice(-8).toUpperCase();
 
@@ -178,21 +172,37 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
     console.warn("Admin email skipped — GMAIL_USER or GMAIL_APP_PASSWORD not set");
   }
 
-  // ── SMS via AWS SNS ──────────────────────────────────────────────────────────
-  if (adminPhone) {
-    const sms = `VG Order! ${order.deliveryFullName} · GH₵${order.totalAmount.toFixed(0)} · ${order.items.length} item(s) · ...${shortRef}`;
+  // ── SMS via Africa's Talking ─────────────────────────────────────────────────
+  if (adminPhone && atUsername && atApiKey) {
+    const smsText =
+      `VG Order! ${order.deliveryFullName} | GH${order.totalAmount.toFixed(0)} | ` +
+      `${order.items.length} item(s) | ${order.deliveryCity} | Ref:${shortRef}`;
+
+    const host = atUsername === "sandbox"
+      ? "https://api.sandbox.africastalking.com"
+      : "https://api.africastalking.com";
+
     try {
-      await sns.send(new PublishCommand({
-        PhoneNumber: adminPhone,
-        Message:     sms,
-        MessageAttributes: {
-          "AWS.SNS.SMS.SMSType":  { DataType: "String", StringValue: "Transactional" },
-          "AWS.SNS.SMS.SenderID": { DataType: "String", StringValue: "VintageGal" },
+      const res = await fetch(`${host}/version1/messaging`, {
+        method:  "POST",
+        headers: {
+          "apiKey":       atApiKey,
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept":       "application/json",
         },
-      }));
-      console.log(`Admin SMS sent → ${adminPhone}`);
+        body: new URLSearchParams({
+          username: atUsername,
+          to:       adminPhone,
+          message:  smsText,
+          from:     "VintageGal", // sender ID (may not be supported on all networks)
+        }).toString(),
+      });
+      const data = await res.json();
+      console.log("Admin SMS (Africa's Talking):", JSON.stringify(data));
     } catch (err) {
-      console.error("Admin SMS (SNS) failed:", err);
+      console.error("Admin SMS (Africa's Talking) failed:", err);
     }
+  } else {
+    console.warn("Admin SMS skipped — AT_USERNAME, AT_API_KEY, or ADMIN_PHONE not set");
   }
 }
