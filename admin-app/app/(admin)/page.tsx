@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
 
 interface Order {
-  id: string; paystackReference: string; status: string;
+  id: string; orderNumber: number; paystackReference: string; status: string;
   totalAmount: number; createdAt: string;
   deliveryFullName: string;
   user: { fullName: string; email: string } | null;
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
                     <tr key={o.id} className="border-b border-zinc-50 dark:border-zinc-700/30 last:border-0 hover:bg-zinc-50/50 dark:hover:bg-zinc-700/30 transition-colors">
                       <td className="px-4 md:px-6 py-3.5">
                         <Link href={`/orders/${o.id}`} className="font-mono text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100">
-                          {o.paystackReference.slice(-8).toUpperCase()}
+                          #{String(o.orderNumber).padStart(4, "0")}
                         </Link>
                       </td>
                       <td className="px-4 md:px-6 py-3.5 font-sans text-sm text-zinc-700 dark:text-zinc-200">{o.user?.fullName ?? o.deliveryFullName}</td>

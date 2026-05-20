@@ -118,6 +118,7 @@ model SavedDesign {
 // ─────────────────────────────────────────────
 model Order {
   id                  String      @id @default(cuid())
+  orderNumber         Int         @unique @default(autoincrement())   // #0001, #0002 …
   userId              String?                  // null for guest checkouts
   paystackReference   String      @unique      // Paystack transaction reference
   paystackAccessCode  String?                  // for re-querying status

@@ -12,7 +12,7 @@ interface OrderItem {
   product: { name: string } | null;
 }
 interface Order {
-  id: string; paystackReference: string; status: string;
+  id: string; orderNumber: number; paystackReference: string; status: string;
   totalAmount: number; createdAt: string; updatedAt: string;
   deliveryFullName: string; deliveryPhone: string;
   deliveryAddress: string; deliveryNotes?: string;
@@ -89,8 +89,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-8">
         <div>
-          <p className="font-mono text-sm text-zinc-400 dark:text-zinc-500 mb-1">{order.paystackReference}</p>
-          <h1 className="font-serif text-zinc-900 dark:text-zinc-50 mb-1" style={{ fontSize: "clamp(1.4rem, 4vw, 1.8rem)", fontWeight: 300 }}>Order Detail</h1>
+          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-1">Order</p>
+          <h1 className="font-serif text-zinc-900 dark:text-zinc-50 mb-1" style={{ fontSize: "clamp(1.4rem, 4vw, 1.8rem)", fontWeight: 300 }}>
+            #{String(order.orderNumber).padStart(4, "0")}
+          </h1>
+          <p className="font-mono text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">{order.paystackReference}</p>
           <p className="font-sans text-sm text-zinc-400 dark:text-zinc-500">{fmt(order.createdAt)}</p>
         </div>
         <span className={`self-start font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-3 py-1.5 rounded-full ${STATUS_COLOR[order.status] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400"}`}>

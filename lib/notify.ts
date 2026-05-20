@@ -41,6 +41,7 @@ const SMS_FREE_LIMIT = 100;
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface OrderNotification {
+  orderNumber:       number;
   paystackReference: string;
   totalAmount:       number;
   deliveryFullName:  string;
@@ -57,6 +58,10 @@ export interface OrderNotification {
 }
 
 // ─── HTML email template ──────────────────────────────────────────────────────
+
+function fmtOrderNum(n: number) {
+  return `#${String(n).padStart(4, "0")}`;
+}
 
 function buildHtml(o: OrderNotification): string {
   const rows = o.items.map(i => `
@@ -94,9 +99,12 @@ function buildHtml(o: OrderNotification): string {
     <!-- Body -->
     <div style="padding:30px 36px;">
 
-      <p style="margin:0 0 3px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Order Reference</p>
-      <p style="margin:0 0 26px;font-size:15px;font-weight:600;color:#111;font-family:monospace;">
-        ${o.paystackReference}
+      <p style="margin:0 0 3px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Order Number</p>
+      <p style="margin:0 0 6px;font-size:22px;font-weight:600;color:#111;">
+        ${fmtOrderNum(o.orderNumber)}
+      </p>
+      <p style="margin:0 0 26px;font-size:12px;color:#aaa;font-family:monospace;">
+        Ref: ${o.paystackReference}
       </p>
 
       <p style="margin:0 0 3px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Customer</p>
@@ -176,12 +184,13 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
     .split(",").map(e => e.trim()).filter(Boolean);
   const adminPhone  = process.env.ADMIN_PHONE; // E.164, e.g. +233503662903
 
-  const shortRef = order.paystackReference.slice(-8).toUpperCase();
+  const shortRef  = order.paystackReference.slice(-8).toUpperCase();
+  const orderLabel = fmtOrderNum(order.orderNumber);
 
   // ── Email via Gmail (unlimited) ──────────────────────────────────────────────
   if (gmailUser && gmailPass && adminEmails.length > 0) {
     const textBody = [
-      `NEW ORDER — ${shortRef}`,
+      `NEW ORDER ${orderLabel} — ${shortRef}`,
       `Customer : ${order.deliveryFullName} (${order.deliveryPhone})`,
       `Address  : ${order.deliveryAddress}, ${order.deliveryCity}, ${order.deliveryRegion}`,
       ``,
@@ -197,7 +206,7 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
       await transporter.sendMail({
         from:    `"Vintage Gallery" <${gmailUser}>`,
         to:      adminEmails.join(", "),
-        subject: `🛍 New Order · GH₵${order.totalAmount.toFixed(0)} · ${order.deliveryFullName}`,
+        subject: `🛍 Order ${orderLabel} · GH₵${order.totalAmount.toFixed(0)} · ${order.deliveryFullName}`,
         text:    textBody,
         html:    buildHtml(order),
       });
@@ -218,7 +227,7 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
         console.log(`Admin SMS skipped — monthly free limit reached (${used}/${SMS_FREE_LIMIT}). Resets next month.`);
       } else {
         const smsText =
-          `VG Order! ${order.deliveryFullName} | GHC${order.totalAmount.toFixed(0)} | ` +
+          `VG ${orderLabel}! ${order.deliveryFullName} | GHC${order.totalAmount.toFixed(0)} | ` +
           `${order.items.length} item(s) | ${order.deliveryCity} | Ref:${shortRef}`;
 
         await sns.send(new PublishCommand({

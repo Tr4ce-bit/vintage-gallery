@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
 
       // Fire-and-forget admin notification (email + SMS) — never blocks the 200 response
       notifyAdminNewOrder({
+        orderNumber:       existing.orderNumber,
         paystackReference: reference,
         totalAmount:       existing.totalAmount,
         deliveryFullName:  existing.deliveryFullName,
