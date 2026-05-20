@@ -305,11 +305,39 @@ export default function AdminProductForm({ initial, mode }: Props) {
   const [saving,   setSaving]   = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Collection picker state
+  const [collections,         setCollections]         = useState<string[]>([]);
+  const [addingNewCollection, setAddingNewCollection] = useState(false);
+
   useEffect(() => {
     if (mode === "create" && form.name) {
       setForm(f => ({ ...f, slug: toSlug(f.name) }));
     }
   }, [form.name, mode]);
+
+  // Load existing collections from the product catalogue
+  useEffect(() => {
+    getAccessToken().then(token => {
+      if (!token) { setAddingNewCollection(true); return; }
+      fetch(apiUrl("/api/admin/products"), { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => {
+          const unique = Array.from(
+            new Set<string>(
+              (d.products ?? []).map((p: { collection: string }) => p.collection).filter(Boolean)
+            )
+          );
+          setCollections(unique);
+          // If editing and the saved collection isn't in the list, open free-text mode
+          if (initial?.collection && unique.length > 0 && !unique.includes(initial.collection)) {
+            setAddingNewCollection(true);
+          }
+          // No collections yet → skip dropdown, go straight to free-text
+          if (unique.length === 0) setAddingNewCollection(true);
+        })
+        .catch(() => setAddingNewCollection(true));
+    });
+  }, []); // eslint-disable-line
 
   function set(key: keyof ProductData, val: unknown) {
     setForm(f => ({ ...f, [key]: val }));
@@ -426,10 +454,61 @@ export default function AdminProductForm({ initial, mode }: Props) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* ── Collection picker ─────────────────────────────────────── */}
         <div>
-          <label className={labelCls}>Collection *</label>
-          <input className={inputCls} value={form.collection} onChange={e => set("collection", e.target.value)} required placeholder="Icons Series" />
+          <div className="flex items-center justify-between mb-1.5">
+            <label className={`${labelCls} mb-0`}>Collection *</label>
+            {addingNewCollection && collections.length > 0 && (
+              <button type="button"
+                onClick={() => {
+                  setAddingNewCollection(false);
+                  // Restore to first existing collection if current value isn't in the list
+                  if (!collections.includes(form.collection)) set("collection", collections[0]);
+                }}
+                className="font-sans text-[9px] tracking-[0.15em] uppercase text-zinc-400 hover:text-zinc-700 underline underline-offset-2 transition-colors">
+                ← Back to list
+              </button>
+            )}
+            {!addingNewCollection && (
+              <button type="button"
+                onClick={() => { setAddingNewCollection(true); set("collection", ""); }}
+                className="font-sans text-[9px] tracking-[0.15em] uppercase text-zinc-400 hover:text-zinc-700 underline underline-offset-2 transition-colors">
+                ＋ New
+              </button>
+            )}
+          </div>
+
+          {addingNewCollection ? (
+            <input
+              className={inputCls}
+              value={form.collection}
+              onChange={e => set("collection", e.target.value)}
+              required
+              placeholder="e.g. Icons Series"
+              autoFocus
+            />
+          ) : (
+            <select
+              className={`${inputCls} cursor-pointer`}
+              value={form.collection}
+              onChange={e => {
+                if (e.target.value === "__new__") {
+                  setAddingNewCollection(true);
+                  set("collection", "");
+                } else {
+                  set("collection", e.target.value);
+                }
+              }}
+              required
+            >
+              <option value="">— Select collection —</option>
+              {collections.map(c => <option key={c} value={c}>{c}</option>)}
+              <option disabled>──────────────</option>
+              <option value="__new__">＋ Add new collection…</option>
+            </select>
+          )}
         </div>
+
         <div>
           <label className={labelCls}>Price (GHS) *</label>
           <input className={inputCls} type="number" min="0" step="0.01" value={form.basePrice} onChange={e => set("basePrice", e.target.value)} required placeholder="300" />
