@@ -11,6 +11,9 @@ const DELIVERY_FEE    = 30; // GHS — must match checkout UI
 const MAX_CART_ITEMS  = 20;   // max distinct line items per order
 const MAX_QTY_PER_ITEM = 99;  // max quantity for a single item
 
+// Valid payment methods
+const VALID_PAYMENT_METHODS = new Set(["momo", "card", "bank_transfer"]);
+
 // Valid MoMo networks accepted by Paystack Ghana
 const VALID_MOMO_NETWORKS = new Set(["MTN", "TELECEL", "AIRTELTIGO"]);
 
@@ -27,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { email, momoNetwork, momoPhone, cartItems, deliveryInfo } = body;
+    const { email, paymentMethod, momoNetwork, momoPhone, cartItems, deliveryInfo } = body;
 
     // ── Strict input validation ───────────────────────────────────────────────
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
@@ -39,12 +42,19 @@ export async function POST(req: NextRequest) {
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
     }
-    if (!VALID_MOMO_NETWORKS.has(momoNetwork)) {
-      return NextResponse.json({ error: "Invalid MoMo network." }, { status: 400 });
+
+    const method: string = VALID_PAYMENT_METHODS.has(paymentMethod) ? paymentMethod : "momo";
+
+    // MoMo-specific validation only when method is momo
+    if (method === "momo") {
+      if (!VALID_MOMO_NETWORKS.has(momoNetwork)) {
+        return NextResponse.json({ error: "Invalid MoMo network." }, { status: 400 });
+      }
+      if (!isValidPhone(momoPhone)) {
+        return NextResponse.json({ error: "Invalid MoMo phone number." }, { status: 400 });
+      }
     }
-    if (!isValidPhone(momoPhone)) {
-      return NextResponse.json({ error: "Invalid MoMo phone number." }, { status: 400 });
-    }
+
     if (!PAYSTACK_SECRET) {
       return NextResponse.json({ error: "Payment service not configured." }, { status: 500 });
     }
@@ -124,27 +134,42 @@ export async function POST(req: NextRequest) {
     const amountPesewas = Math.round(totalGHS * 100);
 
     // ── 2. Initialise Paystack transaction ───────────────────────────────────
-    const paystackPayload = {
+    // Map our method names to Paystack channel names
+    const channelsMap: Record<string, string[]> = {
+      momo:          ["mobile_money"],
+      card:          ["card"],
+      bank_transfer: ["bank_transfer"],
+    };
+
+    const paystackPayload: Record<string, unknown> = {
       email,
-      amount:   amountPesewas,
-      currency: "GHS",
-      channels: ["mobile_money"],
-      mobile_money: {
-        phone:    momoPhone,
-        provider: momoNetworkToPaystackProvider(momoNetwork),
-      },
+      amount:       amountPesewas,
+      currency:     "GHS",
+      channels:     channelsMap[method] ?? ["mobile_money"],
       metadata: {
         cartItems,
         deliveryInfo,
+        paymentMethod: method,
         serverCalculatedTotal: totalGHS,
         custom_fields: [
-          { display_name: "Network",       variable_name: "network",    value: momoNetwork },
-          { display_name: "Phone",         variable_name: "phone",      value: momoPhone   },
-          { display_name: "Delivery Addr", variable_name: "gh_address", value: deliveryInfo?.address },
+          { display_name: "Payment Method", variable_name: "payment_method", value: method },
+          { display_name: "Delivery Addr",  variable_name: "gh_address",     value: deliveryInfo?.address },
+          ...(method === "momo" ? [
+            { display_name: "Network", variable_name: "network", value: momoNetwork },
+            { display_name: "Phone",   variable_name: "phone",   value: momoPhone   },
+          ] : []),
         ],
       },
       callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
     };
+
+    // MoMo requires the mobile_money object
+    if (method === "momo") {
+      paystackPayload.mobile_money = {
+        phone:    momoPhone,
+        provider: momoNetworkToPaystackProvider(momoNetwork),
+      };
+    }
 
     const psRes = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
       method: "POST",
@@ -187,10 +212,12 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        // Mask MoMo phone number
-        const masked = momoPhone.length >= 4
-          ? momoPhone.slice(0, 3) + "****" + momoPhone.slice(-3)
-          : momoPhone;
+        // Mask MoMo phone number (only for MoMo payments)
+        const masked = method === "momo" && momoPhone
+          ? (momoPhone.length >= 4
+              ? momoPhone.slice(0, 3) + "****" + momoPhone.slice(-3)
+              : momoPhone)
+          : null;
 
         await prisma.order.create({
           data: {
@@ -204,7 +231,7 @@ export async function POST(req: NextRequest) {
             deliveryCity:       deliveryInfo?.city     ?? "",
             deliveryRegion:     deliveryInfo?.region   ?? "",
             deliveryNotes:      deliveryInfo?.notes    ?? null,
-            momoNetwork:        momoNetwork as "MTN" | "TELECEL" | "AIRTELTIGO",
+            momoNetwork:        method === "momo" ? momoNetwork as "MTN" | "TELECEL" | "AIRTELTIGO" : null,
             momoNumberMasked:   masked,
             status:             "PENDING",
             items: {

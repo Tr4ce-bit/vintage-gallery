@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Lock, User, UserPlus, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock, User, UserPlus, ShoppingBag, CreditCard, Smartphone, Building2 } from "lucide-react";
 import { useCartStore } from "@/lib/store";
 import { useAuth } from "@/hooks/useAuth";
 import Footer from "@/components/Footer";
 
-type MomoNetwork = "MTN" | "TELECEL" | "AIRTELTIGO";
+type MomoNetwork    = "MTN" | "TELECEL" | "AIRTELTIGO";
+type PaymentMethod  = "momo" | "card" | "bank_transfer";
 
 // ── Real MNO brand logos (SVG) ──────────────────────────────────────────────
 function MtnLogo({ size = 40 }: { size?: number }) {
@@ -67,6 +68,44 @@ const NETWORKS: { id: MomoNetwork; label: string; Logo: React.FC<{ size?: number
   { id: "AIRTELTIGO", label: "AirtelTigo", Logo: AirtelTigoLogo },
 ];
 
+// ── Card-scheme logos ───────────────────────────────────────────────────────
+function VisaLogo() {
+  return (
+    <svg width="52" height="32" viewBox="0 0 52 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="52" height="32" rx="6" fill="#1A1F71"/>
+      <text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle"
+        fontFamily="Arial, sans-serif" fontSize="14" fontWeight="900"
+        fill="#F7B600" fontStyle="italic" letterSpacing="1">
+        VISA
+      </text>
+    </svg>
+  );
+}
+
+function MastercardLogo() {
+  return (
+    <svg width="52" height="32" viewBox="0 0 52 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="52" height="32" rx="6" fill="#252525"/>
+      <circle cx="20" cy="16" r="9" fill="#EB001B"/>
+      <circle cx="32" cy="16" r="9" fill="#F79E1B"/>
+      <path d="M26 9.3A9 9 0 0 1 31.2 16 9 9 0 0 1 26 22.7 9 9 0 0 1 20.8 16 9 9 0 0 1 26 9.3z" fill="#FF5F00"/>
+    </svg>
+  );
+}
+
+function VerveLogo() {
+  return (
+    <svg width="52" height="32" viewBox="0 0 52 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="52" height="32" rx="6" fill="#006529"/>
+      <text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle"
+        fontFamily="Arial, sans-serif" fontSize="12" fontWeight="700"
+        fill="white" letterSpacing="0.5">
+        Verve
+      </text>
+    </svg>
+  );
+}
+
 const GHANA_REGIONS = [
   "Greater Accra", "Ashanti", "Western", "Eastern", "Central",
   "Northern", "Upper East", "Upper West", "Volta", "Brong-Ahafo",
@@ -105,10 +144,11 @@ export default function CheckoutPage() {
     }
   }, [isSignedIn, user]);
 
-  const [network,   setNetwork]   = useState<MomoNetwork | "">("");
-  const [momoPhone, setMomoPhone] = useState("");
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("momo");
+  const [network,       setNetwork]       = useState<MomoNetwork | "">("");
+  const [momoPhone,     setMomoPhone]     = useState("");
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState("");
 
   const set = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -119,8 +159,8 @@ export default function CheckoutPage() {
       setError("Please fill in all required delivery details (name, email, phone, region, city, address).");
       return;
     }
-    if (!network || !momoPhone) {
-      setError("Please select your MoMo network and enter your phone number.");
+    if (paymentMethod === "momo" && (!network || !momoPhone)) {
+      setError("Please select your MoMo network and enter your MoMo phone number.");
       return;
     }
     if (items.length === 0) {
@@ -136,11 +176,12 @@ export default function CheckoutPage() {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email:        form.email,
-          amountGHS:    total,
-          momoNetwork:  network,
-          momoPhone,
-          cartItems:    items,
+          email:         form.email,
+          amountGHS:     total,
+          paymentMethod,
+          momoNetwork:   paymentMethod === "momo" ? network   : undefined,
+          momoPhone:     paymentMethod === "momo" ? momoPhone : undefined,
+          cartItems:     items,
           deliveryInfo: {
             fullName: form.fullName,
             phone:    form.phone,
@@ -420,36 +461,127 @@ export default function CheckoutPage() {
                   {/* Payment section */}
                   <section>
                     <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-zinc-400 font-medium mb-6 pb-3 border-b border-zinc-100 dark:border-zinc-800">
-                      02 · Mobile Money Payment
+                      02 · Payment Method
                     </p>
 
-                    {/* Network picker */}
-                    <div className="grid grid-cols-3 gap-3 mb-5">
-                      {NETWORKS.map(({ id, label, Logo }) => (
-                        <button key={id} type="button" onClick={() => setNetwork(id)}
-                          className={`rounded-2xl border py-4 px-2 flex flex-col items-center gap-2.5 transition-all duration-200 ${
-                            network === id
+                    {/* Method tabs */}
+                    <div className="grid grid-cols-3 gap-2 mb-6">
+                      {([
+                        { id: "momo",          label: "Mobile Money", Icon: Smartphone   },
+                        { id: "card",          label: "Card",         Icon: CreditCard   },
+                        { id: "bank_transfer", label: "Bank Transfer", Icon: Building2   },
+                      ] as const).map(({ id, label, Icon }) => (
+                        <button key={id} type="button"
+                          onClick={() => setPaymentMethod(id)}
+                          className={`rounded-xl border py-3 px-2 flex flex-col items-center gap-1.5 transition-all duration-200 ${
+                            paymentMethod === id
                               ? "border-zinc-900 dark:border-white bg-zinc-50 dark:bg-zinc-800 shadow-sm"
-                              : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
+                              : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500"
                           }`}>
-                          <Logo size={44} />
-                          <span className="font-sans text-[10px] tracking-[0.08em] text-zinc-600 dark:text-zinc-300 font-medium">{label}</span>
+                          <Icon size={18} className={paymentMethod === id ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-zinc-500"} />
+                          <span className={`font-sans text-[9px] tracking-[0.05em] font-medium ${paymentMethod === id ? "text-zinc-800 dark:text-zinc-100" : "text-zinc-400 dark:text-zinc-500"}`}>
+                            {label}
+                          </span>
                         </button>
                       ))}
                     </div>
 
-                    <div>
-                      <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
-                        MoMo Phone Number
-                      </label>
-                      <input type="tel" value={momoPhone}
-                        onChange={e => setMomoPhone(e.target.value)}
-                        placeholder="0241234567"
-                        autoComplete="off"
-                        className={inputCls} />
-                      <p className="font-sans text-[9px] text-zinc-300 font-light mt-2">
-                        You will receive a push notification to approve the payment.
+                    {/* Mobile Money */}
+                    <AnimatePresence mode="wait">
+                      {paymentMethod === "momo" && (
+                        <motion.div key="momo"
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.2 }}>
+                          <div className="grid grid-cols-3 gap-3 mb-5">
+                            {NETWORKS.map(({ id, label, Logo }) => (
+                              <button key={id} type="button" onClick={() => setNetwork(id)}
+                                className={`rounded-2xl border py-4 px-2 flex flex-col items-center gap-2.5 transition-all duration-200 ${
+                                  network === id
+                                    ? "border-zinc-900 dark:border-white bg-zinc-50 dark:bg-zinc-800 shadow-sm"
+                                    : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
+                                }`}>
+                                <Logo size={44} />
+                                <span className="font-sans text-[10px] tracking-[0.08em] text-zinc-600 dark:text-zinc-300 font-medium">{label}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div>
+                            <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
+                              MoMo Phone Number
+                            </label>
+                            <input type="tel" value={momoPhone}
+                              onChange={e => setMomoPhone(e.target.value)}
+                              placeholder="0241234567"
+                              autoComplete="off"
+                              className={inputCls} />
+                            <p className="font-sans text-[9px] text-zinc-300 dark:text-zinc-600 font-light mt-2">
+                              You will receive a push notification on your phone to approve the payment.
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Card */}
+                      {paymentMethod === "card" && (
+                        <motion.div key="card"
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.2 }}>
+                          <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 p-5 space-y-4">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <VisaLogo />
+                              <MastercardLogo />
+                              <VerveLogo />
+                            </div>
+                            <p className="font-sans text-sm text-zinc-600 dark:text-zinc-300 font-light leading-relaxed">
+                              Pay securely with your debit or credit card. You will be redirected to
+                              Paystack&apos;s secure payment page to enter your card details.
+                            </p>
+                            <div className="flex items-center gap-2 text-zinc-400">
+                              <Lock size={11} />
+                              <span className="font-sans text-[10px] tracking-[0.1em] font-light">
+                                256-bit SSL encryption · PCI DSS compliant
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Bank Transfer */}
+                      {paymentMethod === "bank_transfer" && (
+                        <motion.div key="bank_transfer"
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.2 }}>
+                          <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 p-5 space-y-4">
+                            <p className="font-sans text-sm text-zinc-600 dark:text-zinc-300 font-light leading-relaxed">
+                              Pay via direct bank transfer. After clicking Pay, you will receive a
+                              unique account number to transfer to. Your order is confirmed once
+                              payment is received.
+                            </p>
+                            <div className="flex items-center gap-2 text-zinc-400">
+                              <Lock size={11} />
+                              <span className="font-sans text-[10px] tracking-[0.1em] font-light">
+                                Processed securely by Paystack
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Accepted payments strip */}
+                    <div className="mt-6 pt-5 border-t border-zinc-100 dark:border-zinc-800">
+                      <p className="font-sans text-[8px] tracking-[0.25em] uppercase text-zinc-300 dark:text-zinc-600 font-light mb-3">
+                        We accept
                       </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <MtnLogo size={28} />
+                        <TelecelLogo size={28} />
+                        <AirtelTigoLogo size={28} />
+                        <span className="w-px h-5 bg-zinc-100 dark:bg-zinc-800 mx-1" />
+                        <VisaLogo />
+                        <MastercardLogo />
+                        <VerveLogo />
+                      </div>
                     </div>
                   </section>
 
@@ -510,7 +642,10 @@ export default function CheckoutPage() {
                       ) : (
                         <>
                           <Lock size={12} />
-                          Pay GH₵ {total.toLocaleString()} with MoMo
+                          Pay GH₵ {total.toLocaleString()}
+                          {paymentMethod === "momo"          && " · Mobile Money"}
+                          {paymentMethod === "card"          && " · Card"}
+                          {paymentMethod === "bank_transfer" && " · Bank Transfer"}
                           <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
                         </>
                       )}
