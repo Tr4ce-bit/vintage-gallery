@@ -128,7 +128,9 @@ model Order {
   // Delivery info (copied at order time so profile changes don't affect history)
   deliveryFullName    String
   deliveryPhone       String
-  deliveryAddress     String                   // Ghana Post Digital Address
+  deliveryAddress     String                   // Street address / Ghana Post Digital Address
+  deliveryCity        String   @default("")    // e.g. Accra, Kumasi
+  deliveryRegion      String   @default("")    // e.g. Greater Accra
   deliveryNotes       String?
 
   // Mobile Money details (non-sensitive — just network & masked number)

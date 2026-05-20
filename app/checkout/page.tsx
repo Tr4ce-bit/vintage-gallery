@@ -12,14 +12,71 @@ import Footer from "@/components/Footer";
 
 type MomoNetwork = "MTN" | "TELECEL" | "AIRTELTIGO";
 
-const NETWORKS: { id: MomoNetwork; label: string; color: string }[] = [
-  { id: "MTN",        label: "MTN MoMo",   color: "bg-yellow-400" },
-  { id: "TELECEL",    label: "Telecel",     color: "bg-red-500"    },
-  { id: "AIRTELTIGO", label: "AirtelTigo", color: "bg-blue-600"   },
+// ── Real MNO brand logos (SVG) ──────────────────────────────────────────────
+function MtnLogo({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="80" rx="12" fill="#FFCC00" />
+      {/* MTN wordmark */}
+      <text x="50%" y="52%" dominantBaseline="middle" textAnchor="middle"
+        fontFamily="Arial Black, Arial, sans-serif" fontSize="22" fontWeight="900"
+        fill="#1A1A1A" letterSpacing="-0.5">
+        MTN
+      </text>
+    </svg>
+  );
+}
+
+function AirtelTigoLogo({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="80" rx="12" fill="#E4001B" />
+      {/* airtel half */}
+      <text x="50%" y="38%" dominantBaseline="middle" textAnchor="middle"
+        fontFamily="Arial, sans-serif" fontSize="13" fontWeight="700" fill="white">
+        airtel
+      </text>
+      {/* tigo half with blue strip */}
+      <rect x="0" y="44" width="80" height="36" rx="0" fill="#003087" />
+      <rect x="0" y="44" width="80" height="1" fill="white" opacity="0.3" />
+      <text x="50%" y="66%" dominantBaseline="middle" textAnchor="middle"
+        fontFamily="Arial, sans-serif" fontSize="13" fontWeight="700" fill="white">
+        tigo
+      </text>
+    </svg>
+  );
+}
+
+function TelecelLogo({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="80" rx="12" fill="#E4002B" />
+      {/* Telecel speech-bubble dot */}
+      <circle cx="40" cy="26" r="10" fill="white" />
+      <text x="50%" y="65%" dominantBaseline="middle" textAnchor="middle"
+        fontFamily="Arial, sans-serif" fontSize="12" fontWeight="700" fill="white" letterSpacing="0.5">
+        telecel
+      </text>
+    </svg>
+  );
+}
+
+const NETWORKS: { id: MomoNetwork; label: string; Logo: React.FC<{ size?: number }> }[] = [
+  { id: "MTN",        label: "MTN MoMo",   Logo: MtnLogo        },
+  { id: "TELECEL",    label: "Telecel",     Logo: TelecelLogo    },
+  { id: "AIRTELTIGO", label: "AirtelTigo", Logo: AirtelTigoLogo },
+];
+
+const GHANA_REGIONS = [
+  "Greater Accra", "Ashanti", "Western", "Eastern", "Central",
+  "Northern", "Upper East", "Upper West", "Volta", "Brong-Ahafo",
+  "Ahafo", "Bono East", "North East", "Oti", "Savannah", "Western North",
 ];
 
 // "null" = haven't chosen yet, "guest" = continue without account
 type AuthMode = null | "guest";
+
+const inputCls = "w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 dark:text-zinc-200 placeholder-zinc-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors";
 
 export default function CheckoutPage() {
   const router                            = useRouter();
@@ -30,38 +87,36 @@ export default function CheckoutPage() {
   const subtotal     = totalPrice();
   const total        = subtotal + DELIVERY_FEE;
 
-  // Auth gate — null until user makes a choice (or is already signed in)
   const [authMode, setAuthMode] = useState<AuthMode>(null);
 
-  // Delivery form
   const [form, setForm] = useState({
     fullName: "",
     email:    "",
     phone:    "",
+    region:   "",
+    city:     "",
     address:  "",
     notes:    "",
   });
 
-  // Pre-fill email once we know the signed-in user
   useEffect(() => {
     if (isSignedIn && user?.email) {
       setForm(f => ({ ...f, email: user.email! }));
     }
   }, [isSignedIn, user]);
 
-  // Payment
   const [network,   setNetwork]   = useState<MomoNetwork | "">("");
   const [momoPhone, setMomoPhone] = useState("");
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState("");
 
   const set = (k: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleCheckout = async () => {
-    if (!form.fullName || !form.email || !form.phone || !form.address) {
-      setError("Please fill in all delivery details.");
+    if (!form.fullName || !form.email || !form.phone || !form.region || !form.city || !form.address) {
+      setError("Please fill in all required delivery details (name, email, phone, region, city, address).");
       return;
     }
     if (!network || !momoPhone) {
@@ -89,6 +144,8 @@ export default function CheckoutPage() {
           deliveryInfo: {
             fullName: form.fullName,
             phone:    form.phone,
+            region:   form.region,
+            city:     form.city,
             address:  form.address,
             notes:    form.notes,
           },
@@ -115,10 +172,6 @@ export default function CheckoutPage() {
     return null;
   }
 
-  // Show auth gate if:
-  //  • auth state has resolved
-  //  • user is NOT signed in
-  //  • they haven't chosen guest yet
   const showGate = isLoaded && !isSignedIn && authMode === null;
 
   return (
@@ -154,7 +207,6 @@ export default function CheckoutPage() {
                 transition={{ duration: 0.35 }}
                 className="max-w-md mx-auto"
               >
-                {/* Mini cart summary */}
                 <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 p-5 mb-8 flex items-center gap-4">
                   <div className="flex -space-x-3">
                     {items.slice(0, 3).map(item => (
@@ -180,8 +232,6 @@ export default function CheckoutPage() {
                 </p>
 
                 <div className="space-y-3">
-
-                  {/* Sign In */}
                   <Link href="/sign-in?redirect=/checkout"
                     className="group flex items-center gap-4 w-full rounded-2xl border border-zinc-200 dark:border-zinc-700 p-5 hover:border-zinc-900 dark:hover:border-zinc-300 transition-all duration-200">
                     <div className="w-10 h-10 rounded-full bg-zinc-900 dark:bg-white flex items-center justify-center shrink-0">
@@ -196,7 +246,6 @@ export default function CheckoutPage() {
                     <ArrowRight size={14} className="text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 group-hover:translate-x-0.5 transition-all" />
                   </Link>
 
-                  {/* Create Account */}
                   <Link href="/sign-up?redirect=/checkout"
                     className="group flex items-center gap-4 w-full rounded-2xl border border-zinc-200 dark:border-zinc-700 p-5 hover:border-zinc-900 dark:hover:border-zinc-300 transition-all duration-200">
                     <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
@@ -211,14 +260,12 @@ export default function CheckoutPage() {
                     <ArrowRight size={14} className="text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 group-hover:translate-x-0.5 transition-all" />
                   </Link>
 
-                  {/* Divider */}
                   <div className="flex items-center gap-3 py-1">
                     <div className="flex-1 h-px bg-zinc-100 dark:bg-zinc-800" />
                     <span className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 dark:text-zinc-600">or</span>
                     <div className="flex-1 h-px bg-zinc-100 dark:bg-zinc-800" />
                   </div>
 
-                  {/* Guest */}
                   <button
                     onClick={() => setAuthMode("guest")}
                     className="group flex items-center gap-4 w-full rounded-2xl border border-zinc-100 dark:border-zinc-800 p-5 hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 text-left"
@@ -242,7 +289,7 @@ export default function CheckoutPage() {
               </motion.div>
             )}
 
-            {/* ── Checkout Form (signed in OR guest chosen) ──────────────────── */}
+            {/* ── Checkout Form ──────────────────────────────────────────────── */}
             {!showGate && (
               <motion.div
                 key="form"
@@ -255,7 +302,6 @@ export default function CheckoutPage() {
                 {/* ── Left: Forms ── */}
                 <div className="lg:col-span-3 space-y-10">
 
-                  {/* Signed-in badge / guest note */}
                   {isSignedIn ? (
                     <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 w-fit">
                       <div className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -283,37 +329,91 @@ export default function CheckoutPage() {
                       01 · Delivery Details
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {[
-                        { label: "Full Name",            key: "fullName", type: "text",  placeholder: "Kwame Asante",          full: true  },
-                        { label: "Email Address",        key: "email",    type: "email", placeholder: "you@email.com",         full: false },
-                        { label: "Phone Number",         key: "phone",    type: "tel",   placeholder: "0241234567",            full: false },
-                        { label: "Ghana Post / Address", key: "address",  type: "text",  placeholder: "GA-123-4567 or street", full: true  },
-                      ].map(({ label, key, type, placeholder, full }) => (
-                        <div key={key} className={full ? "sm:col-span-2" : ""}>
-                          <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
-                            {label}
-                          </label>
-                          <input
-                            type={type}
-                            value={form[key as keyof typeof form]}
-                            onChange={set(key as keyof typeof form)}
-                            placeholder={placeholder}
-                            className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 dark:text-zinc-200 placeholder-zinc-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
-                          />
-                        </div>
-                      ))}
+
+                      {/* Full Name */}
                       <div className="sm:col-span-2">
                         <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
-                          Delivery Notes (Optional)
+                          Full Name <span className="text-red-400">*</span>
                         </label>
-                        <textarea
-                          value={form.notes}
-                          onChange={set("notes")}
-                          placeholder="Any instructions for delivery..."
-                          rows={2}
-                          className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 dark:text-zinc-200 placeholder-zinc-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors resize-none"
-                        />
+                        <input type="text" value={form.fullName} onChange={set("fullName")}
+                          placeholder="Kwame Asante" required
+                          autoComplete="off" autoCorrect="off" spellCheck={false}
+                          className={inputCls} />
                       </div>
+
+                      {/* Email */}
+                      <div>
+                        <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
+                          Email Address <span className="text-red-400">*</span>
+                        </label>
+                        <input type="email" value={form.email} onChange={set("email")}
+                          placeholder="you@email.com" required
+                          autoComplete="off" autoCorrect="off" spellCheck={false}
+                          className={inputCls} />
+                      </div>
+
+                      {/* Phone */}
+                      <div>
+                        <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
+                          Phone Number <span className="text-red-400">*</span>
+                        </label>
+                        <input type="tel" value={form.phone} onChange={set("phone")}
+                          placeholder="0241234567" required
+                          autoComplete="off"
+                          className={inputCls} />
+                      </div>
+
+                      {/* Region */}
+                      <div>
+                        <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
+                          Region <span className="text-red-400">*</span>
+                        </label>
+                        <select value={form.region} onChange={set("region")} required
+                          className={`${inputCls} appearance-none cursor-pointer`}>
+                          <option value="" disabled>Select region…</option>
+                          {GHANA_REGIONS.map(r => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* City */}
+                      <div>
+                        <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
+                          City / Town <span className="text-red-400">*</span>
+                        </label>
+                        <input type="text" value={form.city} onChange={set("city")}
+                          placeholder="Accra" required
+                          autoComplete="off" autoCorrect="off" spellCheck={false}
+                          className={inputCls} />
+                      </div>
+
+                      {/* Address */}
+                      <div className="sm:col-span-2">
+                        <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
+                          Street Address / Ghana Post <span className="text-red-400">*</span>
+                        </label>
+                        <input type="text" value={form.address} onChange={set("address")}
+                          placeholder="GA-123-4567 or street address" required
+                          autoComplete="off" autoCorrect="off" spellCheck={false}
+                          className={inputCls} />
+                      </div>
+
+                      {/* Notes */}
+                      <div className="sm:col-span-2">
+                        <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
+                          Delivery Notes <span className="text-zinc-300">(Optional)</span>
+                        </label>
+                        <textarea value={form.notes} onChange={set("notes")}
+                          placeholder="Any instructions for delivery…" rows={2}
+                          autoComplete="off" spellCheck={false}
+                          className={`${inputCls} resize-none`} />
+                      </div>
+
+                      <p className="sm:col-span-2 font-sans text-[9px] text-zinc-300 dark:text-zinc-600 font-light">
+                        Fields marked <span className="text-red-400">*</span> are required.
+                        You can update your delivery address up to 15 minutes after placing your order.
+                      </p>
                     </div>
                   </section>
 
@@ -323,16 +423,17 @@ export default function CheckoutPage() {
                       02 · Mobile Money Payment
                     </p>
 
+                    {/* Network picker */}
                     <div className="grid grid-cols-3 gap-3 mb-5">
-                      {NETWORKS.map(n => (
-                        <button key={n.id} onClick={() => setNetwork(n.id)}
-                          className={`rounded-xl border py-3 px-2 flex flex-col items-center gap-2 transition-all duration-200 ${
-                            network === n.id
-                              ? "border-zinc-900 dark:border-white bg-zinc-100 dark:bg-zinc-800"
-                              : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-500"
+                      {NETWORKS.map(({ id, label, Logo }) => (
+                        <button key={id} type="button" onClick={() => setNetwork(id)}
+                          className={`rounded-2xl border py-4 px-2 flex flex-col items-center gap-2.5 transition-all duration-200 ${
+                            network === id
+                              ? "border-zinc-900 dark:border-white bg-zinc-50 dark:bg-zinc-800 shadow-sm"
+                              : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
                           }`}>
-                          <span className={`w-3 h-3 rounded-full ${n.color}`} />
-                          <span className="font-sans text-[10px] tracking-[0.1em] text-zinc-600 dark:text-zinc-300 font-light">{n.label}</span>
+                          <Logo size={44} />
+                          <span className="font-sans text-[10px] tracking-[0.08em] text-zinc-600 dark:text-zinc-300 font-medium">{label}</span>
                         </button>
                       ))}
                     </div>
@@ -341,13 +442,11 @@ export default function CheckoutPage() {
                       <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
                         MoMo Phone Number
                       </label>
-                      <input
-                        type="tel"
-                        value={momoPhone}
+                      <input type="tel" value={momoPhone}
                         onChange={e => setMomoPhone(e.target.value)}
                         placeholder="0241234567"
-                        className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-sans text-sm text-zinc-700 dark:text-zinc-200 placeholder-zinc-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
-                      />
+                        autoComplete="off"
+                        className={inputCls} />
                       <p className="font-sans text-[9px] text-zinc-300 font-light mt-2">
                         You will receive a push notification to approve the payment.
                       </p>
