@@ -4,7 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import AuthProvider from "@/components/AuthProvider";
 import ThemeProvider from "@/components/ThemeProvider";
-import NextTopLoader from "nextjs-toploader";
+import NavigationLoader from "@/components/NavigationLoader";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -45,14 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <html lang="en" className={`${cormorant.variable} ${inter.variable}`} suppressHydrationWarning>
         <body className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 antialiased transition-colors duration-300">
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-            <NextTopLoader
-              color="#18181b"
-              shadow={false}
-              height={2}
-              showSpinner={false}
-              easing="ease"
-              speed={200}
-            />
+            <NavigationLoader />
             <Navbar />
             <main>{children}</main>
           </ThemeProvider>
