@@ -662,7 +662,7 @@ export default function ProductCustomizer() {
 
         <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.15, duration: 0.7 }} className="w-[230px] shrink-0 mt-6 sticky top-6">
-          <GlassPanel><ColorControls /></GlassPanel>
+          <GlassPanel>{ColorControls()}</GlassPanel>
           <p className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-700 font-light text-center mt-4">
             drag shirt to rotate
           </p>
@@ -714,7 +714,7 @@ export default function ProductCustomizer() {
           transition={{ delay: 0.2, duration: 0.7 }}
           className="w-[240px] shrink-0 mt-6 space-y-4 sticky top-6">
 
-          <GlassPanel><DesignControls /></GlassPanel>
+          <GlassPanel>{DesignControls()}</GlassPanel>
 
           <GlassPanel>
             <div className="p-5 space-y-1">
@@ -791,7 +791,7 @@ export default function ProductCustomizer() {
         </div>
 
         <div className="px-4">
-          <GlassPanel>{mobileTab === "color" ? <ColorControls /> : <DesignControls />}</GlassPanel>
+          <GlassPanel>{mobileTab === "color" ? ColorControls() : DesignControls()}</GlassPanel>
         </div>
 
         <div className="px-4 mt-4">
