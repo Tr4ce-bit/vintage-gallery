@@ -10,14 +10,15 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get("x-paystack-signature") ?? "";
   const secret    = process.env.PAYSTACK_SECRET_KEY!;
 
-  // 1. Verify HMAC-SHA512 signature
-  const hash = crypto
-    .createHmac("sha512", secret)
-    .update(body)
-    .digest("hex");
+  if (!secret) {
+    console.error("Webhook: PAYSTACK_SECRET_KEY not set");
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+  }
 
+  // 1. Verify HMAC-SHA512 signature — reject anything that isn't really from Paystack
+  const hash = crypto.createHmac("sha512", secret).update(body).digest("hex");
   if (hash !== signature) {
-    console.warn("Paystack webhook: invalid signature");
+    console.warn("Paystack webhook: invalid signature — possible spoofed request");
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   if (event.event === "charge.success") {
     const { reference } = event.data;
 
-    // 2. Check order exists + idempotency guard
+    // 2. Idempotency guard
     const existing = await prisma.order.findUnique({
       where:   { paystackReference: reference },
       include: { items: true },
@@ -35,15 +36,15 @@ export async function POST(req: NextRequest) {
 
     if (!existing) {
       console.warn(`Webhook: no order found for reference ${reference}`);
-      return NextResponse.json({ received: true });
+      return NextResponse.json({ received: true }); // 200 so Paystack stops retrying
     }
 
     if (existing.status !== "PENDING") {
-      console.log(`Webhook: order ${reference} already has status ${existing.status}, skipping`);
+      console.log(`Webhook: order ${reference} already ${existing.status}, skipping`);
       return NextResponse.json({ received: true });
     }
 
-    // 3. Verify with Paystack API before trusting the webhook
+    // 3. Verify with Paystack before trusting the webhook
     try {
       const verify = await fetch(
         `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
@@ -55,45 +56,48 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true });
       }
     } catch (err) {
-      console.error(`Webhook: error verifying ${reference} with Paystack:`, err);
+      console.error(`Webhook: error verifying ${reference}:`, err);
       return NextResponse.json({ received: true });
     }
 
-    // 4. Mark as PAID + decrement global stock — in one transaction
+    // 4. Pre-fetch sizeStock for all items so the full update is ONE atomic transaction
+    //    (eliminates the race condition between global-stock and sizeStock updates)
+    const products = await prisma.product.findMany({
+      where:  { id: { in: existing.items.map(i => i.productId) } },
+      select: { id: true, sizeStock: true },
+    });
+    const sizeStockMap = Object.fromEntries(products.map(p => [p.id, p.sizeStock]));
+
     try {
       await prisma.$transaction([
+        // Mark order paid
         prisma.order.update({
           where: { paystackReference: reference },
           data:  { status: "PAID" },
         }),
-        ...existing.items.map(item =>
-          prisma.product.update({
-            where: { id: item.productId },
-            data:  { stock: { decrement: item.quantity } },
-          })
-        ),
-      ]);
-
-      // 5. Also decrement sizeStock JSON for the specific size on each item
-      for (const item of existing.items) {
-        try {
-          const prod = await prisma.product.findUnique({
-            where:  { id: item.productId },
-            select: { sizeStock: true },
-          });
-          if (prod?.sizeStock) {
-            const ss = { ...(prod.sizeStock as Record<string, number>) };
-            const key = String(item.size);
-            ss[key] = Math.max(0, (ss[key] ?? 0) - item.quantity);
-            await prisma.product.update({
+        // Decrement global stock + sizeStock in one go
+        ...existing.items.flatMap(item => {
+          const ops = [
+            prisma.product.update({
               where: { id: item.productId },
-              data:  { sizeStock: ss },
-            });
+              data:  { stock: { decrement: item.quantity } },
+            }),
+          ];
+          const raw = sizeStockMap[item.productId];
+          if (raw) {
+            const ss  = { ...(raw as Record<string, number>) };
+            const key = String(item.size);
+            ss[key]   = Math.max(0, (ss[key] ?? 0) - item.quantity);
+            ops.push(
+              prisma.product.update({
+                where: { id: item.productId },
+                data:  { sizeStock: ss },
+              }),
+            );
           }
-        } catch (err) {
-          console.error(`Webhook: sizeStock update failed for product ${item.productId}:`, err);
-        }
-      }
+          return ops;
+        }),
+      ]);
 
       console.log(`Webhook: order ${reference} marked PAID, stock decremented for ${existing.items.length} item(s)`);
     } catch (err) {
@@ -110,14 +114,15 @@ export async function POST(req: NextRequest) {
       include: { items: true },
     });
 
-    if (!existing) {
-      console.warn(`Webhook: no order for refund reference ${transaction_reference}`);
+    if (!existing || existing.status === "REFUNDED") {
       return NextResponse.json({ received: true });
     }
 
-    if (existing.status === "REFUNDED") {
-      return NextResponse.json({ received: true });
-    }
+    const products = await prisma.product.findMany({
+      where:  { id: { in: existing.items.map(i => i.productId) } },
+      select: { id: true, sizeStock: true },
+    });
+    const sizeStockMap = Object.fromEntries(products.map(p => [p.id, p.sizeStock]));
 
     try {
       await prisma.$transaction([
@@ -125,34 +130,28 @@ export async function POST(req: NextRequest) {
           where: { paystackReference: transaction_reference },
           data:  { status: "REFUNDED" },
         }),
-        ...existing.items.map(item =>
-          prisma.product.update({
-            where: { id: item.productId },
-            data:  { stock: { increment: item.quantity } },
-          })
-        ),
-      ]);
-
-      // Restore sizeStock JSON for each item's size
-      for (const item of existing.items) {
-        try {
-          const prod = await prisma.product.findUnique({
-            where:  { id: item.productId },
-            select: { sizeStock: true },
-          });
-          if (prod?.sizeStock) {
-            const ss = { ...(prod.sizeStock as Record<string, number>) };
-            const key = String(item.size);
-            ss[key] = (ss[key] ?? 0) + item.quantity;
-            await prisma.product.update({
+        ...existing.items.flatMap(item => {
+          const ops = [
+            prisma.product.update({
               where: { id: item.productId },
-              data:  { sizeStock: ss },
-            });
+              data:  { stock: { increment: item.quantity } },
+            }),
+          ];
+          const raw = sizeStockMap[item.productId];
+          if (raw) {
+            const ss  = { ...(raw as Record<string, number>) };
+            const key = String(item.size);
+            ss[key]   = (ss[key] ?? 0) + item.quantity;
+            ops.push(
+              prisma.product.update({
+                where: { id: item.productId },
+                data:  { sizeStock: ss },
+              }),
+            );
           }
-        } catch (err) {
-          console.error(`Webhook: sizeStock restore failed for product ${item.productId}:`, err);
-        }
-      }
+          return ops;
+        }),
+      ]);
 
       console.log(`Webhook: order ${transaction_reference} marked REFUNDED, stock restored`);
     } catch (err) {
