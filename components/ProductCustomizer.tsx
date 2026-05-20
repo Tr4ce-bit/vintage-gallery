@@ -216,7 +216,7 @@ function PrintZone({ light, design }: { light: boolean; design: SideDesign }) {
     <div className="absolute pointer-events-none flex items-center justify-center"
       style={{ left: "26%", right: "26%", top: "36%", height: "26%" }}>
       {design.type === "text" && design.text && (
-        <motion.span key={design.text} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+        <motion.span initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.2 }} className="font-serif text-center leading-tight break-words w-full"
           style={{ fontSize: "clamp(0.8rem,3vw,1.3rem)", fontWeight: 600,
             letterSpacing: "0.12em", textTransform: "uppercase", color: textCol,
@@ -520,6 +520,11 @@ export default function ProductCustomizer() {
             <input type="text" value={activeDesign.text}
               onChange={e => setActiveDesign(d => ({ ...d, text: e.target.value.slice(0, 20).toUpperCase() }))}
               placeholder="E.G. ACCRA"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              enterKeyHint="done"
               className="w-full rounded-xl px-4 py-3 font-serif text-white text-center tracking-[0.3em] uppercase placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/30 transition-all"
               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
             <p className="font-sans text-[9px] text-zinc-600 font-light">Screen-printed · updates live</p>

@@ -21,7 +21,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mounted,  setMounted]  = useState(false);
-  const totalItems = useCartStore((s) => s.totalItems);
+  const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
   const pathname   = usePathname();
   const { theme, setTheme } = useTheme();
 
@@ -106,9 +106,9 @@ export default function Navbar() {
 
             <Link href="/cart" className={`relative transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}>
               <ShoppingBag size={18} strokeWidth={1.5} />
-              {totalItems() > 0 && (
+              {cartCount > 0 && (
                 <span className={`absolute -top-1 -right-1.5 w-[15px] h-[15px] rounded-full text-[7px] font-medium flex items-center justify-center ${onDark ? "bg-white text-zinc-900" : "bg-zinc-900 text-white"}`}>
-                  {totalItems()}
+                  {cartCount}
                 </span>
               )}
             </Link>
