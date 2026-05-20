@@ -7,10 +7,27 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
 
+const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+
 interface Product {
   id: string; name: string; slug: string; collection: string;
   basePrice: number; imageUrl: string; badge?: string;
   stock: number; isActive: boolean; featured: boolean;
+  sizes: string[];
+  sizeStock: Record<string, number> | null;
+}
+
+/** Colour + label for one size pill */
+function sizePillClass(size: string, sizes: string[], sizeStock: Record<string, number> | null) {
+  if (!sizes.includes(size)) {
+    // Size not offered for this product
+    return { dot: "bg-zinc-100 dark:bg-zinc-800", text: "text-zinc-300 dark:text-zinc-700", title: "Not offered" };
+  }
+  const qty = sizeStock ? (sizeStock[size] ?? 0) : null;
+  if (qty === null) return { dot: "bg-emerald-400", text: "text-zinc-700", title: "In stock" };
+  if (qty <= 0)  return { dot: "bg-red-400",    text: "text-red-500 dark:text-red-400",   title: "Out of stock (0)" };
+  if (qty <= 3)  return { dot: "bg-amber-400",  text: "text-amber-600 dark:text-amber-400", title: `Low stock (${qty})` };
+  return { dot: "bg-emerald-400", text: "text-zinc-600 dark:text-zinc-400", title: `${qty} in stock` };
 }
 
 export default function ProductsPage() {
@@ -66,6 +83,22 @@ export default function ProductsPage() {
         </Link>
       </div>
 
+      {/* Legend */}
+      <div className="flex items-center gap-4 mb-4 px-1">
+        <p className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-400 font-light">Size stock key:</p>
+        {[
+          { dot: "bg-emerald-400", label: "In stock" },
+          { dot: "bg-amber-400",   label: "Low (≤3)"  },
+          { dot: "bg-red-400",     label: "Out"        },
+          { dot: "bg-zinc-200",    label: "Not offered"},
+        ].map(({ dot, label }) => (
+          <span key={label} className="flex items-center gap-1.5 font-sans text-[9px] text-zinc-400">
+            <span className={`w-2 h-2 rounded-full ${dot}`} />
+            {label}
+          </span>
+        ))}
+      </div>
+
       <div className="bg-white border border-zinc-100 rounded-2xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-32">
@@ -78,10 +111,10 @@ export default function ProductsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[580px]">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-zinc-100">
-                  {["","Name","Collection","Price","Stock","Status",""].map((h,i) => (
+                  {["", "Name", "Collection", "Price", "Sizes & Stock", "Status", ""].map((h, i) => (
                     <th key={i} className="px-4 md:px-5 py-3 text-left font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-300 font-light">{h}</th>
                   ))}
                 </tr>
@@ -89,46 +122,74 @@ export default function ProductsPage() {
               <tbody>
                 {products.map(p => (
                   <tr key={p.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors">
+
+                    {/* Thumbnail */}
                     <td className="px-4 md:px-5 py-3.5 w-12">
                       <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-zinc-100">
                         <Image src={p.imageUrl} alt={p.name} fill className="object-cover" />
                       </div>
                     </td>
+
+                    {/* Name */}
                     <td className="px-4 md:px-5 py-3.5">
                       <p className="font-sans text-sm font-medium text-zinc-800">{p.name}</p>
-                      {p.badge && <span className="font-sans text-[9px] tracking-[0.15em] uppercase text-zinc-400">{p.badge}</span>}
-                    </td>
-                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-500">{p.collection}</td>
-                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-700 font-medium">GH₵ {p.basePrice}</td>
-                    <td className="px-4 md:px-5 py-3.5">
-                      <span className={`font-sans text-sm font-medium ${
-                        p.stock === 0   ? "text-red-500"    :
-                        p.stock <= 5    ? "text-amber-500"  :
-                        p.stock <= 20   ? "text-yellow-600" :
-                                          "text-zinc-600"
-                      }`}>
-                        {p.stock === 0 ? "Out" : p.stock}
-                      </span>
-                      {p.stock > 0 && p.stock <= 5 && (
-                        <span className="ml-1.5 font-sans text-[9px] uppercase tracking-wide text-amber-400">Low</span>
+                      {p.badge && (
+                        <span className="font-sans text-[9px] tracking-[0.15em] uppercase text-zinc-400">{p.badge}</span>
                       )}
                     </td>
+
+                    {/* Collection */}
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-500">{p.collection}</td>
+
+                    {/* Price */}
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-700 font-medium whitespace-nowrap">
+                      GH₵ {p.basePrice}
+                    </td>
+
+                    {/* Per-size stock grid */}
+                    <td className="px-4 md:px-5 py-3.5">
+                      <div className="flex items-center gap-1">
+                        {ALL_SIZES.map(s => {
+                          const { dot, text, title } = sizePillClass(s, p.sizes, p.sizeStock);
+                          return (
+                            <div key={s} className="flex flex-col items-center gap-0.5" title={`${s}: ${title}`}>
+                              <span className={`font-sans text-[8px] tracking-wide ${text}`}>{s}</span>
+                              <span className={`w-2 h-2 rounded-full ${dot}`} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {/* Total stock summary */}
+                      <p className={`font-sans text-[9px] mt-1 ${
+                        p.stock === 0 ? "text-red-400" : p.stock <= 5 ? "text-amber-500" : "text-zinc-400"
+                      }`}>
+                        {p.stock === 0 ? "All out of stock" : `${p.stock} total`}
+                      </p>
+                    </td>
+
+                    {/* Active toggle */}
                     <td className="px-4 md:px-5 py-3.5">
                       <button onClick={() => toggleActive(p.id, p.isActive)}
                         className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full transition-colors ${
-                          p.isActive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
+                          p.isActive
+                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                            : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
                         }`}>
-                        {p.isActive ? "Active" : "Inactive"}
+                        {p.isActive ? "Active" : "Hidden"}
                       </button>
                     </td>
+
+                    {/* Actions */}
                     <td className="px-4 md:px-5 py-3.5">
                       <div className="flex items-center gap-2">
                         <Link href={`/products/${p.id}`}
-                          className="w-7 h-7 rounded-lg bg-zinc-50 hover:bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors">
+                          className="w-7 h-7 rounded-lg bg-zinc-50 hover:bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors"
+                          title="Edit product">
                           <Pencil size={12} />
                         </Link>
                         <button onClick={() => deleteProduct(p.id, p.name)}
-                          className="w-7 h-7 rounded-lg bg-zinc-50 hover:bg-red-50 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors">
+                          className="w-7 h-7 rounded-lg bg-zinc-50 hover:bg-red-50 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors"
+                          title="Delete product">
                           <Trash2 size={12} />
                         </button>
                       </div>

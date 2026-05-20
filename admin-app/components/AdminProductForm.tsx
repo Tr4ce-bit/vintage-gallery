@@ -443,49 +443,96 @@ export default function AdminProductForm({ initial, mode }: Props) {
 
       {/* ── Sizes + per-size stock ─────────────────────────────────── */}
       <div className="bg-zinc-50 rounded-2xl p-4 space-y-4">
-        <div>
-          <label className={labelCls}>Available Sizes</label>
-          <p className="font-sans text-[10px] text-zinc-400 font-light mb-2">
-            Toggle which sizes you offer, then set stock for each below.
-          </p>
-          <div className="flex gap-2 flex-wrap">
-            {ALL_SIZES.map(s => (
-              <button key={s} type="button" onClick={() => toggleSize(s)}
-                className={`font-sans text-xs px-3 py-1.5 rounded-full border transition-all ${
-                  form.sizes.includes(s)
-                    ? "bg-zinc-900 text-white border-zinc-900"
-                    : "border-zinc-200 text-zinc-400 hover:border-zinc-400"
-                }`}>
-                {s}
-              </button>
-            ))}
+        <div className="flex items-center justify-between">
+          <label className={labelCls}>Sizes &amp; Stock</label>
+          <div className="flex gap-2">
+            <button type="button"
+              onClick={() => setForm(f => ({
+                ...f,
+                sizes: ALL_SIZES,
+                sizeStock: Object.fromEntries(ALL_SIZES.map(s => [s, f.sizeStock[s] ?? "0"])),
+              }))}
+              className="font-sans text-[9px] tracking-[0.1em] uppercase text-zinc-400 hover:text-zinc-700 underline underline-offset-2 transition-colors">
+              All sizes
+            </button>
+            <span className="text-zinc-200">·</span>
+            <button type="button"
+              onClick={() => setForm(f => ({
+                ...f,
+                sizeStock: Object.fromEntries(ALL_SIZES.map(s => [s, "0"])),
+              }))}
+              className="font-sans text-[9px] tracking-[0.1em] uppercase text-red-400 hover:text-red-600 underline underline-offset-2 transition-colors">
+              Mark all out of stock
+            </button>
           </div>
         </div>
+        <p className="font-sans text-[10px] text-zinc-400 font-light -mt-2">
+          Check a size to offer it. Set stock to <strong className="font-medium text-zinc-600">0</strong> to show it as{" "}
+          <span className="text-red-500 font-medium">Out of Stock</span> on the product page — customers see it but can&apos;t select it.
+          Uncheck to hide the size entirely.
+        </p>
 
-        <div>
-          <label className={labelCls}>Stock Per Size</label>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {ALL_SIZES.map(s => {
-              const active = form.sizes.includes(s);
-              return (
-                <div key={s} className={`flex flex-col items-center gap-1 ${!active ? "opacity-30 pointer-events-none" : ""}`}>
-                  <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-500 font-light">{s}</span>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          {ALL_SIZES.map(s => {
+            const offered = form.sizes.includes(s);
+            const qty     = Number(form.sizeStock[s] ?? 0);
+            const status  = !offered ? "hidden" : qty <= 0 ? "out" : qty <= 3 ? "low" : "ok";
+            return (
+              <div key={s}
+                className={`relative rounded-xl border-2 p-2.5 flex flex-col items-center gap-2 transition-all ${
+                  status === "hidden" ? "border-zinc-100 bg-white opacity-50" :
+                  status === "out"    ? "border-red-200 bg-red-50" :
+                  status === "low"    ? "border-amber-200 bg-amber-50" :
+                                        "border-emerald-200 bg-emerald-50/60"
+                }`}>
+                {/* Offered checkbox */}
+                <label className="flex flex-col items-center gap-1.5 w-full cursor-pointer">
                   <input
-                    type="number"
-                    min="0"
-                    disabled={!active}
-                    value={form.sizeStock[s] ?? "0"}
-                    onChange={e => setForm(f => ({ ...f, sizeStock: { ...f.sizeStock, [s]: e.target.value } }))}
-                    className="w-full border border-zinc-200 rounded-xl px-2 py-2 font-sans text-sm text-zinc-900 text-center focus:outline-none focus:border-zinc-400 transition-colors bg-white"
-                    placeholder="0"
+                    type="checkbox"
+                    checked={offered}
+                    onChange={() => toggleSize(s)}
+                    className="w-3.5 h-3.5 rounded accent-zinc-900"
                   />
-                </div>
-              );
-            })}
-          </div>
-          <p className="font-sans text-[10px] text-zinc-400 font-light mt-2">
-            Set a size to 0 to mark it as &quot;Out of Stock&quot; — customers won&apos;t be able to select it.
-          </p>
+                  <span className={`font-sans text-[11px] tracking-[0.12em] uppercase font-semibold ${
+                    status === "hidden" ? "text-zinc-300" :
+                    status === "out"    ? "text-red-500"  :
+                    status === "low"    ? "text-amber-600":
+                                          "text-emerald-700"
+                  }`}>{s}</span>
+                </label>
+
+                {/* Stock number input */}
+                <input
+                  type="number"
+                  min="0"
+                  max="9999"
+                  disabled={!offered}
+                  value={form.sizeStock[s] ?? "0"}
+                  onChange={e => setForm(f => ({ ...f, sizeStock: { ...f.sizeStock, [s]: e.target.value } }))}
+                  className={`w-full rounded-lg px-1 py-1.5 font-sans text-sm text-center focus:outline-none transition-colors border ${
+                    !offered          ? "bg-zinc-50 border-zinc-100 text-zinc-300 cursor-not-allowed" :
+                    status === "out"  ? "bg-white border-red-200 text-red-500 focus:border-red-400" :
+                    status === "low"  ? "bg-white border-amber-200 text-amber-600 focus:border-amber-400" :
+                                        "bg-white border-emerald-200 text-emerald-700 focus:border-emerald-400"
+                  }`}
+                  placeholder="0"
+                />
+
+                {/* Status badge */}
+                <span className={`font-sans text-[8px] tracking-wide uppercase font-medium leading-none ${
+                  status === "hidden" ? "text-zinc-300" :
+                  status === "out"    ? "text-red-400"  :
+                  status === "low"    ? "text-amber-500":
+                                        "text-emerald-600"
+                }`}>
+                  {status === "hidden" ? "Hidden" :
+                   status === "out"    ? "Out of stock" :
+                   status === "low"    ? "Low stock" :
+                                         "In stock"}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

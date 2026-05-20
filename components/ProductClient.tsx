@@ -186,7 +186,7 @@ export default function ProductClient({ product, related }: Props) {
                 </div>
                 <p className="font-sans text-[10px] text-zinc-400 dark:text-zinc-500 font-light text-center">
                   This item is currently unavailable. Check back soon or{" "}
-                  <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                  <a href="https://wa.me/233503662903" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
                     message us on WhatsApp
                   </a>{" "}
                   to be notified.
