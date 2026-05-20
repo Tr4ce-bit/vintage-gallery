@@ -1,27 +1,28 @@
 /**
  * Admin notifications — fired when a new order is paid.
- * Sends an email via AWS SES and an SMS via AWS SNS.
+ * Sends an email via Gmail SMTP (nodemailer) and an SMS via AWS SNS.
  *
  * Required env vars:
- *   ADMIN_EMAILS   — comma-separated admin emails (first one is used as FROM + TO)
- *   ADMIN_PHONE    — admin phone in E.164 format, e.g. +233503662903
- *   AWS_SES_REGION — region where your SES identity is verified (e.g. us-east-1)
- *   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — must have ses:SendEmail + sns:Publish
+ *   GMAIL_USER         — vintagegallerystore@gmail.com
+ *   GMAIL_APP_PASSWORD — 16-char App Password from Google Account → Security → App Passwords
+ *   ADMIN_EMAILS       — comma-separated admin emails (notifications go to ALL of them)
+ *   ADMIN_PHONE        — admin phone in E.164 format, e.g. +233503662903  (SMS)
+ *   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — must have sns:Publish permission (SMS only)
  */
 
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
-import { SNSClient, PublishCommand }   from "@aws-sdk/client-sns";
+import nodemailer              from "nodemailer";
+import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
-// SES client — region must match where you verified your email identity
-const ses = new SESClient({
-  region: process.env.AWS_SES_REGION ?? "us-east-1",
-  credentials: {
-    accessKeyId:     process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+// ── Gmail SMTP transporter ───────────────────────────────────────────────────
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD, // App Password, NOT your Gmail login password
   },
 });
 
-// SNS SMS — always us-east-1 for global SMS delivery
+// ── SNS client for SMS (us-east-1 for global delivery) ───────────────────────
 const sns = new SNSClient({
   region: "us-east-1",
   credentials: {
@@ -62,8 +63,8 @@ function buildHtml(o: OrderNotification): string {
       <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:13px;color:#555;">
         ${i.quantity}
       </td>
-      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:13px;color:#111;font-weight:500;">
-        GH₵ ${(i.unitPrice * i.quantity).toFixed(0)}
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:13px;color:#111;font-weight:600;">
+        GH&#8373; ${(i.unitPrice * i.quantity).toFixed(0)}
       </td>
     </tr>`).join("");
 
@@ -79,20 +80,18 @@ function buildHtml(o: OrderNotification): string {
         Vintage Gallery
       </p>
       <h1 style="margin:0;font-size:24px;font-weight:300;color:#ffffff;">
-        New Order Received 🛍
+        New Order Received &#128717;
       </h1>
     </div>
 
     <!-- Body -->
     <div style="padding:30px 36px;">
 
-      <!-- Ref -->
       <p style="margin:0 0 3px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Order Reference</p>
       <p style="margin:0 0 26px;font-size:15px;font-weight:600;color:#111;font-family:monospace;">
         ${o.paystackReference}
       </p>
 
-      <!-- Customer -->
       <p style="margin:0 0 3px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Customer</p>
       <p style="margin:0 0 2px;font-size:15px;color:#111;">${o.deliveryFullName}</p>
       <p style="margin:0 0 2px;font-size:13px;color:#666;">${o.deliveryPhone}</p>
@@ -100,7 +99,6 @@ function buildHtml(o: OrderNotification): string {
         ${o.deliveryAddress}, ${o.deliveryCity}, ${o.deliveryRegion}
       </p>
 
-      <!-- Items -->
       <table width="100%" cellpadding="0" cellspacing="0"
         style="border-collapse:collapse;margin-bottom:20px;border:1px solid #f0f0f0;border-radius:8px;overflow:hidden;">
         <thead>
@@ -114,10 +112,13 @@ function buildHtml(o: OrderNotification): string {
         <tbody>${rows}</tbody>
       </table>
 
-      <!-- Total -->
-      <div style="border-top:2px solid #111;padding-top:18px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Total Paid</span>
-        <span style="font-size:26px;font-weight:300;color:#111;">GH₵ ${o.totalAmount.toFixed(0)}</span>
+      <div style="border-top:2px solid #111;padding-top:18px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Total Paid</td>
+            <td style="text-align:right;font-size:26px;font-weight:300;color:#111;">GH&#8373; ${o.totalAmount.toFixed(0)}</td>
+          </tr>
+        </table>
       </div>
     </div>
 
@@ -130,7 +131,6 @@ function buildHtml(o: OrderNotification): string {
         to process this order.
       </p>
     </div>
-
   </div>
 </body>
 </html>`;
@@ -139,18 +139,16 @@ function buildHtml(o: OrderNotification): string {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function notifyAdminNewOrder(order: OrderNotification): Promise<void> {
-  const adminEmail = (process.env.ADMIN_EMAILS ?? "").split(",")[0]?.trim();
-  const adminPhone = process.env.ADMIN_PHONE; // E.164, e.g. +233503662903
-
-  if (!adminEmail && !adminPhone) {
-    console.warn("notifyAdminNewOrder: ADMIN_EMAILS and ADMIN_PHONE are both unset — skipping");
-    return;
-  }
+  const gmailUser   = process.env.GMAIL_USER;
+  const gmailPass   = process.env.GMAIL_APP_PASSWORD;
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",").map(e => e.trim()).filter(Boolean);
+  const adminPhone  = process.env.ADMIN_PHONE; // E.164, e.g. +233503662903
 
   const shortRef = order.paystackReference.slice(-8).toUpperCase();
 
-  // ── Email via SES ────────────────────────────────────────────────────────────
-  if (adminEmail) {
+  // ── Email via Gmail ──────────────────────────────────────────────────────────
+  if (gmailUser && gmailPass && adminEmails.length > 0) {
     const textBody = [
       `NEW ORDER — ${shortRef}`,
       `Customer : ${order.deliveryFullName} (${order.deliveryPhone})`,
@@ -161,28 +159,26 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
       ),
       ``,
       `TOTAL: GH₵${order.totalAmount.toFixed(0)}`,
-      `Full ref: ${order.paystackReference}`,
+      `Ref: ${order.paystackReference}`,
     ].join("\n");
 
     try {
-      await ses.send(new SendEmailCommand({
-        Source:      `Vintage Gallery <${adminEmail}>`,
-        Destination: { ToAddresses: [adminEmail] },
-        Message: {
-          Subject: { Data: `🛍 New Order · GH₵${order.totalAmount.toFixed(0)} · ${order.deliveryFullName}`, Charset: "UTF-8" },
-          Body: {
-            Text: { Data: textBody,        Charset: "UTF-8" },
-            Html: { Data: buildHtml(order), Charset: "UTF-8" },
-          },
-        },
-      }));
-      console.log(`Admin email sent → ${adminEmail}`);
+      await transporter.sendMail({
+        from:    `"Vintage Gallery" <${gmailUser}>`,
+        to:      adminEmails.join(", "),
+        subject: `🛍 New Order · GH₵${order.totalAmount.toFixed(0)} · ${order.deliveryFullName}`,
+        text:    textBody,
+        html:    buildHtml(order),
+      });
+      console.log(`Admin email sent → ${adminEmails.join(", ")}`);
     } catch (err) {
-      console.error("Admin email (SES) failed:", err);
+      console.error("Admin email (Gmail) failed:", err);
     }
+  } else {
+    console.warn("Admin email skipped — GMAIL_USER or GMAIL_APP_PASSWORD not set");
   }
 
-  // ── SMS via SNS ──────────────────────────────────────────────────────────────
+  // ── SMS via AWS SNS ──────────────────────────────────────────────────────────
   if (adminPhone) {
     const sms = `VG Order! ${order.deliveryFullName} · GH₵${order.totalAmount.toFixed(0)} · ${order.items.length} item(s) · ...${shortRef}`;
     try {
