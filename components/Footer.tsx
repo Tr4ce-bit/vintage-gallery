@@ -35,6 +35,7 @@ const LINKS = {
     { label: "Collabs",         href: "/collabs"       },
   ],
   Help: [
+    { label: "Track Order",     href: "/track"        },
     { label: "Sizing Guide",    href: "/sizing-guide" },
     { label: "Shipping",        href: "/shipping"     },
     { label: "Returns",         href: "/returns"      },
