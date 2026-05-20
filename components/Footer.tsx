@@ -3,36 +3,67 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { motion, useInView } from "framer-motion";
-import { Instagram, Twitter, Youtube, MessageCircle, ArrowUpRight } from "lucide-react";
+import { Instagram, MapPin, MessageCircle, ArrowUpRight } from "lucide-react";
+
+// ── Social links ────────────────────────────────────────────────────────────
+const INSTAGRAM_URL  = "https://www.instagram.com/the_vintage_gallery_store?igsh=MmMwMTJnbjQ2amlm";
+const TIKTOK_URL     = "https://www.tiktok.com/@vintage_gallery_store?_r=1&_t=ZS-96WLewglP9O";
+const WHATSAPP_URL   = "https://wa.me/233503662903";
+const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/gnpN4VfY3zStb3p58";
+
+// ── TikTok SVG (no Lucide icon) ─────────────────────────────────────────────
+function TikTokIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.3 6.3 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.2 8.2 0 0 0 4.79 1.53V6.77a4.85 4.85 0 0 1-1.02-.08z" />
+    </svg>
+  );
+}
 
 const LINKS = {
   Shop: [
-    { label: "New Arrivals",   href: "/shop?filter=New+Arrivals"   },
-    { label: "HOPE Collection",href: "/shop?filter=HOPE+Collection" },
-    { label: "Icons Series",   href: "/shop?filter=Icons+Series"   },
-    { label: "Limited Drops",  href: "/shop?filter=Limited+Drops"  },
-    { label: "Custom Studio",  href: "/customize"                  },
+    { label: "New Arrivals",    href: "/shop?filter=New+Arrivals"   },
+    { label: "HOPE Collection", href: "/shop?filter=HOPE+Collection" },
+    { label: "Icons Series",    href: "/shop?filter=Icons+Series"   },
+    { label: "Limited Drops",   href: "/shop?filter=Limited+Drops"  },
+    { label: "Custom Studio",   href: "/customize"                  },
   ],
   Brand: [
-    { label: "Our Story",      href: "/#about"        },
-    { label: "Drop Schedule",  href: "/drop-schedule" },
-    { label: "Lookbook",       href: "/lookbook"      },
-    { label: "Collabs",        href: "/collabs"       },
+    { label: "Our Story",       href: "/#about"        },
+    { label: "Drop Schedule",   href: "/drop-schedule" },
+    { label: "Lookbook",        href: "/lookbook"      },
+    { label: "Collabs",         href: "/collabs"       },
   ],
   Help: [
-    { label: "Sizing Guide",   href: "/sizing-guide" },
-    { label: "Shipping",       href: "/shipping"     },
-    { label: "Returns",        href: "/returns"      },
-    { label: "Contact",        href: "/#contact"     },
-    { label: "FAQs",           href: "/faq"          },
+    { label: "Sizing Guide",    href: "/sizing-guide" },
+    { label: "Shipping",        href: "/shipping"     },
+    { label: "Returns",         href: "/returns"      },
+    { label: "Contact",         href: "/#contact"     },
+    { label: "FAQs",            href: "/faq"          },
   ],
 };
 
 const SOCIALS = [
-  { icon: Instagram,     href: "#", label: "Instagram" },
-  { icon: Twitter,       href: "#", label: "Twitter" },
-  { icon: Youtube,       href: "#", label: "YouTube" },
-  { icon: MessageCircle, href: "#", label: "WhatsApp" },
+  {
+    label: "Instagram",
+    href:  INSTAGRAM_URL,
+    Icon:  ({ size }: { size: number }) => <Instagram size={size} strokeWidth={1.5} />,
+  },
+  {
+    label: "TikTok",
+    href:  TIKTOK_URL,
+    Icon:  ({ size }: { size: number }) => <TikTokIcon size={size} />,
+  },
+  {
+    label: "WhatsApp",
+    href:  WHATSAPP_URL,
+    Icon:  ({ size }: { size: number }) => <MessageCircle size={size} strokeWidth={1.5} />,
+  },
+  {
+    label: "Find us on Google Maps",
+    href:  GOOGLE_MAPS_URL,
+    Icon:  ({ size }: { size: number }) => <MapPin size={size} strokeWidth={1.5} />,
+  },
 ];
 
 export default function Footer() {
@@ -47,7 +78,7 @@ export default function Footer() {
         {/* Top row */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-8 mb-14">
 
-          {/* Brand */}
+          {/* Brand column */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
@@ -73,19 +104,47 @@ export default function Footer() {
               Ghana&apos;s premier streetwear destination. Curated drops, premium quality, delivered across Accra and beyond.
             </p>
 
-            <div className="flex items-center gap-2 mb-8">
-              {SOCIALS.map(({ icon: Icon, href, label }) => (
+            {/* Social icons */}
+            <div className="flex items-center gap-2 mb-5">
+              {SOCIALS.map(({ label, href, Icon }) => (
                 <a
                   key={label}
                   href={href}
                   aria-label={label}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-9 h-9 rounded-full border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-500 transition-all duration-200"
                 >
-                  <Icon size={14} strokeWidth={1.5} />
+                  <Icon size={14} />
                 </a>
               ))}
             </div>
 
+            {/* WhatsApp text CTA */}
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors mb-8 group"
+            >
+              <MessageCircle size={11} strokeWidth={1.5} />
+              Chat with us on WhatsApp
+              <ArrowUpRight size={9} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+            </a>
+
+            {/* Find us */}
+            <a
+              href={GOOGLE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 font-sans text-[10px] tracking-[0.1em] text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors mb-8 group"
+            >
+              <MapPin size={11} strokeWidth={1.5} />
+              <span>Find us on Google Maps</span>
+              <ArrowUpRight size={9} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+            </a>
+
+            {/* Payment methods */}
             <div className="flex flex-wrap gap-2">
               {["MTN MoMo", "Telecel", "AirtelTigo", "Paystack"].map(m => (
                 <span key={m} className="font-sans text-[8px] tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 rounded-full font-light">
@@ -95,7 +154,7 @@ export default function Footer() {
             </div>
           </motion.div>
 
-          {/* Links */}
+          {/* Nav link columns */}
           {Object.entries(LINKS).map(([section, links], col) => (
             <motion.div
               key={section}
