@@ -1,27 +1,41 @@
 /**
  * Admin notifications — fired when a new order is paid.
- * Sends an email via Gmail SMTP (nodemailer) and an SMS via Africa's Talking.
+ *
+ * EMAIL  → Gmail SMTP via nodemailer (unlimited, free)
+ * SMS    → AWS SNS (100 free SMS/month; hard-stops at 100 and resumes next month)
  *
  * Required env vars:
  *   GMAIL_USER         — vintagegallerystore@gmail.com
  *   GMAIL_APP_PASSWORD — 16-char App Password (Google Account → Security → App Passwords)
  *   ADMIN_EMAILS       — comma-separated admin emails
- *   ADMIN_PHONE        — admin phone with country code, e.g. +233503662903
- *   AT_USERNAME        — Africa's Talking username  ("sandbox" for testing, your username in prod)
- *   AT_API_KEY         — Africa's Talking API key
+ *   ADMIN_PHONE        — E.164 format, e.g. +233503662903
+ *   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — already set for S3; must also have sns:Publish
  */
 
-import nodemailer from "nodemailer";
+import nodemailer              from "nodemailer";
+import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
+import { prisma }              from "@/lib/db";
 
 // ── Gmail SMTP transporter ───────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD, // App Password, NOT your Gmail login password
+    pass: process.env.GMAIL_APP_PASSWORD,
   },
 });
 
+// ── SNS client (us-east-1 handles global SMS) ────────────────────────────────
+const sns = new SNSClient({
+  region: "us-east-1",
+  credentials: {
+    accessKeyId:     process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+// Free-tier cap — AWS SNS gives 100 free SMS/month
+const SMS_FREE_LIMIT = 100;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,6 +142,30 @@ function buildHtml(o: OrderNotification): string {
 </html>`;
 }
 
+// ─── SMS monthly counter (uses existing Settings table) ───────────────────────
+
+/** Returns current month key, e.g. "sms_count_2025-05" */
+function monthKey(): string {
+  return `sms_count_${new Date().toISOString().slice(0, 7)}`;
+}
+
+/** Reads this month's SMS count from the DB. Returns 0 if no record yet. */
+async function getSmsCount(): Promise<number> {
+  const row = await prisma.settings.findUnique({ where: { key: monthKey() } });
+  return parseInt(row?.value ?? "0", 10);
+}
+
+/** Atomically increments this month's SMS count. */
+async function incrementSmsCount(): Promise<void> {
+  const key     = monthKey();
+  const current = await getSmsCount();
+  await prisma.settings.upsert({
+    where:  { key },
+    create: { key, value: "1" },
+    update: { value: String(current + 1) },
+  });
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function notifyAdminNewOrder(order: OrderNotification): Promise<void> {
@@ -135,13 +173,11 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
   const gmailPass   = process.env.GMAIL_APP_PASSWORD;
   const adminEmails = (process.env.ADMIN_EMAILS ?? "")
     .split(",").map(e => e.trim()).filter(Boolean);
-  const adminPhone  = process.env.ADMIN_PHONE;     // e.g. +233503662903
-  const atUsername  = process.env.AT_USERNAME;     // "sandbox" or your AT username
-  const atApiKey    = process.env.AT_API_KEY;
+  const adminPhone  = process.env.ADMIN_PHONE; // E.164, e.g. +233503662903
 
   const shortRef = order.paystackReference.slice(-8).toUpperCase();
 
-  // ── Email via Gmail ──────────────────────────────────────────────────────────
+  // ── Email via Gmail (unlimited) ──────────────────────────────────────────────
   if (gmailUser && gmailPass && adminEmails.length > 0) {
     const textBody = [
       `NEW ORDER — ${shortRef}`,
@@ -172,37 +208,33 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
     console.warn("Admin email skipped — GMAIL_USER or GMAIL_APP_PASSWORD not set");
   }
 
-  // ── SMS via Africa's Talking ─────────────────────────────────────────────────
-  if (adminPhone && atUsername && atApiKey) {
-    const smsText =
-      `VG Order! ${order.deliveryFullName} | GH${order.totalAmount.toFixed(0)} | ` +
-      `${order.items.length} item(s) | ${order.deliveryCity} | Ref:${shortRef}`;
-
-    const host = atUsername === "sandbox"
-      ? "https://api.sandbox.africastalking.com"
-      : "https://api.africastalking.com";
-
+  // ── SMS via AWS SNS — stops at 100/month (free tier) ────────────────────────
+  if (adminPhone) {
     try {
-      const res = await fetch(`${host}/version1/messaging`, {
-        method:  "POST",
-        headers: {
-          "apiKey":       atApiKey,
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Accept":       "application/json",
-        },
-        body: new URLSearchParams({
-          username: atUsername,
-          to:       adminPhone,
-          message:  smsText,
-          from:     "VintageGal", // sender ID (may not be supported on all networks)
-        }).toString(),
-      });
-      const data = await res.json();
-      console.log("Admin SMS (Africa's Talking):", JSON.stringify(data));
+      const used = await getSmsCount();
+
+      if (used >= SMS_FREE_LIMIT) {
+        console.log(`Admin SMS skipped — monthly free limit reached (${used}/${SMS_FREE_LIMIT}). Resets next month.`);
+      } else {
+        const smsText =
+          `VG Order! ${order.deliveryFullName} | GHC${order.totalAmount.toFixed(0)} | ` +
+          `${order.items.length} item(s) | ${order.deliveryCity} | Ref:${shortRef}`;
+
+        await sns.send(new PublishCommand({
+          PhoneNumber: adminPhone,
+          Message:     smsText,
+          MessageAttributes: {
+            "AWS.SNS.SMS.SMSType": { DataType: "String", StringValue: "Transactional" },
+          },
+        }));
+
+        await incrementSmsCount();
+        console.log(`Admin SMS sent → ${adminPhone} (${used + 1}/${SMS_FREE_LIMIT} this month)`);
+      }
     } catch (err) {
-      console.error("Admin SMS (Africa's Talking) failed:", err);
+      console.error("Admin SMS (SNS) failed:", err);
     }
   } else {
-    console.warn("Admin SMS skipped — AT_USERNAME, AT_API_KEY, or ADMIN_PHONE not set");
+    console.warn("Admin SMS skipped — ADMIN_PHONE not set");
   }
 }
