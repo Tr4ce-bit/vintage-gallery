@@ -144,6 +144,13 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href="/track"
+                onClick={() => setMenuOpen(false)}
+                className="font-sans text-[11px] tracking-[0.22em] uppercase text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors font-light"
+              >
+                Track Order
+              </Link>
               <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800">
                 <NavbarAuth mobile onDark={false} onClose={() => setMenuOpen(false)} />
                 {mounted && (

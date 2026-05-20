@@ -159,6 +159,15 @@ export default function CartPage() {
                   <p className="font-sans text-[9px] text-zinc-400 dark:text-zinc-500 font-light text-center mt-4">
                     Secured by Paystack · MTN MoMo · Telecel · AirtelTigo
                   </p>
+
+                  <div className="border-t border-zinc-100 dark:border-zinc-800 mt-5 pt-4 text-center">
+                    <Link
+                      href="/track"
+                      className="font-sans text-[10px] tracking-[0.15em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                    >
+                      Track an existing order →
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
