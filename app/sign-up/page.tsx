@@ -30,7 +30,9 @@ function friendlyError(err: unknown): string {
 export default function SignUpPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const redirect     = searchParams.get("redirect") || "/";
+  // safeRedirect: only allow relative paths — blocks open-redirect attacks
+  const rawRedirect  = searchParams.get("redirect") || "/";
+  const redirect     = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/";
   const [name,          setName]          = useState("");
   const [email,         setEmail]         = useState("");
   const [password,      setPassword]      = useState("");

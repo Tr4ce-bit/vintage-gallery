@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
+import { isValidSlug, isAllowedImageUrl } from "@/lib/validation";
+
+const VALID_SIZES_SET = new Set(["XS","S","M","L","XL","XXL"]);
 
 export async function GET(
   req: NextRequest,
@@ -30,6 +33,49 @@ export async function PATCH(
   const { id } = await params;
   const body   = await req.json();
 
+  // ── Per-field validation on anything provided ────────────────────────────
+  if (body.name !== undefined) {
+    if (typeof body.name !== "string" || !body.name.trim() || body.name.length > 120) {
+      return NextResponse.json({ error: "name must be a non-empty string (max 120 chars)." }, { status: 400 });
+    }
+  }
+  if (body.slug !== undefined && !isValidSlug(body.slug)) {
+    return NextResponse.json(
+      { error: "slug must be lowercase letters, numbers and hyphens only." },
+      { status: 400 },
+    );
+  }
+  if (body.collection !== undefined) {
+    if (typeof body.collection !== "string" || !body.collection.trim() || body.collection.length > 80) {
+      return NextResponse.json({ error: "collection must be a non-empty string (max 80 chars)." }, { status: 400 });
+    }
+  }
+  if (body.imageUrl !== undefined && !isAllowedImageUrl(body.imageUrl)) {
+    return NextResponse.json(
+      { error: "imageUrl must be an HTTPS URL from our S3 bucket or Cloudinary." },
+      { status: 400 },
+    );
+  }
+  if (body.images !== undefined) {
+    if (!Array.isArray(body.images) || body.images.length > 10) {
+      return NextResponse.json({ error: "images must be an array with max 10 entries." }, { status: 400 });
+    }
+    if (!(body.images as unknown[]).every(isAllowedImageUrl)) {
+      return NextResponse.json({ error: "All image URLs must be from our S3 bucket or Cloudinary." }, { status: 400 });
+    }
+  }
+  if (body.basePrice !== undefined) {
+    const price = Number(body.basePrice);
+    if (!Number.isFinite(price) || price <= 0 || price > 100_000) {
+      return NextResponse.json({ error: "basePrice must be a positive number." }, { status: 400 });
+    }
+  }
+  if (body.sizes !== undefined) {
+    if (!Array.isArray(body.sizes) || !(body.sizes as unknown[]).every(s => VALID_SIZES_SET.has(s as string))) {
+      return NextResponse.json({ error: "sizes must be XS/S/M/L/XL/XXL." }, { status: 400 });
+    }
+  }
+
   // Prevent changing to a slug that belongs to another product
   if (body.slug) {
     const conflict = await prisma.product.findFirst({
@@ -44,22 +90,22 @@ export async function PATCH(
     const product = await prisma.product.update({
       where: { id },
       data:  {
-        ...(body.name        !== undefined && { name:        body.name }),
+        ...(body.name        !== undefined && { name:        (body.name as string).trim() }),
         ...(body.slug        !== undefined && { slug:        body.slug }),
-        ...(body.collection  !== undefined && { collection:  body.collection }),
-        ...(body.description !== undefined && { description: body.description }),
-        ...(body.details     !== undefined && { details:     body.details }),
+        ...(body.collection  !== undefined && { collection:  (body.collection as string).trim() }),
+        ...(body.description !== undefined && { description: typeof body.description === "string" ? body.description.slice(0, 2000) : null }),
+        ...(body.details     !== undefined && { details:     (body.details as unknown[]).filter((d): d is string => typeof d === "string").slice(0, 20) }),
         ...(body.basePrice   !== undefined && { basePrice:   Number(body.basePrice) }),
         ...(body.imageUrl    !== undefined && { imageUrl:    body.imageUrl }),
         ...(body.images      !== undefined && { images:      body.images }),
-        ...(body.color       !== undefined && { color:       body.color }),
+        ...(body.color       !== undefined && { color:       typeof body.color === "string" ? body.color.trim().slice(0, 40) : "White" }),
         ...(body.sizes       !== undefined && { sizes:       body.sizes }),
-        ...(body.badge       !== undefined && { badge:       body.badge }),
-        ...(body.featured    !== undefined && { featured:    body.featured }),
-        ...(body.stock       !== undefined && { stock:       Number(body.stock) }),
+        ...(body.badge       !== undefined && { badge:       typeof body.badge === "string" ? body.badge.trim().slice(0, 30) : null }),
+        ...(body.featured    !== undefined && { featured:    Boolean(body.featured) }),
+        ...(body.stock       !== undefined && { stock:       Math.max(0, Math.min(999_999, Math.floor(Number(body.stock)))) }),
         ...(body.sizeStock   !== undefined && { sizeStock:   body.sizeStock }),
-        ...(body.isActive    !== undefined && { isActive:    body.isActive }),
-        ...(body.sortOrder   !== undefined && { sortOrder:   Number(body.sortOrder) }),
+        ...(body.isActive    !== undefined && { isActive:    Boolean(body.isActive) }),
+        ...(body.sortOrder   !== undefined && { sortOrder:   Math.floor(Number(body.sortOrder)) }),
       },
     });
     return NextResponse.json({ product });

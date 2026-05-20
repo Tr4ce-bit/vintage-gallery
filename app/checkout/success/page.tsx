@@ -19,11 +19,14 @@ export default function SuccessPage({
   const clearCart                 = useCartStore((s) => s.clearCart);
 
   useEffect(() => {
-    if (!reference) { setStatus("failed"); return; }
+    // Validate reference format before sending to API — prevents crafted URLs
+    // from probing our backend with arbitrary strings
+    const REF_RE = /^[a-zA-Z0-9_-]{8,64}$/;
+    if (!reference || !REF_RE.test(reference)) { setStatus("failed"); return; }
 
     const verify = async () => {
       try {
-        const res  = await fetch(`/api/paystack?reference=${reference}`);
+        const res  = await fetch(`/api/paystack?reference=${encodeURIComponent(reference)}`);
         const data = await res.json();
 
         if (res.ok && data.verified) {

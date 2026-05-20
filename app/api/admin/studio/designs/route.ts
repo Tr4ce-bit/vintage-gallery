@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
+import { isAllowedImageUrl } from "@/lib/validation";
 
 // GET /api/admin/studio/designs — all designs (including inactive)
 export async function GET(req: NextRequest) {
@@ -21,15 +22,21 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name, imageUrl, category } = body;
 
-  if (!name?.trim() || !imageUrl?.trim()) {
-    return NextResponse.json({ error: "Name and imageUrl are required" }, { status: 400 });
+  if (typeof name !== "string" || !name.trim() || name.length > 120) {
+    return NextResponse.json({ error: "name is required (max 120 chars)." }, { status: 400 });
+  }
+  if (!isAllowedImageUrl(imageUrl)) {
+    return NextResponse.json(
+      { error: "imageUrl must be an HTTPS URL from our S3 bucket or Cloudinary." },
+      { status: 400 },
+    );
   }
 
   const design = await prisma.studioDesign.create({
     data: {
       name:     name.trim(),
       imageUrl: imageUrl.trim(),
-      category: category?.trim() || null,
+      category: typeof category === "string" ? category.trim().slice(0, 60) || null : null,
     },
   });
 

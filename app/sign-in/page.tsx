@@ -31,7 +31,9 @@ function friendlyError(err: unknown): string {
 export default function SignInPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const redirect     = searchParams.get("redirect") || "/";
+  // safeRedirect: only allow relative paths — blocks open-redirect attacks
+  const rawRedirect  = searchParams.get("redirect") || "/";
+  const redirect     = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/";
 
   // Step 1 — credentials
   const [email,         setEmail]         = useState("");

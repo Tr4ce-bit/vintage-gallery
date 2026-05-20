@@ -6,6 +6,14 @@ import { prisma } from "@/lib/db";
 // https://yourdomain.com/api/paystack/webhook
 
 export async function POST(req: NextRequest) {
+  // Reject payloads that are unrealistically large before reading the body.
+  // A real Paystack event is at most a few KB; 64 KB is a generous ceiling.
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (contentLength > 65_536) {
+    console.warn("Webhook: oversized payload rejected", { contentLength });
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+
   const body      = await req.text();
   const signature = req.headers.get("x-paystack-signature") ?? "";
   const secret    = process.env.PAYSTACK_SECRET_KEY!;

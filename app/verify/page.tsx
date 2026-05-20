@@ -9,7 +9,9 @@ function VerifyForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const email        = searchParams.get("email") ?? "";
-  const redirect     = searchParams.get("redirect") || "/";
+  // safeRedirect: only allow relative paths — blocks open-redirect attacks
+  const rawRedirect  = searchParams.get("redirect") || "/";
+  const redirect     = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/";
 
   const [code,     setCode]     = useState("");
   const [error,    setError]    = useState("");

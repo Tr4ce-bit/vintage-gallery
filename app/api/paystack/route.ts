@@ -1,24 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-server";
+import { isValidEmail, isValidPhone } from "@/lib/validation";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_BASE   = "https://api.paystack.co";
 const DELIVERY_FEE    = 30; // GHS — must match checkout UI
+
+// Hard limits — prevent DoS via oversized payloads / inventory abuse
+const MAX_CART_ITEMS  = 20;   // max distinct line items per order
+const MAX_QTY_PER_ITEM = 99;  // max quantity for a single item
+
+// Valid MoMo networks accepted by Paystack Ghana
+const VALID_MOMO_NETWORKS = new Set(["MTN", "TELECEL", "AIRTELTIGO"]);
 
 // Size enum values the DB accepts
 const VALID_SIZES = new Set(["XS", "S", "M", "L", "XL", "XXL"]);
 
 // ── POST /api/paystack  — initialise a transaction + create pending order ────
 export async function POST(req: NextRequest) {
+  // Reject obviously oversized payloads before JSON parsing
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (contentLength > 32_768) { // 32 KB is more than enough for a cart
+    return NextResponse.json({ error: "Request too large." }, { status: 413 });
+  }
+
   try {
     const body = await req.json();
     const { email, momoNetwork, momoPhone, cartItems, deliveryInfo } = body;
 
-    if (!email || !momoNetwork || !momoPhone || !Array.isArray(cartItems) || cartItems.length === 0) {
-      return NextResponse.json({ error: "Missing required payment fields." }, { status: 400 });
+    // ── Strict input validation ───────────────────────────────────────────────
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+      return NextResponse.json({ error: "Cart is empty." }, { status: 400 });
     }
-
+    if (cartItems.length > MAX_CART_ITEMS) {
+      return NextResponse.json({ error: `Cart cannot exceed ${MAX_CART_ITEMS} items.` }, { status: 400 });
+    }
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
+    }
+    if (!VALID_MOMO_NETWORKS.has(momoNetwork)) {
+      return NextResponse.json({ error: "Invalid MoMo network." }, { status: 400 });
+    }
+    if (!isValidPhone(momoPhone)) {
+      return NextResponse.json({ error: "Invalid MoMo phone number." }, { status: 400 });
+    }
     if (!PAYSTACK_SECRET) {
       return NextResponse.json({ error: "Payment service not configured." }, { status: 500 });
     }
@@ -40,8 +66,14 @@ export async function POST(req: NextRequest) {
 
     for (const item of cartItems) {
       const { productId, quantity, name, size, color } = item;
-      if (!productId || typeof quantity !== "number" || quantity < 1) {
-        return NextResponse.json({ error: "Invalid cart item." }, { status: 400 });
+      if (
+        !productId ||
+        typeof quantity !== "number" ||
+        !Number.isInteger(quantity) ||
+        quantity < 1 ||
+        quantity > MAX_QTY_PER_ITEM
+      ) {
+        return NextResponse.json({ error: "Invalid cart item quantity." }, { status: 400 });
       }
 
       if (productId.startsWith("custom-")) {
