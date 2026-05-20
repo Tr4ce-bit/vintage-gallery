@@ -23,7 +23,7 @@ frontend:
         - echo "FAL_KEY=$FAL_KEY" >> .env.production
         - echo "GOOGLE_GEMINI_API_KEY=$GOOGLE_GEMINI_API_KEY" >> .env.production
         - npx prisma generate
-        - npx prisma db push --skip-generate
+        - npx prisma db push --skip-generate --accept-data-loss
         - npx prisma db seed
     build:
       commands:
