@@ -16,8 +16,9 @@ interface Order {
   totalAmount: number; createdAt: string; updatedAt: string;
   deliveryFullName: string; deliveryPhone: string;
   deliveryAddress: string; deliveryNotes?: string;
+  guestEmail?: string;
   momoNetwork?: string; momoNumberMasked?: string;
-  user: { fullName: string; email: string };
+  user: { fullName: string; email: string } | null;
   items: OrderItem[];
 }
 
@@ -155,7 +156,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl px-5 py-5">
             <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-300 dark:text-zinc-600 font-light mb-3">Customer</h3>
             <p className="font-sans text-sm font-medium text-zinc-800 dark:text-zinc-100">{order.user?.fullName ?? order.deliveryFullName}</p>
-            <p className="font-sans text-sm text-zinc-400 dark:text-zinc-500">{order.user?.email ?? "—"}</p>
+            <p className="font-sans text-sm text-zinc-400 dark:text-zinc-500">{order.user?.email ?? order.guestEmail ?? "—"}</p>
+            {!order.user && (
+              <span className="font-sans text-[9px] tracking-[0.15em] uppercase text-zinc-300 dark:text-zinc-600 font-light">Guest order</span>
+            )}
           </div>
           <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl px-5 py-5 space-y-2">
             <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-300 dark:text-zinc-600 font-light mb-3">Delivery</h3>

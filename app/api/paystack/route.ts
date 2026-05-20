@@ -191,14 +191,14 @@ export async function POST(req: NextRequest) {
 
     const { authorization_url, access_code, reference } = psData.data;
 
-    // ── 3. Save pending order to DB (authenticated users) ────────────────────
+    // ── 3. Save pending order to DB (all users — guests included) ───────────
     // We do this AFTER getting the reference so we can tie the order to it.
-    // Guest users skip this — their order lives in Paystack metadata only.
-    const authUser = await getAuthUser(req);
+    try {
+      const authUser = await getAuthUser(req);
 
-    if (authUser) {
-      try {
-        // Upsert UserProfile (first order auto-creates a profile)
+      // For signed-in users: upsert their UserProfile so we can link the order
+      let profileId: string | null = null;
+      if (authUser) {
         let profile = await prisma.userProfile.findUnique({
           where: { cognitoId: authUser.userId },
         });
@@ -211,48 +211,50 @@ export async function POST(req: NextRequest) {
             },
           });
         }
-
-        // Mask MoMo phone number (only for MoMo payments)
-        const masked = method === "momo" && momoPhone
-          ? (momoPhone.length >= 4
-              ? momoPhone.slice(0, 3) + "****" + momoPhone.slice(-3)
-              : momoPhone)
-          : null;
-
-        await prisma.order.create({
-          data: {
-            userId:             profile.id,
-            paystackReference:  reference,
-            paystackAccessCode: access_code,
-            totalAmount:        totalGHS,
-            deliveryFullName:   deliveryInfo?.fullName ?? "",
-            deliveryPhone:      deliveryInfo?.phone    ?? "",
-            deliveryAddress:    deliveryInfo?.address  ?? "",
-            deliveryCity:       deliveryInfo?.city     ?? "",
-            deliveryRegion:     deliveryInfo?.region   ?? "",
-            deliveryNotes:      deliveryInfo?.notes    ?? null,
-            momoNetwork:        method === "momo" ? momoNetwork as "MTN" | "TELECEL" | "AIRTELTIGO" : null,
-            momoNumberMasked:   masked,
-            status:             "PENDING",
-            items: {
-              create: resolvedItems
-                .filter(i => VALID_SIZES.has(i.size))
-                .map(i => ({
-                  productId:   i.productId,
-                  productName: i.productName,
-                  size:        i.size as "XS" | "S" | "M" | "L" | "XL" | "XXL",
-                  color:       i.color,
-                  quantity:    i.quantity,
-                  unitPrice:   i.unitPrice,
-                  subtotal:    i.unitPrice * i.quantity,
-                })),
-            },
-          },
-        });
-      } catch (dbErr) {
-        // Don't block payment if DB write fails — log and continue
-        console.error("Order DB creation failed (payment still proceeds):", dbErr);
+        profileId = profile.id;
       }
+
+      // Mask MoMo phone number (only for MoMo payments)
+      const masked = method === "momo" && momoPhone
+        ? (momoPhone.length >= 4
+            ? momoPhone.slice(0, 3) + "****" + momoPhone.slice(-3)
+            : momoPhone)
+        : null;
+
+      await prisma.order.create({
+        data: {
+          userId:             profileId,           // null for guests
+          guestEmail:         profileId ? null : email, // store email for guest orders
+          paystackReference:  reference,
+          paystackAccessCode: access_code,
+          totalAmount:        totalGHS,
+          deliveryFullName:   deliveryInfo?.fullName ?? "",
+          deliveryPhone:      deliveryInfo?.phone    ?? "",
+          deliveryAddress:    deliveryInfo?.address  ?? "",
+          deliveryCity:       deliveryInfo?.city     ?? "",
+          deliveryRegion:     deliveryInfo?.region   ?? "",
+          deliveryNotes:      deliveryInfo?.notes    ?? null,
+          momoNetwork:        method === "momo" ? momoNetwork as "MTN" | "TELECEL" | "AIRTELTIGO" : null,
+          momoNumberMasked:   masked,
+          status:             "PENDING",
+          items: {
+            create: resolvedItems
+              .filter(i => VALID_SIZES.has(i.size))
+              .map(i => ({
+                productId:   i.productId,
+                productName: i.productName,
+                size:        i.size as "XS" | "S" | "M" | "L" | "XL" | "XXL",
+                color:       i.color,
+                quantity:    i.quantity,
+                unitPrice:   i.unitPrice,
+                subtotal:    i.unitPrice * i.quantity,
+              })),
+          },
+        },
+      });
+    } catch (dbErr) {
+      // Don't block payment if DB write fails — log and continue
+      console.error("Order DB creation failed (payment still proceeds):", dbErr);
     }
 
     return NextResponse.json({

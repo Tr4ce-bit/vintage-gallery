@@ -118,7 +118,7 @@ model SavedDesign {
 // ─────────────────────────────────────────────
 model Order {
   id                  String      @id @default(cuid())
-  userId              String
+  userId              String?                  // null for guest checkouts
   paystackReference   String      @unique      // Paystack transaction reference
   paystackAccessCode  String?                  // for re-querying status
   status              OrderStatus @default(PENDING)
@@ -128,10 +128,13 @@ model Order {
   // Delivery info (copied at order time so profile changes don't affect history)
   deliveryFullName    String
   deliveryPhone       String
-  deliveryAddress     String                   // Street address / Ghana Post Digital Address
+  deliveryAddress     String                   // Street address
   deliveryCity        String   @default("")    // e.g. Accra, Kumasi
   deliveryRegion      String   @default("")    // e.g. Greater Accra
   deliveryNotes       String?
+
+  // Guest contact email (for orders placed without an account)
+  guestEmail          String?
 
   // Mobile Money details (non-sensitive — just network & masked number)
   momoNetwork         MomoNetwork?
@@ -140,7 +143,7 @@ model Order {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  user                UserProfile @relation(fields: [userId], references: [id])
+  user                UserProfile? @relation(fields: [userId], references: [id])
   items               OrderItem[]
 
   @@index([userId])

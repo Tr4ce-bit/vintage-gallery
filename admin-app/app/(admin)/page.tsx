@@ -9,7 +9,8 @@ import { apiUrl } from "@/lib/api";
 interface Order {
   id: string; paystackReference: string; status: string;
   totalAmount: number; createdAt: string;
-  user: { fullName: string; email: string };
+  deliveryFullName: string;
+  user: { fullName: string; email: string } | null;
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -111,7 +112,7 @@ export default function AdminDashboard() {
                           {o.paystackReference.slice(-8).toUpperCase()}
                         </Link>
                       </td>
-                      <td className="px-4 md:px-6 py-3.5 font-sans text-sm text-zinc-700 dark:text-zinc-200">{o.user?.fullName ?? "—"}</td>
+                      <td className="px-4 md:px-6 py-3.5 font-sans text-sm text-zinc-700 dark:text-zinc-200">{o.user?.fullName ?? o.deliveryFullName}</td>
                       <td className="px-4 md:px-6 py-3.5 font-sans text-sm text-zinc-700 dark:text-zinc-200">GH₵ {o.totalAmount}</td>
                       <td className="px-4 md:px-6 py-3.5">
                         <span className={`font-sans text-[10px] tracking-[0.1em] uppercase font-medium px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400"}`}>

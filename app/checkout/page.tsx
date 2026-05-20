@@ -93,19 +93,6 @@ function MastercardLogo() {
   );
 }
 
-function VerveLogo() {
-  return (
-    <svg width="52" height="32" viewBox="0 0 52 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="52" height="32" rx="6" fill="#006529"/>
-      <text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle"
-        fontFamily="Arial, sans-serif" fontSize="12" fontWeight="700"
-        fill="white" letterSpacing="0.5">
-        Verve
-      </text>
-    </svg>
-  );
-}
-
 const GHANA_REGIONS = [
   "Greater Accra", "Ashanti", "Western", "Eastern", "Central",
   "Northern", "Upper East", "Upper West", "Volta", "Brong-Ahafo",
@@ -530,7 +517,6 @@ export default function CheckoutPage() {
                             <div className="flex items-center gap-3 flex-wrap">
                               <VisaLogo />
                               <MastercardLogo />
-                              <VerveLogo />
                             </div>
                             <p className="font-sans text-sm text-zinc-600 dark:text-zinc-300 font-light leading-relaxed">
                               Pay securely with your debit or credit card. You will be redirected to
@@ -580,7 +566,6 @@ export default function CheckoutPage() {
                         <span className="w-px h-5 bg-zinc-100 dark:bg-zinc-800 mx-1" />
                         <VisaLogo />
                         <MastercardLogo />
-                        <VerveLogo />
                       </div>
                     </div>
                   </section>

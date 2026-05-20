@@ -8,7 +8,8 @@ import { apiUrl } from "@/lib/api";
 interface Order {
   id: string; paystackReference: string; status: string;
   totalAmount: number; createdAt: string;
-  user: { fullName: string };
+  deliveryFullName: string;
+  user: { fullName: string } | null;
   items: { id: string }[];
 }
 
@@ -86,7 +87,7 @@ export default function OrdersPage() {
                 {shown.map(o => (
                   <tr key={o.id} className="border-b border-zinc-50 dark:border-zinc-700/30 last:border-0 hover:bg-zinc-50/50 dark:hover:bg-zinc-700/30 transition-colors">
                     <td className="px-4 md:px-5 py-3.5 font-mono text-xs text-zinc-400 dark:text-zinc-500">{o.paystackReference.slice(-8).toUpperCase()}</td>
-                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-700 dark:text-zinc-200">{o.user?.fullName ?? "—"}</td>
+                    <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-700 dark:text-zinc-200">{o.user?.fullName ?? o.deliveryFullName}</td>
                     <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-400 dark:text-zinc-500">{o.items.length}</td>
                     <td className="px-4 md:px-5 py-3.5 font-sans text-sm text-zinc-700 dark:text-zinc-200 font-medium">GH₵ {o.totalAmount}</td>
                     <td className="px-4 md:px-5 py-3.5">
