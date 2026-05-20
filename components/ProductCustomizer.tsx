@@ -74,7 +74,7 @@ function ShirtCanvas({
   side?:     "front" | "back";
   children?: React.ReactNode;
 }) {
-  const src        = side === "back" ? "/shirt-back.png" : "/shirt-base.png";
+  const src        = side === "back" ? "/back-new.jpeg" : "/front-new.png";
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const colorRef   = useRef(color);
   colorRef.current = color;
@@ -408,7 +408,7 @@ export default function ProductCustomizer() {
       name:       `Custom Tee — ${color.name}${desc ? ` · ${desc}` : ""}`,
       collection: "Custom Studio",
       price,
-      image:      "/shirt-base.png",
+      image:      "/front-new.png",
       size,
       color:      color.name,
       quantity,
