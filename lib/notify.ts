@@ -26,11 +26,12 @@ const transporter = nodemailer.createTransport({
 });
 
 // ── SNS client (us-east-1 handles global SMS) ────────────────────────────────
+// Falls back to S3_* keys since those are what's set in Amplify env vars
 const sns = new SNSClient({
   region: "us-east-1",
   credentials: {
-    accessKeyId:     process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId:     (process.env.AWS_ACCESS_KEY_ID ?? process.env.S3_ACCESS_KEY_ID)!,
+    secretAccessKey: (process.env.AWS_SECRET_ACCESS_KEY ?? process.env.S3_SECRET_ACCESS_KEY)!,
   },
 });
 
