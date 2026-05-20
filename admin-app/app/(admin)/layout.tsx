@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, ShoppingBag, Package, Settings, LogOut, ExternalLink, Menu, X } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, Settings, LogOut, ExternalLink, Menu, X, Moon, Sun } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/components/ThemeProvider";
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
   .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
@@ -21,6 +22,7 @@ const NAV = [
 
 export default function AdminShellLayout({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn, user, signOut } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const router   = useRouter();
   const pathname = usePathname();
   const [checked,     setChecked]     = useState(false);
@@ -39,8 +41,8 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
 
   if (!checked) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-zinc-700 border-t-white rounded-full animate-spin" />
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-zinc-300 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
       </div>
     );
   }
@@ -97,6 +99,19 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
           <ExternalLink size={15} strokeWidth={1.5} />
           View Store
         </a>
+
+        {/* Dark / Light mode toggle */}
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-sans text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark"
+            ? <Sun  size={15} strokeWidth={1.5} />
+            : <Moon size={15} strokeWidth={1.5} />}
+          {theme === "dark" ? "Light Mode" : "Dark Mode"}
+        </button>
+
         <button
           onClick={async () => { await signOut(); router.replace("/sign-in"); }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-sans text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
@@ -109,7 +124,7 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
   );
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 flex">
 
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex w-60 shrink-0 bg-zinc-950 flex-col min-h-screen">
@@ -153,7 +168,7 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
           </div>
         </div>
 
-        <main className="flex-1 overflow-auto bg-zinc-50">
+        <main className="flex-1 overflow-auto bg-zinc-50 dark:bg-zinc-900">
           {children}
         </main>
       </div>

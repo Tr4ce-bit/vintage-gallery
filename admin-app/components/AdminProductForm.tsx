@@ -115,8 +115,8 @@ function ImageUploader({ value, onChange, label, required, size = "large", getTo
         onClick={() => !uploading && inputRef.current?.click()}
         className={`relative group cursor-pointer rounded-2xl border-2 transition-all overflow-hidden
           ${value
-            ? "border-zinc-200 hover:border-zinc-400"
-            : "border-dashed border-zinc-200 hover:border-zinc-400 bg-zinc-50 hover:bg-zinc-100"
+            ? "border-zinc-200 dark:border-zinc-600 hover:border-zinc-400"
+            : "border-dashed border-zinc-200 dark:border-zinc-600 hover:border-zinc-400 bg-zinc-50 dark:bg-zinc-700/50 hover:bg-zinc-100 dark:hover:bg-zinc-700"
           }
           ${isLarge ? "w-full aspect-[4/3]" : "w-full aspect-square"}
         `}
@@ -134,7 +134,7 @@ function ImageUploader({ value, onChange, label, required, size = "large", getTo
 
         {/* Upload overlay with progress bar */}
         {uploading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-10 gap-3 px-5">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 dark:bg-zinc-800/90 z-10 gap-3 px-5">
             {isLarge ? (
               <>
                 {/* Percentage */}
@@ -263,7 +263,7 @@ function MultiImageUploader({ values, onChange, max = 4, getToken }: MultiImageU
         {Array.from({ length: Math.max(0, 4 - slots.length) }).map((_, i) => (
           <div
             key={`empty-${i}`}
-            className="aspect-square rounded-2xl border-2 border-dashed border-zinc-100 bg-zinc-50 flex items-center justify-center"
+            className="aspect-square rounded-2xl border-2 border-dashed border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/30 flex items-center justify-center"
           >
             <ImagePlus size={16} className="text-zinc-200" />
           </div>
@@ -415,13 +415,13 @@ export default function AdminProductForm({ initial, mode }: Props) {
   }
 
   const labelCls = "block font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 font-light mb-1.5";
-  const inputCls = "w-full border border-zinc-200 rounded-xl px-4 py-2.5 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors";
+  const inputCls = "w-full border border-zinc-200 dark:border-zinc-600 rounded-xl px-4 py-2.5 font-sans text-sm text-zinc-900 dark:text-zinc-50 bg-white dark:bg-zinc-700 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-400 transition-colors";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
 
       {/* ── Photos ─────────────────────────────────────────────────── */}
-      <div className="bg-zinc-50 rounded-2xl p-4 space-y-4">
+      <div className="bg-zinc-50 dark:bg-zinc-700/40 rounded-2xl p-4 space-y-4">
         <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-zinc-400 font-light">
           Product Photos
         </p>
@@ -521,7 +521,7 @@ export default function AdminProductForm({ initial, mode }: Props) {
       </div>
 
       {/* ── Sizes + per-size stock ─────────────────────────────────── */}
-      <div className="bg-zinc-50 rounded-2xl p-4 space-y-4">
+      <div className="bg-zinc-50 dark:bg-zinc-700/40 rounded-2xl p-4 space-y-4">
         <div className="flex items-center justify-between">
           <label className={labelCls}>Sizes &amp; Stock</label>
           <div className="flex gap-2">
@@ -559,8 +559,8 @@ export default function AdminProductForm({ initial, mode }: Props) {
             return (
               <div key={s}
                 className={`relative rounded-xl border-2 p-2.5 flex flex-col items-center gap-2 transition-all ${
-                  status === "hidden" ? "border-zinc-100 bg-white opacity-50" :
-                  status === "out"    ? "border-red-200 bg-red-50" :
+                  status === "hidden" ? "border-zinc-100 dark:border-zinc-700 bg-white dark:bg-zinc-800 opacity-50" :
+                  status === "out"    ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20" :
                   status === "low"    ? "border-amber-200 bg-amber-50" :
                                         "border-emerald-200 bg-emerald-50/60"
                 }`}>
@@ -589,10 +589,10 @@ export default function AdminProductForm({ initial, mode }: Props) {
                   value={form.sizeStock[s] ?? "0"}
                   onChange={e => setForm(f => ({ ...f, sizeStock: { ...f.sizeStock, [s]: e.target.value } }))}
                   className={`w-full rounded-lg px-1 py-1.5 font-sans text-sm text-center focus:outline-none transition-colors border ${
-                    !offered          ? "bg-zinc-50 border-zinc-100 text-zinc-300 cursor-not-allowed" :
-                    status === "out"  ? "bg-white border-red-200 text-red-500 focus:border-red-400" :
-                    status === "low"  ? "bg-white border-amber-200 text-amber-600 focus:border-amber-400" :
-                                        "bg-white border-emerald-200 text-emerald-700 focus:border-emerald-400"
+                    !offered          ? "bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 text-zinc-300 dark:text-zinc-600 cursor-not-allowed" :
+                    status === "out"  ? "bg-white dark:bg-zinc-800 border-red-200 dark:border-red-700 text-red-500 focus:border-red-400" :
+                    status === "low"  ? "bg-white dark:bg-zinc-800 border-amber-200 dark:border-amber-700 text-amber-600 focus:border-amber-400" :
+                                        "bg-white dark:bg-zinc-800 border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 focus:border-emerald-400"
                   }`}
                   placeholder="0"
                 />
@@ -652,17 +652,17 @@ export default function AdminProductForm({ initial, mode }: Props) {
       </div>
 
       {error && (
-        <p className="font-sans text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{error}</p>
+        <p className="font-sans text-sm text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl px-4 py-3">{error}</p>
       )}
 
       <div className="flex items-center gap-3 pt-2">
         <button type="submit" disabled={saving}
-          className="flex-1 h-12 bg-zinc-900 hover:bg-zinc-700 text-white rounded-full font-sans font-medium text-[11px] tracking-[0.18em] uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          className="flex-1 h-12 bg-zinc-900 dark:bg-white hover:bg-zinc-700 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-sans font-medium text-[11px] tracking-[0.18em] uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           {saving ? "Saving…" : mode === "create" ? "Add Product" : "Save Changes"}
         </button>
         {mode === "edit" && (
           <button type="button" onClick={handleDelete} disabled={deleting}
-            className="px-5 h-12 border border-red-200 text-red-400 hover:bg-red-50 rounded-full font-sans text-[11px] tracking-[0.15em] uppercase transition-colors disabled:opacity-40">
+            className="px-5 h-12 border border-red-200 dark:border-red-800 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full font-sans text-[11px] tracking-[0.15em] uppercase transition-colors disabled:opacity-40">
             {deleting ? "Deleting…" : "Delete"}
           </button>
         )}

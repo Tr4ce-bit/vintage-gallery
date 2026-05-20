@@ -191,7 +191,7 @@ export default function StudioSettingsPage() {
   // ── Shared styles ─────────────────────────────────────────────────────────────
 
   const labelCls = "block font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 font-light mb-1.5";
-  const inputCls = "w-full border border-zinc-200 rounded-xl px-4 py-2.5 font-sans text-sm text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors";
+  const inputCls = "w-full border border-zinc-200 dark:border-zinc-600 rounded-xl px-4 py-2.5 font-sans text-sm text-zinc-900 dark:text-zinc-50 bg-white dark:bg-zinc-700 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-400 transition-colors";
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -199,14 +199,14 @@ export default function StudioSettingsPage() {
     <div className="px-4 md:px-8 py-6 md:py-8">
       <div className="mb-8">
         <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Configuration</p>
-        <h1 className="font-serif text-zinc-900" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>
+        <h1 className="font-serif text-zinc-900 dark:text-zinc-50" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>
           Custom Studio Settings
         </h1>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-32">
-          <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
         </div>
       ) : (
         <div className="max-w-2xl space-y-8">
@@ -214,16 +214,16 @@ export default function StudioSettingsPage() {
           {/* ── Pricing section ─────────────────────────────────────────────── */}
 
           {/* Current preview */}
-          <div className="bg-white border border-zinc-100 rounded-2xl p-6">
+          <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl p-6">
             <p className="font-sans text-[10px] tracking-[0.25em] uppercase text-zinc-400 font-light mb-4">Live Pricing Preview</p>
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-xl bg-zinc-50 border border-zinc-100 p-4">
+              <div className="rounded-xl bg-zinc-50 dark:bg-zinc-700/50 border border-zinc-100 dark:border-zinc-600 p-4">
                 <p className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-400 font-light mb-1">Plain Tee</p>
-                <p className="font-serif text-zinc-900 text-2xl font-light">GH₵ {prices.basePriceGHS}</p>
+                <p className="font-serif text-zinc-900 dark:text-zinc-50 text-2xl font-light">GH₵ {prices.basePriceGHS}</p>
               </div>
-              <div className="rounded-xl bg-zinc-50 border border-zinc-100 p-4">
+              <div className="rounded-xl bg-zinc-50 dark:bg-zinc-700/50 border border-zinc-100 dark:border-zinc-600 p-4">
                 <p className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-400 font-light mb-1">Custom Tee</p>
-                <p className="font-serif text-zinc-900 text-2xl font-light">
+                <p className="font-serif text-zinc-900 dark:text-zinc-50 text-2xl font-light">
                   GH₵ {prices.basePriceGHS + prices.designAddonGHS}
                 </p>
                 <p className="font-sans text-[9px] text-zinc-400 font-light mt-1">
@@ -234,7 +234,7 @@ export default function StudioSettingsPage() {
           </div>
 
           {/* Edit pricing form */}
-          <form onSubmit={handleSave} className="bg-white border border-zinc-100 rounded-2xl p-6 space-y-5">
+          <form onSubmit={handleSave} className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl p-6 space-y-5">
             <p className="font-sans text-[10px] tracking-[0.25em] uppercase text-zinc-400 font-light">Update Prices</p>
 
             <div className="grid grid-cols-2 gap-4">
@@ -273,7 +273,7 @@ export default function StudioSettingsPage() {
             )}
 
             <button type="submit" disabled={saving}
-              className="flex items-center gap-2 px-6 h-11 bg-zinc-900 hover:bg-zinc-700 text-white rounded-full font-sans text-[11px] tracking-[0.15em] uppercase transition-colors disabled:opacity-50">
+              className="flex items-center gap-2 px-6 h-11 bg-zinc-900 dark:bg-white hover:bg-zinc-700 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-sans text-[11px] tracking-[0.15em] uppercase transition-colors disabled:opacity-50">
               {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
               {saving ? "Saving…" : "Save Prices"}
             </button>
@@ -281,18 +281,18 @@ export default function StudioSettingsPage() {
 
           {/* ── Studio designs section ───────────────────────────────────────── */}
 
-          <div className="bg-white border border-zinc-100 rounded-2xl p-6 space-y-6">
+          <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl p-6 space-y-6">
             <div>
               <p className="font-sans text-[10px] tracking-[0.25em] uppercase text-zinc-400 font-light mb-1">
                 Studio Designs
               </p>
-              <p className="font-sans text-xs text-zinc-500 font-light">
+              <p className="font-sans text-xs text-zinc-500 dark:text-zinc-400 font-light">
                 Upload graphic designs (PNG with transparent background recommended). Customers can select them in the Custom Studio and see a live preview on the shirt.
               </p>
             </div>
 
             {/* Upload form */}
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-5 space-y-4">
+            <div className="rounded-xl border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/40 p-5 space-y-4">
               <p className="font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-400 font-light">
                 <Plus size={10} className="inline mr-1" />
                 Add New Design
@@ -326,10 +326,10 @@ export default function StudioSettingsPage() {
                 <label className={labelCls}>Design Image (PNG recommended) *</label>
                 <div
                   onClick={() => fileRef.current?.click()}
-                  className="flex items-center gap-3 border border-dashed border-zinc-300 rounded-xl px-4 py-3 cursor-pointer hover:border-zinc-400 transition-colors"
+                  className="flex items-center gap-3 border border-dashed border-zinc-300 dark:border-zinc-600 rounded-xl px-4 py-3 cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-400 transition-colors"
                 >
                   <ImageIcon size={16} className="text-zinc-400 shrink-0" />
-                  <span className="font-sans text-xs text-zinc-500 font-light truncate">
+                  <span className="font-sans text-xs text-zinc-500 dark:text-zinc-400 font-light truncate">
                     {fileRef.current?.files?.[0]?.name ?? "Click to select image…"}
                   </span>
                 </div>
@@ -343,9 +343,9 @@ export default function StudioSettingsPage() {
               {/* Progress bar */}
               {uploading && (
                 <div className="space-y-1.5">
-                  <div className="h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-zinc-200 dark:bg-zinc-600 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-zinc-900 rounded-full transition-all duration-200"
+                      className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all duration-200"
                       style={{ width: `${uploadPct}%` }}
                     />
                   </div>
@@ -377,7 +377,7 @@ export default function StudioSettingsPage() {
                 type="button"
                 onClick={handleUpload}
                 disabled={uploading}
-                className="flex items-center gap-2 px-6 h-10 bg-zinc-900 hover:bg-zinc-700 text-white rounded-full font-sans text-[11px] tracking-[0.15em] uppercase transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-6 h-10 bg-zinc-900 dark:bg-white hover:bg-zinc-700 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-sans text-[11px] tracking-[0.15em] uppercase transition-colors disabled:opacity-50"
               >
                 {uploading
                   ? <><RefreshCw size={12} className="animate-spin" /> Uploading…</>
@@ -394,12 +394,12 @@ export default function StudioSettingsPage() {
 
               {designsLoad ? (
                 <div className="flex items-center justify-center h-24">
-                  <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
                 </div>
               ) : designs.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-zinc-200 py-10 text-center">
-                  <ImageIcon size={24} className="text-zinc-300 mx-auto mb-2" />
-                  <p className="font-sans text-sm text-zinc-400 font-light">No designs yet. Upload your first one above.</p>
+                <div className="rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 py-10 text-center">
+                  <ImageIcon size={24} className="text-zinc-300 dark:text-zinc-600 mx-auto mb-2" />
+                  <p className="font-sans text-sm text-zinc-400 dark:text-zinc-500 font-light">No designs yet. Upload your first one above.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -407,11 +407,11 @@ export default function StudioSettingsPage() {
                     <div
                       key={d.id}
                       className={`rounded-2xl border overflow-hidden transition-all ${
-                        d.isActive ? "border-zinc-100" : "border-zinc-200 opacity-60"
+                        d.isActive ? "border-zinc-100 dark:border-zinc-700" : "border-zinc-200 dark:border-zinc-600 opacity-60"
                       }`}
                     >
                       {/* Thumbnail */}
-                      <div className="relative aspect-square bg-zinc-50 flex items-center justify-center">
+                      <div className="relative aspect-square bg-zinc-50 dark:bg-zinc-700/50 flex items-center justify-center">
                         <Image
                           src={d.imageUrl}
                           alt={d.name}
@@ -420,8 +420,8 @@ export default function StudioSettingsPage() {
                           unoptimized
                         />
                         {!d.isActive && (
-                          <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
-                            <span className="font-sans text-[9px] tracking-[0.2em] uppercase bg-zinc-200 text-zinc-500 px-2 py-1 rounded-full">
+                          <div className="absolute inset-0 bg-white/50 dark:bg-zinc-900/50 flex items-center justify-center">
+                            <span className="font-sans text-[9px] tracking-[0.2em] uppercase bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 px-2 py-1 rounded-full">
                               Hidden
                             </span>
                           </div>
@@ -429,10 +429,10 @@ export default function StudioSettingsPage() {
                       </div>
 
                       {/* Info + actions */}
-                      <div className="p-3 bg-white">
-                        <p className="font-sans text-xs text-zinc-800 font-medium truncate">{d.name}</p>
+                      <div className="p-3 bg-white dark:bg-zinc-800">
+                        <p className="font-sans text-xs text-zinc-800 dark:text-zinc-100 font-medium truncate">{d.name}</p>
                         {d.category && (
-                          <p className="font-sans text-[10px] text-zinc-400 font-light truncate">{d.category}</p>
+                          <p className="font-sans text-[10px] text-zinc-400 dark:text-zinc-500 font-light truncate">{d.category}</p>
                         )}
                         <div className="flex items-center gap-2 mt-3">
                           <button
@@ -440,8 +440,8 @@ export default function StudioSettingsPage() {
                             title={d.isActive ? "Hide design" : "Show design"}
                             className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-sans text-[10px] border transition-colors ${
                               d.isActive
-                                ? "border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
-                                : "border-zinc-200 text-zinc-500 bg-zinc-50 hover:bg-zinc-100"
+                                ? "border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50"
+                                : "border-zinc-200 text-zinc-500 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-400 dark:bg-zinc-700 dark:hover:bg-zinc-600"
                             }`}
                           >
                             {d.isActive
@@ -452,7 +452,7 @@ export default function StudioSettingsPage() {
                           <button
                             onClick={() => deleteDesign(d)}
                             title="Delete"
-                            className="ml-auto p-1.5 rounded-full text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            className="ml-auto p-1.5 rounded-full text-zinc-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -466,16 +466,16 @@ export default function StudioSettingsPage() {
           </div>
 
           {/* Stock management note */}
-          <div className="bg-white border border-zinc-100 rounded-2xl p-6">
+          <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl p-6">
             <p className="font-sans text-[10px] tracking-[0.25em] uppercase text-zinc-400 font-light mb-3">
               Stock Management
             </p>
-            <p className="font-sans text-sm text-zinc-500 font-light leading-relaxed mb-4">
-              Product stock levels are managed per-product. Go to <strong className="font-medium text-zinc-700">Products</strong> → click a product → update the <strong className="font-medium text-zinc-700">Stock</strong> field. When stock reaches 0, the product automatically shows &quot;Out of Stock&quot; in the store and customers cannot add it to their cart.
+            <p className="font-sans text-sm text-zinc-500 dark:text-zinc-400 font-light leading-relaxed mb-4">
+              Product stock levels are managed per-product. Go to <strong className="font-medium text-zinc-700 dark:text-zinc-200">Products</strong> → click a product → update the <strong className="font-medium text-zinc-700 dark:text-zinc-200">Stock</strong> field. When stock reaches 0, the product automatically shows &quot;Out of Stock&quot; in the store and customers cannot add it to their cart.
             </p>
             <a
               href="/products"
-              className="inline-flex items-center gap-2 font-sans text-sm text-zinc-900 font-medium hover:text-zinc-600 transition-colors underline underline-offset-2"
+              className="inline-flex items-center gap-2 font-sans text-sm text-zinc-900 dark:text-zinc-100 font-medium hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors underline underline-offset-2"
             >
               Manage Product Stock →
             </a>

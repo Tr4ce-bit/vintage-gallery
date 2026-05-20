@@ -61,7 +61,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
     </div>
   );
   if (notFound) return (
@@ -70,11 +70,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8">
-      <Link href="/products" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-300 hover:text-zinc-600 transition-colors mb-8">
+      <Link href="/products" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-300 dark:text-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors mb-8">
         <ArrowLeft size={12} /> Products
       </Link>
       <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Catalog</p>
-      <h1 className="font-serif text-zinc-900 mb-8" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>Edit Product</h1>
+      <h1 className="font-serif text-zinc-900 dark:text-zinc-50 mb-8" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>Edit Product</h1>
       <AdminProductForm mode="edit" initial={initial!} />
     </div>
   );
