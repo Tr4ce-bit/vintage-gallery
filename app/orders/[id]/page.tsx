@@ -373,9 +373,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       placeholder="Accra" required autoComplete="off" className={inputCls} />
                   </div>
                   <div>
-                    <label className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-400 font-light block mb-1">Address *</label>
+                    <label className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-400 font-light block mb-1">Street Address *</label>
                     <input value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))}
-                      placeholder="GA-123-4567 or street" required autoComplete="off" className={inputCls} />
+                      placeholder="12 Oxford Street, East Legon" required autoComplete="off" className={inputCls} />
                   </div>
                   <div>
                     <label className="font-sans text-[9px] tracking-[0.2em] uppercase text-zinc-400 font-light block mb-1">Notes</label>

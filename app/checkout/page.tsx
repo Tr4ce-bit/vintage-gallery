@@ -391,10 +391,10 @@ export default function CheckoutPage() {
                       {/* Address */}
                       <div className="sm:col-span-2">
                         <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
-                          Street Address / Ghana Post <span className="text-red-400">*</span>
+                          Street Address <span className="text-red-400">*</span>
                         </label>
                         <input type="text" value={form.address} onChange={set("address")}
-                          placeholder="GA-123-4567 or street address" required
+                          placeholder="12 Oxford Street, East Legon" required
                           autoComplete="off" autoCorrect="off" spellCheck={false}
                           className={inputCls} />
                       </div>
