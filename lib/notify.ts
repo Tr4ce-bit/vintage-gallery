@@ -175,6 +175,188 @@ async function incrementSmsCount(): Promise<void> {
   });
 }
 
+// ─── Customer status-update notification ─────────────────────────────────────
+
+export interface StatusUpdateNotification {
+  orderNumber:      number;
+  paystackReference: string;
+  newStatus:        string;
+  customerEmail:    string;
+  customerName:     string;
+  totalAmount:      number;
+  items: {
+    productName: string | null;
+    size:        string;
+    quantity:    number;
+    unitPrice:   number;
+  }[];
+}
+
+const STATUS_COPY: Record<string, { subject: string; headline: string; body: string; color: string }> = {
+  PAID: {
+    subject:  "Payment confirmed — we're getting your order ready",
+    headline: "Payment Confirmed ✓",
+    body:     "We've received your payment and your order is now being queued for preparation. You'll hear from us as soon as it's on its way.",
+    color:    "#3b82f6",
+  },
+  PROCESSING: {
+    subject:  "Your order is being prepared",
+    headline: "Order Being Prepared 👕",
+    body:     "Great news — our team has started preparing your order. We'll notify you the moment it ships.",
+    color:    "#6366f1",
+  },
+  SHIPPED: {
+    subject:  "Your order is on its way!",
+    headline: "Order Shipped 🚚",
+    body:     "Your order has left our hands and is heading to you. Expect delivery within the next 1–3 business days.",
+    color:    "#8b5cf6",
+  },
+  DELIVERED: {
+    subject:  "Your order has been delivered",
+    headline: "Order Delivered 🎉",
+    body:     "Your order has been marked as delivered. We hope you love it! If you have any issues, don't hesitate to reach out.",
+    color:    "#10b981",
+  },
+  CANCELLED: {
+    subject:  "Your order has been cancelled",
+    headline: "Order Cancelled",
+    body:     "Your order has been cancelled. If this was unexpected or you have questions, please contact us at vintagegallerystore@gmail.com.",
+    color:    "#ef4444",
+  },
+  REFUNDED: {
+    subject:  "Your refund has been processed",
+    headline: "Refund Processed",
+    body:     "Your refund has been processed. Depending on your payment provider it may take 3–5 business days to reflect. Contact us if you need assistance.",
+    color:    "#71717a",
+  },
+};
+
+function buildCustomerHtml(o: StatusUpdateNotification): string {
+  const copy = STATUS_COPY[o.newStatus];
+  if (!copy) return "";
+
+  const rows = o.items.map(i => `
+    <tr>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#333;">
+        ${i.productName ?? "Custom Studio item"}
+      </td>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:13px;color:#555;">${i.size}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:13px;color:#555;">${i.quantity}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:13px;color:#111;font-weight:600;">
+        GH&#8373; ${(i.unitPrice * i.quantity).toFixed(0)}
+      </td>
+    </tr>`).join("");
+
+  const storeUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://vintagegallery.store";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
+  <div style="max-width:580px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,0.07);">
+
+    <!-- Coloured status bar -->
+    <div style="height:5px;background:${copy.color};"></div>
+
+    <!-- Header -->
+    <div style="background:#111111;padding:28px 36px;">
+      <p style="margin:0 0 6px;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,0.35);">Vintage Gallery</p>
+      <h1 style="margin:0;font-size:22px;font-weight:300;color:#ffffff;">${copy.headline}</h1>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:28px 36px;">
+      <p style="margin:0 0 20px;font-size:14px;color:#444;line-height:1.6;">
+        Hi ${o.customerName},<br><br>${copy.body}
+      </p>
+
+      <!-- Order pill -->
+      <div style="display:inline-block;background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:12px 20px;margin-bottom:24px;">
+        <p style="margin:0 0 2px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Order Number</p>
+        <p style="margin:0;font-size:20px;font-weight:700;color:#111;">${fmtOrderNum(o.orderNumber)}</p>
+      </div>
+
+      <!-- Items table -->
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="border-collapse:collapse;margin-bottom:20px;border:1px solid #f0f0f0;border-radius:8px;overflow:hidden;">
+        <thead>
+          <tr style="background:#f9f9f9;">
+            <th style="padding:10px 14px;text-align:left;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#aaa;font-weight:500;">Item</th>
+            <th style="padding:10px 14px;text-align:center;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#aaa;font-weight:500;">Size</th>
+            <th style="padding:10px 14px;text-align:center;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#aaa;font-weight:500;">Qty</th>
+            <th style="padding:10px 14px;text-align:right;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#aaa;font-weight:500;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <div style="border-top:2px solid #111;padding-top:16px;margin-bottom:28px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Total Paid</td>
+            <td style="text-align:right;font-size:22px;font-weight:300;color:#111;">GH&#8373; ${o.totalAmount.toFixed(0)}</td>
+          </tr>
+        </table>
+      </div>
+
+      <a href="${storeUrl}/orders"
+        style="display:inline-block;background:#111;color:#fff;font-size:11px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;padding:12px 28px;border-radius:100px;">
+        View My Orders
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:20px 36px;background:#f9f9f9;border-top:1px solid #eee;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#bbb;">
+        Questions? Reply to this email or WhatsApp us at +233 53 847 7072
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export async function notifyCustomerStatusUpdate(order: StatusUpdateNotification): Promise<void> {
+  const copy = STATUS_COPY[order.newStatus];
+  if (!copy) return; // don't email for PENDING or unknown statuses
+
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+  if (!gmailUser || !gmailPass) {
+    console.warn("Customer status email skipped — GMAIL_USER or GMAIL_APP_PASSWORD not set");
+    return;
+  }
+
+  const orderLabel = fmtOrderNum(order.orderNumber);
+  const textBody = [
+    `Hi ${order.customerName},`,
+    ``,
+    copy.body,
+    ``,
+    `Order: ${orderLabel}`,
+    `Total: GH₵${order.totalAmount.toFixed(0)}`,
+    ``,
+    ...order.items.map(i =>
+      `• ${i.productName ?? "Custom item"} · ${i.size} × ${i.quantity}`
+    ),
+    ``,
+    `Questions? Email us at vintagegallerystore@gmail.com or WhatsApp +233538477072`,
+  ].join("\n");
+
+  try {
+    await transporter.sendMail({
+      from:    `"Vintage Gallery" <${gmailUser}>`,
+      to:      order.customerEmail,
+      subject: `${copy.subject} — ${orderLabel}`,
+      text:    textBody,
+      html:    buildCustomerHtml(order),
+    });
+    console.log(`Customer status email (${order.newStatus}) sent → ${order.customerEmail}`);
+  } catch (err) {
+    console.error("Customer status email failed:", err);
+  }
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function notifyAdminNewOrder(order: OrderNotification): Promise<void> {

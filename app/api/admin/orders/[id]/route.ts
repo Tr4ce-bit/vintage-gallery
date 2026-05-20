@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
+import { notifyCustomerStatusUpdate } from "@/lib/notify";
 
 const VALID_STATUSES = ["PENDING","PAID","PROCESSING","SHIPPED","DELIVERED","CANCELLED","REFUNDED"];
 
@@ -76,6 +77,29 @@ export async function PATCH(
       where:   { id },
       include: { user: true, items: { include: { product: true } } },
     });
+
+    // Fire-and-forget customer notification — never blocks the response
+    if (order) {
+      const customerEmail = order.user?.email ?? order.guestEmail;
+      const customerName  = order.deliveryFullName;
+      if (customerEmail) {
+        notifyCustomerStatusUpdate({
+          orderNumber:       order.orderNumber,
+          paystackReference: order.paystackReference,
+          newStatus:         status,
+          customerEmail,
+          customerName,
+          totalAmount:       order.totalAmount,
+          items: order.items.map(i => ({
+            productName: i.productName,
+            size:        String(i.size),
+            quantity:    i.quantity,
+            unitPrice:   i.unitPrice,
+          })),
+        }).catch(err => console.error("notifyCustomerStatusUpdate failed:", err));
+      }
+    }
+
     return NextResponse.json({ order });
   } catch (err) {
     console.error("Admin order update error:", err);
