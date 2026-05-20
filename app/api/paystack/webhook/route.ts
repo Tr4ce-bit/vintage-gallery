@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
+import { notifyAdminNewOrder } from "@/lib/notify";
 
 // Register this URL in Paystack Dashboard → Settings → Webhooks:
 // https://yourdomain.com/api/paystack/webhook
@@ -110,6 +111,24 @@ export async function POST(req: NextRequest) {
       ]);
 
       console.log(`Webhook: order ${reference} marked PAID, stock decremented for ${existing.items.length} item(s)`);
+
+      // Fire-and-forget admin notification (email + SMS) — never blocks the 200 response
+      notifyAdminNewOrder({
+        paystackReference: reference,
+        totalAmount:       existing.totalAmount,
+        deliveryFullName:  existing.deliveryFullName,
+        deliveryPhone:     existing.deliveryPhone,
+        deliveryAddress:   existing.deliveryAddress,
+        deliveryCity:      existing.deliveryCity,
+        deliveryRegion:    existing.deliveryRegion,
+        items: existing.items.map(i => ({
+          productName: i.productName,
+          size:        String(i.size),
+          quantity:    i.quantity,
+          unitPrice:   i.unitPrice,
+        })),
+      }).catch(err => console.error("notifyAdminNewOrder failed:", err));
+
     } catch (err) {
       console.error(`Webhook: failed to process order ${reference}:`, err);
     }
