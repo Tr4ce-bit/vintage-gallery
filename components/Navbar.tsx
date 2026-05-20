@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Menu, X, Sun, Moon } from "lucide-react";
+import { ShoppingCart, Menu, X, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import NavbarAuth from "@/components/NavbarAuth";
 import { useCartStore } from "@/lib/store";
@@ -105,7 +105,7 @@ export default function Navbar() {
             )}
 
             <Link href="/cart" className={`relative transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}>
-              <ShoppingBag size={18} strokeWidth={1.5} />
+              <ShoppingCart size={18} strokeWidth={1.5} />
               {cartCount > 0 && (
                 <span className={`absolute -top-1 -right-1.5 w-[15px] h-[15px] rounded-full text-[7px] font-medium flex items-center justify-center ${onDark ? "bg-white text-zinc-900" : "bg-zinc-900 text-white"}`}>
                   {cartCount}
