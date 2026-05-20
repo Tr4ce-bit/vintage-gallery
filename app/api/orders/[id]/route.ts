@@ -80,12 +80,14 @@ export async function PATCH(
         data:  { status: "CANCELLED" },
       }),
       ...(needsStockRestore
-        ? order.items.map(item =>
-            prisma.product.update({
-              where: { id: item.productId },
-              data:  { stock: { increment: item.quantity } },
-            })
-          )
+        ? order.items
+            .filter((item): item is typeof item & { productId: string } => item.productId !== null)
+            .map(item =>
+              prisma.product.update({
+                where: { id: item.productId },
+                data:  { stock: { increment: item.quantity } },
+              })
+            )
         : []),
     ]);
 

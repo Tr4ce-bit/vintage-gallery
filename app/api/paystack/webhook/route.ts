@@ -61,9 +61,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Pre-fetch sizeStock for all items so the full update is ONE atomic transaction
-    //    (eliminates the race condition between global-stock and sizeStock updates)
+    //    Only process items linked to a real product (custom-studio items have null productId)
+    const productIds = existing.items.map(i => i.productId).filter((id): id is string => id !== null);
     const products = await prisma.product.findMany({
-      where:  { id: { in: existing.items.map(i => i.productId) } },
+      where:  { id: { in: productIds } },
       select: { id: true, sizeStock: true },
     });
     const sizeStockMap = Object.fromEntries(products.map(p => [p.id, p.sizeStock]));
@@ -75,8 +76,9 @@ export async function POST(req: NextRequest) {
           where: { paystackReference: reference },
           data:  { status: "PAID" },
         }),
-        // Decrement global stock + sizeStock in one go
+        // Decrement global stock + sizeStock only for items with a real productId
         ...existing.items.flatMap(item => {
+          if (!item.productId) return []; // skip custom-studio items
           const ops = [
             prisma.product.update({
               where: { id: item.productId },
@@ -118,8 +120,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    const refundProductIds = existing.items.map(i => i.productId).filter((id): id is string => id !== null);
     const products = await prisma.product.findMany({
-      where:  { id: { in: existing.items.map(i => i.productId) } },
+      where:  { id: { in: refundProductIds } },
       select: { id: true, sizeStock: true },
     });
     const sizeStockMap = Object.fromEntries(products.map(p => [p.id, p.sizeStock]));
@@ -131,6 +134,7 @@ export async function POST(req: NextRequest) {
           data:  { status: "REFUNDED" },
         }),
         ...existing.items.flatMap(item => {
+          if (!item.productId) return []; // skip custom-studio items
           const ops = [
             prisma.product.update({
               where: { id: item.productId },

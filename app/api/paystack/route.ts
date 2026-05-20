@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser } from "@/lib/auth-server";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_BASE   = "https://api.paystack.co";
 const DELIVERY_FEE    = 30; // GHS — must match checkout UI
 
-// ── POST /api/paystack  — initialise a transaction ───────────────────────────
+// Size enum values the DB accepts
+const VALID_SIZES = new Set(["XS", "S", "M", "L", "XL", "XXL"]);
+
+// ── POST /api/paystack  — initialise a transaction + create pending order ────
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -19,43 +23,75 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Payment service not configured." }, { status: 500 });
     }
 
-    // ── Server-side price recalculation ──────────────────────────────────────
-    // NEVER trust the client-supplied amount. Look up every item price from DB.
+    // ── 1. Server-side price recalculation ───────────────────────────────────
+    // NEVER trust the client-supplied amount — look up every item from DB.
     let subtotalGHS = 0;
 
+    // Resolve prices for all items
+    const resolvedItems: Array<{
+      productId:   string | null;
+      productName: string;
+      size:        string;
+      color:       string;
+      quantity:    number;
+      unitPrice:   number;
+      isCustom:    boolean;
+    }> = [];
+
     for (const item of cartItems) {
-      const { productId, quantity } = item;
+      const { productId, quantity, name, size, color } = item;
       if (!productId || typeof quantity !== "number" || quantity < 1) {
         return NextResponse.json({ error: "Invalid cart item." }, { status: 400 });
       }
 
       if (productId.startsWith("custom-")) {
-        // Custom studio tee — fetch price from settings
+        // Custom studio tee — price from settings table
         const rows = await prisma.settings.findMany({
           where: { key: { in: ["studio_base_price", "studio_design_addon"] } },
         });
         const map: Record<string, number> = { studio_base_price: 150, studio_design_addon: 30 };
         for (const r of rows) map[r.key] = Number(r.value);
 
-        const hasDesign = !!item.name?.includes("·"); // custom tees with a print
+        const hasDesign = typeof name === "string" && name.includes("·");
         const unitPrice = map.studio_base_price + (hasDesign ? map.studio_design_addon : 0);
         subtotalGHS += unitPrice * quantity;
+
+        resolvedItems.push({
+          productId:   null,
+          productName: name ?? "Custom Studio Tee",
+          size:        size ?? "M",
+          color:       color ?? "",
+          quantity,
+          unitPrice,
+          isCustom:    true,
+        });
       } else {
-        // Regular product — fetch authoritative price from DB
+        // Regular product — authoritative price from DB
         const product = await prisma.product.findUnique({
           where:  { id: productId },
-          select: { basePrice: true, isActive: true },
+          select: { basePrice: true, isActive: true, name: true },
         });
         if (!product || !product.isActive) {
           return NextResponse.json({ error: `Product ${productId} is unavailable.` }, { status: 400 });
         }
         subtotalGHS += product.basePrice * quantity;
+
+        resolvedItems.push({
+          productId,
+          productName: product.name,
+          size:        size ?? "M",
+          color:       color ?? "",
+          quantity,
+          unitPrice:   product.basePrice,
+          isCustom:    false,
+        });
       }
     }
 
     const totalGHS      = subtotalGHS + DELIVERY_FEE;
     const amountPesewas = Math.round(totalGHS * 100);
 
+    // ── 2. Initialise Paystack transaction ───────────────────────────────────
     const paystackPayload = {
       email,
       amount:   amountPesewas,
@@ -78,7 +114,7 @@ export async function POST(req: NextRequest) {
       callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
     };
 
-    const res = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
+    const psRes = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
       method: "POST",
       headers: {
         Authorization:  `Bearer ${PAYSTACK_SECRET}`,
@@ -87,20 +123,82 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(paystackPayload),
     });
 
-    const data = await res.json();
+    const psData = await psRes.json();
 
-    if (!data.status) {
+    if (!psData.status) {
       return NextResponse.json(
-        { error: data.message ?? "Paystack declined the request." },
+        { error: psData.message ?? "Paystack declined the request." },
         { status: 400 }
       );
     }
 
+    const { authorization_url, access_code, reference } = psData.data;
+
+    // ── 3. Save pending order to DB (authenticated users) ────────────────────
+    // We do this AFTER getting the reference so we can tie the order to it.
+    // Guest users skip this — their order lives in Paystack metadata only.
+    const authUser = await getAuthUser(req);
+
+    if (authUser) {
+      try {
+        // Upsert UserProfile (first order auto-creates a profile)
+        let profile = await prisma.userProfile.findUnique({
+          where: { cognitoId: authUser.userId },
+        });
+        if (!profile) {
+          profile = await prisma.userProfile.create({
+            data: {
+              cognitoId: authUser.userId,
+              fullName:  deliveryInfo?.fullName ?? "",
+              email:     email ?? authUser.email ?? "",
+            },
+          });
+        }
+
+        // Mask MoMo phone number
+        const masked = momoPhone.length >= 4
+          ? momoPhone.slice(0, 3) + "****" + momoPhone.slice(-3)
+          : momoPhone;
+
+        await prisma.order.create({
+          data: {
+            userId:             profile.id,
+            paystackReference:  reference,
+            paystackAccessCode: access_code,
+            totalAmount:        totalGHS,
+            deliveryFullName:   deliveryInfo?.fullName   ?? "",
+            deliveryPhone:      deliveryInfo?.phone      ?? "",
+            deliveryAddress:    deliveryInfo?.address    ?? "",
+            deliveryNotes:      deliveryInfo?.notes      ?? null,
+            momoNetwork:        momoNetwork as "MTN" | "TELECEL" | "AIRTELTIGO",
+            momoNumberMasked:   masked,
+            status:             "PENDING",
+            items: {
+              create: resolvedItems
+                .filter(i => VALID_SIZES.has(i.size))
+                .map(i => ({
+                  productId:   i.productId,
+                  productName: i.productName,
+                  size:        i.size as "XS" | "S" | "M" | "L" | "XL" | "XXL",
+                  color:       i.color,
+                  quantity:    i.quantity,
+                  unitPrice:   i.unitPrice,
+                  subtotal:    i.unitPrice * i.quantity,
+                })),
+            },
+          },
+        });
+      } catch (dbErr) {
+        // Don't block payment if DB write fails — log and continue
+        console.error("Order DB creation failed (payment still proceeds):", dbErr);
+      }
+    }
+
     return NextResponse.json({
-      authorizationUrl: data.data.authorization_url,
-      accessCode:       data.data.access_code,
-      reference:        data.data.reference,
-      totalGHS,         // inform client of server-calculated total
+      authorizationUrl: authorization_url,
+      accessCode:       access_code,
+      reference,
+      totalGHS,
     });
   } catch (err) {
     console.error("Paystack init error:", err);
@@ -108,20 +206,18 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── GET /api/paystack?reference=xxx  — verify a transaction (auth required) ──
-// This endpoint is for the success page only — must be authenticated.
+// ── GET /api/paystack?reference=xxx  — verify a transaction ──────────────────
 export async function GET(req: NextRequest) {
   try {
-    // Require a signed-in user or at minimum a valid session header
-    // to prevent enumeration of arbitrary Paystack references.
     const reference = req.nextUrl.searchParams.get("reference");
     if (!reference || !/^[a-zA-Z0-9_-]{8,64}$/.test(reference)) {
       return NextResponse.json({ error: "Invalid reference" }, { status: 400 });
     }
 
-    const res = await fetch(`${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
-    });
+    const res = await fetch(
+      `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } },
+    );
 
     const data = await res.json();
 
@@ -132,11 +228,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Only return safe fields — never forward raw Paystack response to client
+    // Only return safe fields — never forward the raw Paystack response to the client
     return NextResponse.json({
       verified:  true,
       reference: data.data.reference,
-      amount:    data.data.amount,   // in pesewas
+      amount:    data.data.amount,
       currency:  data.data.currency,
       status:    data.data.status,
     });

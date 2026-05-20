@@ -61,12 +61,14 @@ export async function PATCH(
         data:  { status },
       }),
       ...(needsStockRestore
-        ? existing.items.map(item =>
-            prisma.product.update({
-              where: { id: item.productId },
-              data:  { stock: { increment: item.quantity } },
-            })
-          )
+        ? existing.items
+            .filter((item): item is typeof item & { productId: string } => item.productId !== null)
+            .map(item =>
+              prisma.product.update({
+                where: { id: item.productId },
+                data:  { stock: { increment: item.quantity } },
+              })
+            )
         : []),
     ]);
 

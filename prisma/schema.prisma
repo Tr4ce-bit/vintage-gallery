@@ -149,16 +149,17 @@ model Order {
 model OrderItem {
   id          String  @id @default(cuid())
   orderId     String
-  productId   String
+  productId   String?                          // nullable for custom-studio items
   designId    String?                          // nullable – plain shirt (no custom design)
+  productName String?                          // captured at order time (denormalised)
   size        Size
   color       String
   quantity    Int
   unitPrice   Float                            // price locked at time of purchase
   subtotal    Float
 
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product @relation(fields: [productId], references: [id])
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id])
 
   @@map("order_items")
 }
