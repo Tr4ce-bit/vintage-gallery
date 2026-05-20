@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-server";
 import { isValidEmail, isValidPhone } from "@/lib/validation";
+import { generateOrderId } from "@/lib/order-id";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_BASE   = "https://api.paystack.co";
@@ -223,6 +224,7 @@ export async function POST(req: NextRequest) {
 
       await prisma.order.create({
         data: {
+          orderNumber:        generateOrderId(),
           userId:             profileId,           // null for guests
           guestEmail:         profileId ? null : email, // store email for guest orders
           paystackReference:  reference,

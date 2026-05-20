@@ -41,7 +41,7 @@ const SMS_FREE_LIMIT = 100;
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface OrderNotification {
-  orderNumber:       number;
+  orderNumber:       string;
   paystackReference: string;
   totalAmount:       number;
   deliveryFullName:  string;
@@ -59,8 +59,8 @@ export interface OrderNotification {
 
 // ─── HTML email template ──────────────────────────────────────────────────────
 
-function fmtOrderNum(n: number) {
-  return `#${String(n).padStart(4, "0")}`;
+function fmtOrderNum(n: string) {
+  return `#${n}`;
 }
 
 function buildHtml(o: OrderNotification): string {
@@ -178,7 +178,7 @@ async function incrementSmsCount(): Promise<void> {
 // ─── Customer status-update notification ─────────────────────────────────────
 
 export interface StatusUpdateNotification {
-  orderNumber:      number;
+  orderNumber:      string;
   paystackReference: string;
   newStatus:        string;
   customerEmail:    string;

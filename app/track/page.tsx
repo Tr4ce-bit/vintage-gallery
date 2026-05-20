@@ -16,7 +16,7 @@ interface TrackItem {
   subtotal: number;
 }
 interface TrackedOrder {
-  orderNumber: number;
+  orderNumber: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -79,13 +79,13 @@ export default function TrackPage() {
     setOrder(null);
     setLoading(true);
 
-    const num = parseInt(orderNumber.replace(/^#/, ""), 10);
-    if (!num) { setError("Please enter a valid Order ID."); setLoading(false); return; }
+    const cleaned = orderNumber.trim().replace(/^#/, "").toUpperCase();
+    if (!cleaned || cleaned.length < 4) { setError("Please enter a valid Order ID."); setLoading(false); return; }
 
     const trimmed = identifier.trim();
     // Detect email vs phone
     const isEmail = trimmed.includes("@");
-    const params  = new URLSearchParams({ orderNumber: String(num) });
+    const params  = new URLSearchParams({ orderNumber: cleaned });
     if (isEmail) params.set("email", trimmed);
     else         params.set("phone", trimmed);
 
@@ -138,7 +138,7 @@ export default function TrackPage() {
             <input
               value={orderNumber}
               onChange={e => setOrderNumber(e.target.value)}
-              placeholder="#0001"
+              placeholder="e.g. VG4KX9M2"
               required
               autoComplete="off"
               className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 font-mono text-sm text-zinc-900 dark:text-zinc-50 placeholder-zinc-300 dark:placeholder-zinc-600 bg-white dark:bg-zinc-900 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
@@ -182,7 +182,7 @@ export default function TrackPage() {
                 <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-1">Order</p>
                 <p className="font-serif text-zinc-900 dark:text-zinc-50"
                   style={{ fontSize: "clamp(1.8rem, 5vw, 2.4rem)", fontWeight: 300, lineHeight: 1 }}>
-                  #{String(order.orderNumber).padStart(4, "0")}
+                  #{order.orderNumber}
                 </p>
                 <p className="font-sans text-sm text-zinc-400 dark:text-zinc-500 mt-1">{fmt(order.createdAt)}</p>
               </div>

@@ -12,9 +12,10 @@ export async function GET(req: NextRequest) {
   const emailParam  = (req.nextUrl.searchParams.get("email")  ?? "").trim().toLowerCase();
   const phoneParam  = (req.nextUrl.searchParams.get("phone")  ?? "").trim();
 
-  const orderNumber = parseInt(raw, 10);
-  if (!orderNumber || orderNumber < 1) {
-    return NextResponse.json({ error: "Order number is required." }, { status: 400 });
+  // Normalise: strip leading # and uppercase
+  const orderNumber = raw.trim().replace(/^#/, "").toUpperCase();
+  if (!orderNumber || orderNumber.length < 4) {
+    return NextResponse.json({ error: "Order ID is required." }, { status: 400 });
   }
   if (!emailParam && !phoneParam) {
     return NextResponse.json({ error: "Email or phone number is required." }, { status: 400 });

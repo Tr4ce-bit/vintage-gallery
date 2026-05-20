@@ -12,7 +12,7 @@ interface OrderItem {
   product: { name: string } | null;
 }
 interface Order {
-  id: string; orderNumber: number; paystackReference: string; status: string;
+  id: string; orderNumber: string; paystackReference: string; status: string;
   totalAmount: number; createdAt: string; updatedAt: string;
   deliveryFullName: string; deliveryPhone: string;
   deliveryAddress: string; deliveryCity: string; deliveryRegion: string; deliveryNotes?: string;
@@ -91,7 +91,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <div>
           <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-1">Order</p>
           <h1 className="font-serif text-zinc-900 dark:text-zinc-50 mb-1" style={{ fontSize: "clamp(1.4rem, 4vw, 1.8rem)", fontWeight: 300 }}>
-            #{String(order.orderNumber).padStart(4, "0")}
+            #{order.orderNumber}
           </h1>
           <p className="font-mono text-xs text-zinc-400 dark:text-zinc-500 mb-0.5">{order.paystackReference}</p>
           <p className="font-sans text-sm text-zinc-400 dark:text-zinc-500">{fmt(order.createdAt)}</p>

@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface Order {
   id: string;
-  orderNumber: number;
+  orderNumber: string;
   paystackReference: string;
   status: string;
   totalAmount: number;
@@ -93,7 +93,7 @@ export default function OrdersPage() {
                   {orders.map(o => (
                     <tr key={o.id} className="border-b border-zinc-50 dark:border-zinc-800 last:border-0 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
                       <td className="px-4 md:px-5 py-4 font-mono text-xs text-zinc-600 dark:text-zinc-400">
-                        #{String(o.orderNumber).padStart(4, "0")}
+                        #{o.orderNumber}
                       </td>
                       <td className="px-4 md:px-5 py-4 font-sans text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">{fmt(o.createdAt)}</td>
                       <td className="px-4 md:px-5 py-4 font-sans text-sm text-zinc-500 dark:text-zinc-400">{o.items.length} {o.items.length === 1 ? "item" : "items"}</td>
