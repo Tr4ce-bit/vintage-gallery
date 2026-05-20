@@ -7,7 +7,6 @@ export const metadata = { title: "Returns & Exchanges" };
 const ELIGIBLE = [
   "Item received damaged or defective",
   "Wrong item or size sent by us",
-  "Item significantly different from the product description",
 ];
 
 const NOT_ELIGIBLE = [
