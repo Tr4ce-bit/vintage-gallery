@@ -15,7 +15,7 @@ interface Order {
   id: string; orderNumber: number; paystackReference: string; status: string;
   totalAmount: number; createdAt: string; updatedAt: string;
   deliveryFullName: string; deliveryPhone: string;
-  deliveryAddress: string; deliveryNotes?: string;
+  deliveryAddress: string; deliveryCity: string; deliveryRegion: string; deliveryNotes?: string;
   guestEmail?: string;
   momoNetwork?: string; momoNumberMasked?: string;
   user: { fullName: string; email: string } | null;
@@ -168,6 +168,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <h3 className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-300 dark:text-zinc-600 font-light mb-3">Delivery</h3>
             <p className="font-sans text-sm font-medium text-zinc-800 dark:text-zinc-100">{order.deliveryFullName}</p>
             <p className="font-sans text-sm text-zinc-500 dark:text-zinc-400">{order.deliveryPhone}</p>
+            {(order.deliveryCity || order.deliveryRegion) && (
+              <p className="font-sans text-sm text-zinc-500 dark:text-zinc-400">
+                {[order.deliveryCity, order.deliveryRegion].filter(Boolean).join(", ")}
+              </p>
+            )}
             <p className="font-sans text-sm text-zinc-500 dark:text-zinc-400">{order.deliveryAddress}</p>
             {order.deliveryNotes && <p className="font-sans text-sm text-zinc-400 dark:text-zinc-500 italic">{order.deliveryNotes}</p>}
           </div>
