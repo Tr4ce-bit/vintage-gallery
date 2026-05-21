@@ -42,33 +42,22 @@ frontend:
         - |
           if [ "${BUILD_ADMIN}" = "true" ]; then
             npm run build
-            # Determine the relativeAppDir from Next.js build output.
-            # Without outputFileTracingRoot, Next.js uses vintage-gallery/ as the
-            # workspace root, so relativeAppDir="admin-app" and standalone output is:
-            #   .next/standalone/admin-app/server.js
-            #   .next/standalone/admin-app/node_modules/
-            #   .next/standalone/admin-app/.next/
-            REL=$(node -e "const d=require('./.next/required-server-files.json');process.stdout.write(d.relativeAppDir||'')")
-            echo "relativeAppDir='${REL}'"
-            SAPP=".next/standalone"
-            if [ -n "${REL}" ]; then SAPP=".next/standalone/${REL}"; fi
-            # Assemble a flat Lambda package at repo-root .next/ with no standalone/
-            # subdir and no required-server-files.json. Without these SSR markers in
-            # the artifact, Amplify does not detect "Next.js - SSR" and keeps the
-            # branch framework as null, using the generic WEB_COMPUTE bootstrap which
-            # simply runs node server.js — no read-only-FS symlink creation needed.
+            # Copy admin-app/.next/ to repo-root .next/ so Amplify's
+            # baseDirectory: .next (always relative to repo root) picks
+            # up the full standalone artifact. The artifact includes:
+            #   standalone/admin-app/server.js  (relativeAppDir="admin-app")
+            #   standalone/admin-app/node_modules/
+            #   standalone/admin-app/.next/
+            #   static/
+            #   required-server-files.json
+            # With framework: null (no appRoot in inline buildSpec to
+            # trigger SSR auto-detection), Amplify uses the generic
+            # WEB_COMPUTE bootstrap which reads required-server-files.json,
+            # finds relativeAppDir="admin-app", and starts the server with:
+            #   node standalone/admin-app/server.js
+            # No symlink creation — same pattern as the working main store.
             rm -rf ../.next
-            mkdir -p ../.next ../.next/.next/static
-            cp    "${SAPP}/server.js"     ../.next/ || { echo "ERROR: server.js missing at ${SAPP}"; ls .next/standalone/; exit 1; }
-            cp    "${SAPP}/package.json"  ../.next/ 2>/dev/null || true
-            cp -r "${SAPP}/node_modules"  ../.next/
-            cp -r "${SAPP}/.next/."       ../.next/.next/
-            cp -r .next/static/.          ../.next/.next/static/ 2>/dev/null || true
-            mkdir -p ../.next/public
-            # Remove SSR markers from admin-app/.next/ so Amplify's post-build
-            # artifact scan (which also checks the build CWD) finds no standalone/
-            # directory and does not trigger "framework looks wrong" validation.
-            rm -rf .next/standalone .next/required-server-files.json
+            cp -r .next ../.next
           else
             npm run build
           fi
