@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 
 export const metadata = { title: "Cookies Policy" };
 
-const LAST_UPDATED = "17 May 2025";
+const LAST_UPDATED = "21 May 2026";
 
 const COOKIE_TABLE = [
   {
@@ -29,9 +29,9 @@ const COOKIE_TABLE = [
     type:     "Preference",
   },
   {
-    name:     "__vercel_live_token (if applicable)",
-    provider: "Vercel / AWS Amplify",
-    purpose:  "Used by the hosting platform for deployment and performance optimisation.",
+    name:     "AWS Amplify session (if applicable)",
+    provider: "AWS Amplify",
+    purpose:  "Used by the hosting platform for deployment previews and performance optimisation.",
     duration: "Session",
     type:     "Technical",
   },
@@ -158,7 +158,7 @@ export default function CookiesPage() {
                 Changes to This Policy
               </h2>
               <p>
-                We may update this Cookies Policy as our practices change. Any significant updates will be communicated on our website.
+                We may update this Cookies Policy as our practices change. If we make significant changes, we will notify you by email <strong className="font-medium text-zinc-700 dark:text-zinc-300">at least 30 days before</strong> the changes take effect. The updated date at the top of this page will always reflect the latest revision.
               </p>
             </section>
 

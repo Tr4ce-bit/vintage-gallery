@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 
 export const metadata = { title: "Terms of Service" };
 
-const LAST_UPDATED = "17 May 2025";
+const LAST_UPDATED = "21 May 2026";
 
 export default function TermsPage() {
   return (
@@ -57,6 +57,9 @@ export default function TermsPage() {
               </p>
               <p className="mt-3">
                 We reserve the right to limit quantities, discontinue products, or cancel orders at our discretion. If your order is cancelled after payment, you will receive a full refund.
+              </p>
+              <p className="mt-3">
+                <strong className="font-medium text-zinc-700 dark:text-zinc-300">No warranties.</strong> Our products are sold &ldquo;as is.&rdquo; To the fullest extent permitted by Ghanaian law, we disclaim all implied warranties of merchantability and fitness for a particular purpose, except where those warranties cannot legally be excluded.
               </p>
             </section>
 
@@ -135,10 +138,12 @@ export default function TermsPage() {
 
             <section>
               <h2 className="font-sans text-[10px] tracking-[0.3em] uppercase text-zinc-400 dark:text-zinc-500 font-medium mb-4 pb-3 border-b border-zinc-100 dark:border-zinc-800">
-                11. Governing Law
+                11. Governing Law & Dispute Resolution
               </h2>
               <p>
-                These terms are governed by the laws of the Republic of Ghana. Any disputes shall be resolved in the courts of Ghana.
+                These terms are governed by the laws of the Republic of Ghana. If you have a dispute with us, please contact us first at{" "}
+                <a href="mailto:vintagegallerystore@gmail.com" className="text-zinc-900 dark:text-zinc-200 underline underline-offset-2">vintagegallerystore@gmail.com</a>{" "}
+                so we can try to resolve it informally. If we cannot reach a resolution within 30 days, the dispute shall be referred to the courts of Ghana.
               </p>
             </section>
 
@@ -147,7 +152,7 @@ export default function TermsPage() {
                 12. Changes to These Terms
               </h2>
               <p>
-                We may update these Terms at any time. Material changes will be communicated by email or notice on our website. Continued use of our services after changes constitutes acceptance.
+                We may update these Terms from time to time. If we make material changes, we will notify you by email <strong className="font-medium text-zinc-700 dark:text-zinc-300">at least 30 days before</strong> the changes take effect. The updated date at the top of this page will always reflect the latest revision. Continued use of our services after the effective date constitutes acceptance of the revised Terms.
               </p>
             </section>
 
