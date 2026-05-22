@@ -10,6 +10,7 @@ node_modules/
 # Next.js build output
 /.next/
 /out/
+/admin-app/.next/
 
 # Environment variables — NEVER commit these
 .env

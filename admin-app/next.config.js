@@ -1,24 +1,32 @@
+const path = require("path");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Standalone output packages everything Lambda needs into .next/standalone/.
-  // Without this, node_modules/ is not included in the artifact and Lambda fails
-  // at runtime with "failed to create symbolic link ... Read-only file system".
   output: "standalone",
-  // NOTE: Do NOT set outputFileTracingRoot here. When set to __dirname (admin-app/),
-  // relativeAppDir becomes "" in required-server-files.json. Amplify's "Next.js - SSR"
-  // Lambda bootstrap uses relativeAppDir="" to locate server.js at the standalone root,
-  // then tries to create X/X symlinks (node_modules/node_modules, public/public, etc.)
-  // inside read-only Lambda directories — causing runtime 500 errors on every request.
-  // Without outputFileTracingRoot, Next.js walks up to vintage-gallery/ as workspace
-  // root, setting relativeAppDir="admin-app". The amplify.yml flat-assembly script
-  // reads this value and copies standalone/admin-app/ to the artifact root, so the
-  // generic WEB_COMPUTE bootstrap finds server.js at the artifact root and starts
-  // the app correctly — no symlinks needed.
+
+  // CRITICAL for Amplify WEB_COMPUTE (framework: null / generic bootstrap):
+  // Setting outputFileTracingRoot to this directory (__dirname = admin-app/) forces
+  // Next.js to treat admin-app/ as the workspace root, which sets relativeAppDir=""
+  // in required-server-files.json. The generic WEB_COMPUTE bootstrap hardcodes
+  // `node standalone/server.js` — so server.js MUST be at standalone/server.js
+  // (not standalone/admin-app/server.js which results from relativeAppDir="admin-app").
+  //
+  // Without this setting, Next.js on Linux walks up to vintage-gallery/ as workspace
+  // root, producing relativeAppDir="admin-app" and placing server.js at
+  // standalone/admin-app/server.js — the bootstrap then can't find it → HTTP 500.
+  //
+  // NOTE: This only causes the X/X symlink crash when framework is "Next.js - SSR"
+  // (the dedicated SSR bootstrap creates node_modules/node_modules symlinks when
+  // relativeAppDir=""). With framework: null (generic bootstrap) no symlinks are
+  // created, so this setting is safe.
+  //
   // NOTE: Do NOT add a "turbopack" key here. In Next.js 16, having a `turbopack`
   // config object enables Turbopack for production builds. Turbopack SSR chunks
   // use an externalRequire() mechanism that fails on Amplify WEB_COMPUTE because
   // the Lambda splits node_modules from the app pages. Webpack (the default when
   // `turbopack` is absent) works correctly with Amplify WEB_COMPUTE.
+  outputFileTracingRoot: path.join(__dirname),
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.amazonaws.com" },
