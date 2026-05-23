@@ -7,6 +7,9 @@ frontend:
           if [ "${BUILD_ADMIN}" = "true" ]; then
             cd admin-app
             npm ci
+            # Symlink admin-app/node_modules → repo-root/node_modules so Amplify's
+            # post-build bundler can resolve the `next` package (it searches from root).
+            ln -sf "$(pwd)/node_modules" ../node_modules
             echo "NEXT_PUBLIC_COGNITO_USER_POOL_ID=$NEXT_PUBLIC_COGNITO_USER_POOL_ID" >> .env.production
             echo "NEXT_PUBLIC_COGNITO_CLIENT_ID=$NEXT_PUBLIC_COGNITO_CLIENT_ID" >> .env.production
             echo "NEXT_PUBLIC_COGNITO_REGION=$NEXT_PUBLIC_COGNITO_REGION" >> .env.production
