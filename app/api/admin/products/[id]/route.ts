@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { isValidSlug, isAllowedImageUrl } from "@/lib/validation";
@@ -108,6 +109,9 @@ export async function PATCH(
         ...(body.sortOrder   !== undefined && { sortOrder:   Math.floor(Number(body.sortOrder)) }),
       },
     });
+    revalidatePath("/");
+    revalidatePath("/shop");
+    revalidatePath(`/product/${product.slug}`);
     return NextResponse.json({ product });
   } catch (err) {
     console.error("Admin product update error:", err);
@@ -131,11 +135,19 @@ export async function DELETE(
       where: { id },
       data:  { isActive: false },
     });
+    revalidatePath("/");
+    revalidatePath("/shop");
+    revalidatePath(`/product/${product.slug}`);
     return NextResponse.json({ product, note: "Product has orders — deactivated instead of deleted" });
   }
 
   try {
+    // Grab slug before deletion so we can revalidate its page
+    const product = await prisma.product.findUnique({ where: { id }, select: { slug: true } });
     await prisma.product.delete({ where: { id } });
+    revalidatePath("/");
+    revalidatePath("/shop");
+    if (product) revalidatePath(`/product/${product.slug}`);
     return NextResponse.json({ deleted: true });
   } catch (err) {
     console.error("Admin product delete error:", err);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { isValidSlug, isAllowedImageUrl } from "@/lib/validation";
@@ -96,6 +97,10 @@ export async function POST(req: NextRequest) {
         isActive:    body.isActive !== false,
       },
     });
+    // Bust the Next.js router cache so the main store shows the new product immediately
+    revalidatePath("/");
+    revalidatePath("/shop");
+    revalidatePath(`/product/${product.slug}`);
     return NextResponse.json({ product }, { status: 201 });
   } catch (err) {
     console.error("Admin product create error:", err);

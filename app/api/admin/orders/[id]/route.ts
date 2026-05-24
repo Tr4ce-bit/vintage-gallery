@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { notifyCustomerStatusUpdate } from "@/lib/notify";
@@ -100,6 +101,9 @@ export async function PATCH(
       }
     }
 
+    // Bust router cache so customer's orders pages show the new status immediately
+    revalidatePath("/orders");
+    if (order) revalidatePath(`/orders/${order.id}`);
     return NextResponse.json({ order });
   } catch (err) {
     console.error("Admin order update error:", err);

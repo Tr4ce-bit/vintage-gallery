@@ -81,13 +81,18 @@ async function main() {
     },
   ];
 
-  for (const p of products) {
-    await prisma.product.upsert({
-      where:  { id: p.id },
-      update: p,
-      create: p,
-    });
-    console.log(`✓ Upserted product: ${p.name}`);
+  // IMPORTANT: use createMany with skipDuplicates so subsequent builds
+  // never overwrite products that have been edited via the admin app.
+  // Products are only inserted on the very first deployment (fresh DB).
+  const result = await prisma.product.createMany({
+    data:           products,
+    skipDuplicates: true,   // skip any product whose id or slug already exists
+  });
+
+  if (result.count > 0) {
+    console.log(`✓ Seeded ${result.count} product(s).`);
+  } else {
+    console.log("⏭  Products already exist — seed skipped (admin edits preserved).");
   }
 
   console.log("Seed complete.");
