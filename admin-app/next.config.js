@@ -37,19 +37,9 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
-  // Proxy all /api/* requests to the main store's API so the browser never
-  // makes a cross-origin request (avoids CORS entirely). The Authorization
-  // header is forwarded automatically by Vercel's server-side rewrite.
-  async rewrites() {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiBase) return [];
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiBase}/api/:path*`,
-      },
-    ];
-  },
+  // No rewrites needed — the admin app calls the Amplify main store API
+  // directly from the browser. The main store's middleware.ts adds CORS
+  // headers for the admin app's Vercel origin on /api/admin/* routes.
   async headers() {
     return [
       {
