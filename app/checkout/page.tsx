@@ -5,13 +5,24 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Lock, User, UserPlus, ShoppingBag, CreditCard, Smartphone, Building2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock, User, UserPlus, ShoppingBag, CreditCard, Smartphone, Building2, CloudRain, Truck, Zap } from "lucide-react";
 import { useCartStore } from "@/lib/store";
 import { useAuth } from "@/hooks/useAuth";
 import Footer from "@/components/Footer";
 
 type MomoNetwork    = "MTN" | "TELECEL" | "AIRTELTIGO";
 type PaymentMethod  = "momo" | "card" | "bank_transfer";
+type DeliveryType   = "standard" | "sameday";
+
+interface DeliveryFees {
+  standard:           number;
+  sameday:            number;
+  samedayBase:        number;
+  rainSurcharge:      number;
+  isRaining:          boolean;
+  weatherDescription: string;
+  weatherIcon:        string;
+}
 
 // ── Real MNO brand logos (SVG) ──────────────────────────────────────────────
 function MtnLogo({ size = 40 }: { size?: number }) {
@@ -109,9 +120,26 @@ export default function CheckoutPage() {
   const { items, totalPrice, clearCart }  = useCartStore();
   const { user, isLoaded, isSignedIn }    = useAuth();
 
-  const DELIVERY_FEE = 30;
-  const subtotal     = totalPrice();
-  const total        = subtotal + DELIVERY_FEE;
+  const subtotal = totalPrice();
+
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>("standard");
+  const [fees, setFees] = useState<DeliveryFees>({
+    standard: 30, sameday: 50, samedayBase: 50,
+    rainSurcharge: 0, isRaining: false,
+    weatherDescription: "", weatherIcon: "01d",
+  });
+  const [feesLoading, setFeesLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/delivery-fee")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setFees(d); })
+      .catch(() => {})
+      .finally(() => setFeesLoading(false));
+  }, []);
+
+  const deliveryFee = deliveryType === "sameday" ? fees.sameday : fees.standard;
+  const total       = subtotal + deliveryFee;
 
   const [authMode, setAuthMode] = useState<AuthMode>(null);
 
@@ -165,6 +193,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           email:         form.email,
           amountGHS:     total,
+          deliveryType,
           paymentMethod,
           momoNetwork:   paymentMethod === "momo" ? network   : undefined,
           momoPhone:     paymentMethod === "momo" ? momoPhone : undefined,
@@ -249,7 +278,7 @@ export default function CheckoutPage() {
                       {items.length} item{items.length !== 1 ? "s" : ""} · GH₵ {subtotal.toLocaleString()}
                     </p>
                     <p className="font-sans text-[9px] text-zinc-300 dark:text-zinc-600 font-light mt-0.5">
-                      + GH₵ {DELIVERY_FEE} delivery · Total GH₵ {total.toLocaleString()}
+                      + GH₵ {deliveryFee} delivery · Total GH₵ {total.toLocaleString()}
                     </p>
                   </div>
                   <ShoppingBag size={16} className="text-zinc-300 dark:text-zinc-600 shrink-0" />
@@ -351,10 +380,83 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
+                  {/* ── Delivery Type ──────────────────────────────────── */}
+                  <section>
+                    <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-zinc-400 font-medium mb-4 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                      01 · Delivery Method
+                    </p>
+
+                    {/* Rain alert banner */}
+                    {fees.isRaining && !feesLoading && (
+                      <div className="mb-4 flex items-start gap-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 px-4 py-3">
+                        <CloudRain size={15} className="text-blue-500 mt-0.5 shrink-0" />
+                        <p className="font-sans text-[11px] text-blue-700 dark:text-blue-300 font-light leading-relaxed">
+                          It&apos;s raining in Accra right now ({fees.weatherDescription}). Same-day delivery includes a GH₵ {fees.rainSurcharge} rain surcharge.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                      {/* Standard */}
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryType("standard")}
+                        className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
+                          deliveryType === "standard"
+                            ? "border-zinc-900 dark:border-white bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                            : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500"
+                        }`}
+                      >
+                        <Truck size={16} className={`mt-0.5 shrink-0 ${deliveryType === "standard" ? "opacity-100" : "text-zinc-400"}`} />
+                        <div>
+                          <p className="font-sans text-xs font-medium">Standard Delivery</p>
+                          <p className={`font-sans text-[10px] mt-0.5 ${deliveryType === "standard" ? "opacity-70" : "text-zinc-400"}`}>
+                            2 – 4 business days
+                          </p>
+                          <p className="font-sans text-sm font-semibold mt-1.5">
+                            {feesLoading ? "..." : `GH₵ ${fees.standard}`}
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* Same-Day */}
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryType("sameday")}
+                        className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all relative overflow-hidden ${
+                          deliveryType === "sameday"
+                            ? "border-zinc-900 dark:border-white bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                            : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500"
+                        }`}
+                      >
+                        <Zap size={16} className={`mt-0.5 shrink-0 ${deliveryType === "sameday" ? "opacity-100" : "text-zinc-400"}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-sans text-xs font-medium">Same-Day Delivery</p>
+                          <p className={`font-sans text-[10px] mt-0.5 ${deliveryType === "sameday" ? "opacity-70" : "text-zinc-400"}`}>
+                            Within Accra · Order by 1pm
+                          </p>
+                          <p className="font-sans text-sm font-semibold mt-1.5">
+                            {feesLoading ? "..." : `GH₵ ${fees.sameday}`}
+                            {fees.isRaining && !feesLoading && (
+                              <span className={`ml-1.5 font-sans text-[9px] font-normal ${
+                                deliveryType === "sameday" ? "opacity-70" : "text-blue-500"
+                              }`}>
+                                incl. +GH₵ {fees.rainSurcharge} rain
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        {fees.isRaining && !feesLoading && (
+                          <CloudRain size={12} className={`shrink-0 self-start mt-1 ${deliveryType === "sameday" ? "opacity-60" : "text-blue-400"}`} />
+                        )}
+                      </button>
+                    </div>
+                  </section>
+
                   {/* Delivery section */}
                   <section>
                     <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-zinc-400 font-medium mb-6 pb-3 border-b border-zinc-100 dark:border-zinc-800">
-                      01 · Delivery Details
+                      02 · Delivery Details
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
@@ -610,9 +712,20 @@ export default function CheckoutPage() {
                         <span className="font-sans text-sm text-zinc-400 font-light">Subtotal</span>
                         <span className="font-sans text-sm text-zinc-600 dark:text-zinc-300 font-light">GH₵ {subtotal.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="font-sans text-sm text-zinc-400 font-light">Delivery</span>
-                        <span className="font-sans text-sm text-zinc-600 dark:text-zinc-300 font-light">GH₵ {DELIVERY_FEE}</span>
+                      <div className="flex justify-between items-start">
+                        <span className="font-sans text-sm text-zinc-400 font-light">
+                          {deliveryType === "sameday" ? "Same-Day Delivery" : "Standard Delivery"}
+                        </span>
+                        <div className="text-right">
+                          <span className="font-sans text-sm text-zinc-600 dark:text-zinc-300 font-light">
+                            {feesLoading ? "..." : `GH₵ ${deliveryFee}`}
+                          </span>
+                          {fees.isRaining && deliveryType === "sameday" && !feesLoading && (
+                            <p className="font-sans text-[9px] text-blue-500 mt-0.5 flex items-center justify-end gap-1">
+                              <CloudRain size={9} /> incl. GH₵ {fees.rainSurcharge} rain
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex justify-between pt-2 border-t border-zinc-200 dark:border-zinc-700">
                         <span className="font-sans text-sm text-zinc-700 dark:text-zinc-200">Total</span>

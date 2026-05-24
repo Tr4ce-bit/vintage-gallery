@@ -36,6 +36,7 @@ frontend:
             echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> .env.production
             echo "FAL_KEY=$FAL_KEY" >> .env.production
             echo "GOOGLE_GEMINI_API_KEY=$GOOGLE_GEMINI_API_KEY" >> .env.production
+            echo "OPENWEATHER_API_KEY=$OPENWEATHER_API_KEY" >> .env.production
             npx prisma generate
             npx prisma db push --skip-generate --accept-data-loss
             npx prisma db seed

@@ -3,10 +3,46 @@ import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-server";
 import { isValidEmail, isValidPhone } from "@/lib/validation";
 import { generateOrderId } from "@/lib/order-id";
+import { getAccraWeather } from "@/lib/weather";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_BASE   = "https://api.paystack.co";
-const DELIVERY_FEE    = 30; // GHS — must match checkout UI
+
+/** Resolve delivery fee from DB settings + live weather. Never throws. */
+async function resolveDeliveryFee(deliveryType: "standard" | "sameday" = "standard"): Promise<number> {
+  try {
+    const rows = await prisma.settings.findMany({
+      where: {
+        key: {
+          in: [
+            "delivery_standard",
+            "delivery_sameday",
+            "delivery_sameday_rain_surcharge",
+            "delivery_rain_enabled",
+          ],
+        },
+      },
+    });
+    const cfg: Record<string, string> = {};
+    for (const r of rows) cfg[r.key] = r.value;
+
+    if (deliveryType === "sameday") {
+      const base         = Number(cfg.delivery_sameday                ?? 50);
+      const surcharge    = Number(cfg.delivery_sameday_rain_surcharge ?? 20);
+      const rainEnabled  = cfg.delivery_rain_enabled !== "false";
+      if (rainEnabled) {
+        const weather = await getAccraWeather();
+        return weather.isRaining ? base + surcharge : base;
+      }
+      return base;
+    }
+
+    return Number(cfg.delivery_standard ?? 30);
+  } catch {
+    // Fallback to safe default so payment never fails
+    return deliveryType === "sameday" ? 50 : 30;
+  }
+}
 
 // Hard limits — prevent DoS via oversized payloads / inventory abuse
 const MAX_CART_ITEMS  = 20;   // max distinct line items per order
@@ -31,7 +67,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { email, paymentMethod, momoNetwork, momoPhone, cartItems, deliveryInfo } = body;
+    const { email, paymentMethod, momoNetwork, momoPhone, cartItems, deliveryInfo, deliveryType } = body;
+    const validDeliveryType: "standard" | "sameday" =
+      deliveryType === "sameday" ? "sameday" : "standard";
 
     // ── Strict input validation ───────────────────────────────────────────────
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
@@ -131,7 +169,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const totalGHS      = subtotalGHS + DELIVERY_FEE;
+    const deliveryFee   = await resolveDeliveryFee(validDeliveryType);
+    const totalGHS      = subtotalGHS + deliveryFee;
     const amountPesewas = Math.round(totalGHS * 100);
 
     // ── 2. Initialise Paystack transaction ───────────────────────────────────
