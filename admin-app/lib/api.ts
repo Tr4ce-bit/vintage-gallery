@@ -4,5 +4,6 @@
  * NEXT_PUBLIC_API_URL via next.config.js rewrites — no CORS issues.
  */
 export function apiUrl(path: string): string {
+  // Relative path — handled by Next.js rewrite in next.config.js
   return path;
 }
