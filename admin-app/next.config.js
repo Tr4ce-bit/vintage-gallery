@@ -37,6 +37,19 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
+  // Proxy all /api/* requests to the main store's API so the browser never
+  // makes a cross-origin request (avoids CORS entirely). The Authorization
+  // header is forwarded automatically by Vercel's server-side rewrite.
+  async rewrites() {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiBase) return [];
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${apiBase}/api/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
