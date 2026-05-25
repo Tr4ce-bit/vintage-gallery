@@ -45,21 +45,16 @@ frontend:
       commands:
         - |
           if [ "${BUILD_ADMIN}" = "true" ]; then
-            npm run build
-            # Copy admin-app/.next/ to repo-root .next/ so Amplify's
-            # baseDirectory: .next (always relative to repo root) picks
-            # up the full standalone artifact. The artifact includes:
-            #   standalone/admin-app/server.js  (relativeAppDir="admin-app")
-            #   standalone/admin-app/node_modules/
-            #   standalone/admin-app/.next/
-            #   static/
-            #   required-server-files.json
-            # With framework: null (no appRoot in inline buildSpec to
-            # trigger SSR auto-detection), Amplify uses the generic
-            # WEB_COMPUTE bootstrap which reads required-server-files.json,
-            # finds relativeAppDir="admin-app", and starts the server with:
-            #   node standalone/admin-app/server.js
-            # No symlink creation — same pattern as the working main store.
+            # Build runs from admin-app/ (cd persists within the same shell block).
+            # next.config.js sets outputFileTracingRoot=admin-app/, so Next.js writes:
+            #   relativeAppDir="" in required-server-files.json
+            #   server.js at admin-app/.next/standalone/server.js
+            # The generic WEB_COMPUTE bootstrap (framework: null) hardcodes
+            #   node standalone/server.js
+            # so server.js must live at .next/standalone/server.js — correct.
+            cd admin-app && npm run build
+            # Copy admin-app/.next → repo-root .next so baseDirectory: .next picks it up.
+            # After the cd above, CWD is admin-app/, so ".." is the repo root.
             rm -rf ../.next
             cp -r .next ../.next
           else
