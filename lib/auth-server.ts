@@ -1,7 +1,3 @@
-/**
- * Server-side Cognito JWT verification for API routes.
- * Verifies the ID token sent in the Authorization header (contains email).
- */
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 
 let verifier: ReturnType<typeof CognitoJwtVerifier.create> | null = null;
@@ -17,13 +13,15 @@ function getVerifier() {
   return verifier;
 }
 
-/**
- * Extract and verify the Cognito access token from the Authorization header.
- * Returns the sub (user ID) on success, null on failure.
- */
-export async function getAuthUser(
-  request: Request
-): Promise<{ userId: string; email: string | null } | null> {
+export interface AuthUser {
+  userId: string;
+  email:  string | null;
+  // Cognito group memberships from the "cognito:groups" JWT claim.
+  // Used by requireAdmin() to check for the "admin" group.
+  groups: string[];
+}
+
+export async function getAuthUser(request: Request): Promise<AuthUser | null> {
   try {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) return null;
@@ -34,6 +32,7 @@ export async function getAuthUser(
     return {
       userId: payload.sub,
       email:  (payload.email as string | undefined) ?? null,
+      groups: (payload["cognito:groups"] as string[] | undefined) ?? [],
     };
   } catch {
     return null;

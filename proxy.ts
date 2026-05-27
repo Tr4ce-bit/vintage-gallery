@@ -1,13 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+// ⚠️  THIS FILE IS NOT ACTIVE — Next.js only loads middleware from `middleware.ts`.
+// This file was incorrectly named and was never executed. It has been superseded
+// by middleware.ts at the project root, which fixes the CORS logic and uses the
+// correct filename. This file can be safely deleted.
+//
+// DO NOT rename this back to middleware.ts — that would create a duplicate.
 
-/**
- * Proxy / middleware file for Next.js 16.
- *
- * Responsibilities:
- * 1. CORS for /api/admin/* — allows the separate admin app domain to call
- *    these endpoints cross-origin while blocking all other origins.
- * 2. Everything else passes through unchanged.
- */
+import { NextRequest, NextResponse } from "next/server";
 
 const ADMIN_ORIGIN = process.env.ADMIN_APP_URL ?? "";
 

@@ -26,13 +26,18 @@ const transporter = nodemailer.createTransport({
 });
 
 // ── SNS client (us-east-1 handles global SMS) ────────────────────────────────
-// Falls back to S3_* keys since those are what's set in Amplify env vars
+// On Lambda the IAM role provides credentials automatically.
+// Explicit keys are only used in local dev.
 const sns = new SNSClient({
   region: "us-east-1",
-  credentials: {
-    accessKeyId:     (process.env.AWS_ACCESS_KEY_ID ?? process.env.S3_ACCESS_KEY_ID)!,
-    secretAccessKey: (process.env.AWS_SECRET_ACCESS_KEY ?? process.env.S3_SECRET_ACCESS_KEY)!,
-  },
+  ...(process.env.AWS_ACCESS_KEY_ID ?? process.env.S3_ACCESS_KEY_ID
+    ? {
+        credentials: {
+          accessKeyId:     (process.env.AWS_ACCESS_KEY_ID ?? process.env.S3_ACCESS_KEY_ID)!,
+          secretAccessKey: (process.env.AWS_SECRET_ACCESS_KEY ?? process.env.S3_SECRET_ACCESS_KEY)!,
+        },
+      }
+    : {}),
 });
 
 // Free-tier cap — AWS SNS gives 100 free SMS/month
@@ -141,7 +146,7 @@ function buildHtml(o: OrderNotification): string {
     <div style="padding:20px 36px;background:#f9f9f9;border-top:1px solid #eee;text-align:center;">
       <p style="margin:0;font-size:11px;color:#bbb;">
         Open the
-        <a href="https://master.d3ic7vfcs7q16g.amplifyapp.com/orders"
+        <a href="${process.env.ADMIN_APP_URL ?? ""}/orders"
           style="color:#111;font-weight:600;text-decoration:none;">admin portal</a>
         to process this order.
       </p>

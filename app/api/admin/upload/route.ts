@@ -5,12 +5,19 @@ import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
 
+// On Lambda the IAM role (granted in sst.config.ts) provides credentials
+// automatically via the default credential chain — no hardcoded keys needed.
+// Explicit keys are only used in local dev (sst dev / next dev).
 const s3 = new S3Client({
   region: process.env.S3_REGION ?? "us-east-1",
-  credentials: {
-    accessKeyId:     process.env.S3_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
-  },
+  ...(process.env.S3_ACCESS_KEY_ID
+    ? {
+        credentials: {
+          accessKeyId:     process.env.S3_ACCESS_KEY_ID,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+        },
+      }
+    : {}),
 });
 
 const BUCKET = process.env.S3_BUCKET ?? "vintage-gallery-products";

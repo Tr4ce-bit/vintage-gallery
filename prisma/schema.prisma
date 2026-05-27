@@ -2,7 +2,11 @@
 // Database: PostgreSQL (AWS RDS)
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" covers local dev on any OS.
+  // "rhel-openssl-1.0.x"        = Lambda x86_64 (Amazon Linux 2)
+  // "linux-arm64-openssl-3.0.x" = Lambda arm64  (Graviton — SST default)
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {

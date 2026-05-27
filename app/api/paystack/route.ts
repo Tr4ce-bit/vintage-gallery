@@ -4,6 +4,7 @@ import { getAuthUser } from "@/lib/auth-server";
 import { isValidEmail, isValidPhone } from "@/lib/validation";
 import { generateOrderId } from "@/lib/order-id";
 import { getAccraWeather } from "@/lib/weather";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_BASE   = "https://api.paystack.co";
@@ -59,6 +60,18 @@ const VALID_SIZES = new Set(["XS", "S", "M", "L", "XL", "XXL"]);
 
 // ── POST /api/paystack  — initialise a transaction + create pending order ────
 export async function POST(req: NextRequest) {
+  // 10 checkout attempts per IP per minute — prevents spam order creation
+  const rl = rateLimit(`checkout:${clientIp(req)}`, 10, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment and try again." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    );
+  }
+
   // Reject obviously oversized payloads before JSON parsing
   const contentLength = Number(req.headers.get("content-length") ?? 0);
   if (contentLength > 32_768) { // 32 KB is more than enough for a cart

@@ -10,7 +10,12 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
+    "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "sst:dev": "sst dev",
+    "sst:deploy": "sst deploy --stage staging",
+    "sst:deploy:prod": "sst deploy --stage production",
+    "sst:diff": "sst diff --stage production",
+    "sst:remove:staging": "sst remove --stage staging"
   },
   "prisma": {
     "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
@@ -48,6 +53,7 @@
     "postcss": "^8",
     "prisma": "^5.14.0",
     "sharp": "^0.34.5",
+    "sst": "^3",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5"

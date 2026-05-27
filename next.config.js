@@ -39,60 +39,52 @@ const nextConfig = {
     NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
   },
 
-  // Custom headers for security
   async headers() {
     return [
       {
         source: "/(.*)",
         headers: [
-          // Prevent MIME sniffing
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          // Block clickjacking
-          { key: "X-Frame-Options", value: "DENY" },
-          // Reduce referrer leakage
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          // Force HTTPS for 1 year (enable once fully on HTTPS)
-          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
-          // Disable browser features we don't use
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          // Content Security Policy — restricts where scripts/styles/media can load from
+          { key: "X-Content-Type-Options",  value: "nosniff" },
+          { key: "X-Frame-Options",          value: "DENY" },
+          { key: "Referrer-Policy",          value: "strict-origin-when-cross-origin" },
+          // preload makes the domain eligible for browser HSTS preload lists
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          { key: "Permissions-Policy",        value: "camera=(), microphone=(), geolocation=()" },
+          // Prevent this page from being embedded by other origins (defense-in-depth over X-Frame-Options)
+          { key: "Cross-Origin-Opener-Policy",   value: "same-origin" },
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // Scripts: self + inline (Next.js needs this) + Paystack
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co https://checkout.paystack.com",
-              // Styles: self + inline (Tailwind inlines styles)
+              // 'unsafe-inline' is required for Next.js __NEXT_DATA__ scripts and Tailwind.
+              // 'unsafe-eval' has been removed — it is not needed in production builds
+              // and opens eval()-based XSS vectors.
+              "script-src 'self' 'unsafe-inline' https://js.paystack.co https://checkout.paystack.com",
               "style-src 'self' 'unsafe-inline'",
-              // Images: self + S3 + Cloudinary + data URIs (canvas toDataURL)
               "img-src 'self' data: blob: https://*.amazonaws.com https://res.cloudinary.com",
-              // Fonts: self
               "font-src 'self'",
-              // Connect (fetch/XHR): self + Paystack + Cognito + our API
-              "connect-src 'self' https://api.paystack.co https://cognito-idp.us-east-1.amazonaws.com https://*.auth.us-east-1.amazoncognito.com",
-              // Frames: Paystack checkout uses an iframe
+              // fal.ai WebSocket endpoint for AI image generation
+              "connect-src 'self' https://api.paystack.co https://cognito-idp.us-east-1.amazonaws.com https://*.auth.us-east-1.amazoncognito.com https://fal.run wss://fal.run",
               "frame-src https://checkout.paystack.com",
-              // Block object/embed
               "object-src 'none'",
-              // Upgrade insecure requests in production
+              "base-uri 'self'",
+              "form-action 'self'",
               "upgrade-insecure-requests",
             ].join("; "),
           },
         ],
       },
-      // API routes: allow cross-origin from admin app only
+      // Webhook endpoint must never be cached — Paystack retries need fresh handling
       {
-        source: "/api/:path*",
+        source: "/api/paystack/webhook",
         headers: [
-          {
-            key:   "Access-Control-Allow-Origin",
-            value: process.env.ADMIN_APP_URL ?? "https://admin.vintagegallery.com",
-          },
-          { key: "Access-Control-Allow-Methods", value: "GET,POST,PATCH,DELETE,OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization,Content-Type" },
+          { key: "Cache-Control", value: "no-store" },
         ],
       },
     ];
+    // NOTE: CORS for /api/admin/* is handled dynamically in middleware.ts,
+    // NOT here. Static next.config.js headers cannot vary per-request origin.
   },
 };
 

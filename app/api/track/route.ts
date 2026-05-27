@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 // Public order tracking endpoint — no auth required.
 // Requires orderNumber + (email OR phone) to prevent enumeration.
@@ -8,6 +9,18 @@ import { prisma } from "@/lib/db";
 // GET /api/track?orderNumber=1&phone=0241234567
 
 export async function GET(req: NextRequest) {
+  // 30 lookups per IP per minute — prevents order number enumeration
+  const rl = rateLimit(`track:${clientIp(req)}`, 30, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment and try again." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    );
+  }
+
   const raw         = req.nextUrl.searchParams.get("orderNumber") ?? "";
   const emailParam  = (req.nextUrl.searchParams.get("email")  ?? "").trim().toLowerCase();
   const phoneParam  = (req.nextUrl.searchParams.get("phone")  ?? "").trim();

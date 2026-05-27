@@ -1,0 +1,84 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - master   # → production
+      - staging  # → staging
+
+# Only one deployment per branch at a time.
+# A new push cancels the in-flight deploy on that branch.
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy (${{ github.ref_name == 'master' && 'production' || 'staging' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install admin-app dependencies
+        run: cd admin-app && npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      # ── Deploy ──────────────────────────────────────────────────────────────
+      # main → production stage, any other branch → staging stage
+      - name: Deploy to AWS
+        run: npx sst deploy --stage ${{ github.ref_name == 'master' && 'production' || 'staging' }}
+        env:
+          # ── AWS credentials ─────────────────────────────────────────────────
+          # Create a dedicated IAM deploy user in AWS console with these policies:
+          #   - AWSLambdaFullAccess, AmazonS3FullAccess, CloudFrontFullAccess
+          #   - AmazonAPIGatewayAdministrator, IAMFullAccess
+          #   - AmazonRoute53FullAccess, AWSCertificateManagerFullAccess
+          # Then add its access key to GitHub → Settings → Secrets and variables → Actions
+          AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION:    us-east-1
+
+          # ── Domains (set in GitHub Variables, not Secrets — these are not sensitive) ─
+          STORE_DOMAIN: ${{ vars.STORE_DOMAIN }}
+          ADMIN_DOMAIN: ${{ vars.ADMIN_DOMAIN }}
+
+          # ── Database ─────────────────────────────────────────────────────────
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+          # ── Cognito (public IDs — can live in Variables) ─────────────────────
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ vars.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
+          NEXT_PUBLIC_COGNITO_CLIENT_ID:    ${{ vars.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
+
+          # ── Paystack ─────────────────────────────────────────────────────────
+          PAYSTACK_SECRET_KEY:             ${{ secrets.PAYSTACK_SECRET_KEY }}
+          NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY }}
+
+          # ── Email + SMS ───────────────────────────────────────────────────────
+          GMAIL_USER:         ${{ vars.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          ADMIN_PHONE:        ${{ vars.ADMIN_PHONE }}
+
+          # ── Admin config ──────────────────────────────────────────────────────
+          ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS }}
+
+          # ── AWS services ──────────────────────────────────────────────────────
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_REGION: ${{ vars.S3_REGION }}
+
+          # ── External APIs ─────────────────────────────────────────────────────
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          FAL_KEY:             ${{ secrets.FAL_KEY }}

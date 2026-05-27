@@ -37,17 +37,37 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
-  // No rewrites needed — the admin app calls the Amplify main store API
-  // directly from the browser. The main store's middleware.ts adds CORS
-  // headers for the admin app's Vercel origin on /api/admin/* routes.
   async headers() {
     return [
       {
         source: "/(.*)",
         headers: [
-          { key: "X-Content-Type-Options",  value: "nosniff" },
-          { key: "X-Frame-Options",          value: "DENY"   },
-          { key: "Referrer-Policy",          value: "strict-origin-when-cross-origin" },
+          { key: "X-Content-Type-Options",   value: "nosniff" },
+          { key: "X-Frame-Options",           value: "DENY" },
+          { key: "Referrer-Policy",           value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          { key: "Permissions-Policy",        value: "camera=(), microphone=(), geolocation=()" },
+          { key: "Cross-Origin-Opener-Policy",   value: "same-origin" },
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              // Admin app: no Paystack scripts — no payment processing here
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://*.amazonaws.com https://res.cloudinary.com",
+              "font-src 'self'",
+              // connect-src must include the main store API origin for admin API calls,
+              // and Cognito for auth. NEXT_PUBLIC_API_URL is the main store's domain.
+              `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL ?? ""} https://cognito-idp.us-east-1.amazonaws.com https://*.auth.us-east-1.amazoncognito.com`,
+              "frame-src 'none'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "upgrade-insecure-requests",
+            ].join("; "),
+          },
         ],
       },
     ];
