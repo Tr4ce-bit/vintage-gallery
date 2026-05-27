@@ -37,10 +37,28 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      # ── Debug — confirm secrets are actually being injected ──────────────────
+      # Reports the LENGTH of each secret, never the value. Lengths should be:
+      #   AWS_DEPLOY_ACCESS_KEY_ID    = 20 (AKIA...)
+      #   AWS_DEPLOY_SECRET_ACCESS_KEY = 40
+      # If length is 0, the secret is missing or misnamed in GitHub.
+      - name: Debug — verify secret presence
+        run: |
+          if [ -z "$KEY_ID" ]; then
+            echo "::error::AWS_DEPLOY_ACCESS_KEY_ID is EMPTY — secret not found in GitHub. Check Settings → Secrets and variables → Actions → Secrets tab"
+            exit 1
+          fi
+          if [ -z "$SECRET" ]; then
+            echo "::error::AWS_DEPLOY_SECRET_ACCESS_KEY is EMPTY — secret not found in GitHub. Check Settings → Secrets and variables → Actions → Secrets tab"
+            exit 1
+          fi
+          echo "AWS_DEPLOY_ACCESS_KEY_ID length: ${#KEY_ID} (expected 20)"
+          echo "AWS_DEPLOY_SECRET_ACCESS_KEY length: ${#SECRET} (expected 40)"
+        env:
+          KEY_ID: ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
+          SECRET: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
+
       # ── Configure AWS credentials ────────────────────────────────────────────
-      # Uses the official AWS action — validates credentials by calling STS
-      # before any deploy step runs. Fails fast with a clear error if the
-      # GitHub Secrets are missing, empty, or invalid.
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
