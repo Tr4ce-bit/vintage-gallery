@@ -9,7 +9,10 @@ import { NextResponse } from "next/server";
 import { prisma }       from "@/lib/db";
 import { getAccraWeather } from "@/lib/weather";
 
-export const revalidate = 600; // edge cache 10 min
+// Always read current settings from the DB so admin price changes show
+// in the store immediately. This is a tiny 4-row query; weather is still
+// cached 15 min inside getAccraWeather(), so no external API hammering.
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
