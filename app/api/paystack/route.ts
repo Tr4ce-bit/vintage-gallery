@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-server";
 import { isValidEmail, isValidPhone } from "@/lib/validation";
 import { generateOrderId } from "@/lib/order-id";
-import { getAccraWeather } from "@/lib/weather";
+import { resolveRain } from "@/lib/delivery";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
@@ -20,6 +20,7 @@ async function resolveDeliveryFee(deliveryType: "standard" | "sameday" = "standa
             "delivery_sameday",
             "delivery_sameday_rain_surcharge",
             "delivery_rain_enabled",
+            "delivery_rain_mode",
           ],
         },
       },
@@ -28,14 +29,11 @@ async function resolveDeliveryFee(deliveryType: "standard" | "sameday" = "standa
     for (const r of rows) cfg[r.key] = r.value;
 
     if (deliveryType === "sameday") {
-      const base         = Number(cfg.delivery_sameday                ?? 50);
-      const surcharge    = Number(cfg.delivery_sameday_rain_surcharge ?? 20);
-      const rainEnabled  = cfg.delivery_rain_enabled !== "false";
-      if (rainEnabled) {
-        const weather = await getAccraWeather();
-        return weather.isRaining ? base + surcharge : base;
-      }
-      return base;
+      const base      = Number(cfg.delivery_sameday                ?? 50);
+      const surcharge = Number(cfg.delivery_sameday_rain_surcharge ?? 20);
+      // Same resolver the display endpoint uses — charge matches what's shown.
+      const rain = await resolveRain(cfg);
+      return rain.isRaining ? base + surcharge : base;
     }
 
     return Number(cfg.delivery_standard ?? 30);
