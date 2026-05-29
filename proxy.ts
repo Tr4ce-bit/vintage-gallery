@@ -1,44 +1,57 @@
-// ⚠️  THIS FILE IS NOT ACTIVE — Next.js only loads middleware from `middleware.ts`.
-// This file was incorrectly named and was never executed. It has been superseded
-// by middleware.ts at the project root, which fixes the CORS logic and uses the
-// correct filename. This file can be safely deleted.
-//
-// DO NOT rename this back to middleware.ts — that would create a duplicate.
-
 import { NextRequest, NextResponse } from "next/server";
 
+// Next.js 16 proxy (formerly "middleware"). Runs on every matched request.
+//
+// ADMIN_APP_URL must be set in production. If unset, cross-origin requests
+// to /api/admin/* are rejected (fail-closed). Same-origin and server-to-server
+// requests pass through; requireAdmin() JWT check is the authority there.
 const ADMIN_ORIGIN = process.env.ADMIN_APP_URL ?? "";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization,Content-Type",
-  "Access-Control-Max-Age":       "86400",
-};
+const CORS_ALLOW_METHODS = "GET,POST,PATCH,DELETE,OPTIONS";
+const CORS_ALLOW_HEADERS = "Authorization,Content-Type";
+const CORS_MAX_AGE = "86400";
 
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/api/admin")) {
-    const origin  = req.headers.get("origin") ?? "";
-    const allowed = !origin || !ADMIN_ORIGIN || origin === ADMIN_ORIGIN;
+    const origin = req.headers.get("origin");
+
+    // No Origin header = same-origin browser request or server-to-server call.
+    // Let the route handler's requireAdmin() JWT check be the authority.
+    if (!origin) return NextResponse.next();
+
+    // ADMIN_APP_URL not configured — block all cross-origin requests.
+    // Prevents a misconfigured deploy from silently opening the admin API.
+    if (!ADMIN_ORIGIN) {
+      return new NextResponse(null, { status: 403 });
+    }
+
+    // Origin mismatch — reject unknown cross-origin callers.
+    if (origin !== ADMIN_ORIGIN) {
+      return new NextResponse(null, { status: 403 });
+    }
 
     // CORS preflight
     if (req.method === "OPTIONS") {
       return new NextResponse(null, {
-        status:  allowed ? 204 : 403,
-        headers: allowed
-          ? { "Access-Control-Allow-Origin": ADMIN_ORIGIN || "*", ...CORS_HEADERS }
-          : {},
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin":  ADMIN_ORIGIN,
+          "Access-Control-Allow-Methods": CORS_ALLOW_METHODS,
+          "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
+          "Access-Control-Max-Age":       CORS_MAX_AGE,
+          "Vary":                         "Origin",
+        },
       });
     }
 
-    // Attach CORS headers to the actual response
+    // Actual cross-origin request — attach CORS headers to the response.
     const res = NextResponse.next();
-    if (allowed && ADMIN_ORIGIN) {
-      res.headers.set("Access-Control-Allow-Origin",  ADMIN_ORIGIN);
-      res.headers.set("Access-Control-Allow-Methods", CORS_HEADERS["Access-Control-Allow-Methods"]);
-      res.headers.set("Access-Control-Allow-Headers", CORS_HEADERS["Access-Control-Allow-Headers"]);
-    }
+    res.headers.set("Access-Control-Allow-Origin",  ADMIN_ORIGIN);
+    res.headers.set("Access-Control-Allow-Methods", CORS_ALLOW_METHODS);
+    res.headers.set("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS);
+    res.headers.set("Vary", "Origin");
     return res;
   }
 
