@@ -110,5 +110,5 @@ jobs:
           S3_REGION: ${{ vars.S3_REGION }}
 
           # ── External APIs ─────────────────────────────────────────────────────
-          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
-          FAL_KEY:             ${{ secrets.FAL_KEY }}
+          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+          FAL_KEY:         ${{ secrets.FAL_KEY }}

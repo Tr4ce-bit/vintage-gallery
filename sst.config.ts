@@ -146,7 +146,7 @@ export default $config({
         ADMIN_APP_URL:       adminUrl,
         NEXT_PUBLIC_APP_URL: storeUrl,
 
-        OPENWEATHER_API_KEY: process.env.OPENWEATHER_API_KEY ?? "",
+        WEATHER_API_KEY: process.env.WEATHER_API_KEY ?? "",
         FAL_KEY:             process.env.FAL_KEY             ?? "",
       },
     });

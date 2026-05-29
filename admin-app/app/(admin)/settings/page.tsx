@@ -245,7 +245,7 @@ export default function SettingsPage() {
               })}
             </div>
             <p className="font-sans text-[10px] text-zinc-600 mt-1.5">
-              Auto uses OpenWeatherMap (needs OPENWEATHER_API_KEY). On/Off override the weather manually.
+              Auto uses OpenWeatherMap (needs WEATHER_API_KEY). On/Off override the weather manually.
             </p>
           </div>
 
@@ -325,7 +325,7 @@ export default function SettingsPage() {
               </div>
             ) : (
               <p className="font-sans text-xs text-zinc-600">
-                {wxLoading ? "Loading weather…" : "Weather unavailable (check OPENWEATHER_API_KEY env var)"}
+                {wxLoading ? "Loading weather…" : "Weather unavailable (check WEATHER_API_KEY env var)"}
               </p>
             )}
           </div>
