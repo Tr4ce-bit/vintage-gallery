@@ -177,6 +177,14 @@ export default $config({
 
         ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? "",
 
+        // Client-side admin gate in admin-app/app/(admin)/layout.tsx reads this.
+        // Baked into the JS bundle at build time — must be set during `next build`.
+        // Without it the admin allowlist is empty and EVERY user is denied.
+        NEXT_PUBLIC_ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? "",
+
+        // "View Store" link in the admin sidebar
+        NEXT_PUBLIC_STORE_URL: storeUrl,
+
         // The admin app's browser code fetches /api/admin/* on the main store.
         // Also used in the admin CSP connect-src header (admin-app/next.config.js).
         NEXT_PUBLIC_API_URL: storeUrl,

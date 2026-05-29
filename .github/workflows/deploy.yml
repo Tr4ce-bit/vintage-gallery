@@ -80,6 +80,12 @@ jobs:
           STORE_DOMAIN: ${{ vars.STORE_DOMAIN }}
           ADMIN_DOMAIN: ${{ vars.ADMIN_DOMAIN }}
 
+          # ── Cross-app URLs (CloudFront URLs in staging; real domains take over in prod) ─
+          # Store URL: used for Paystack callback, email links, and as the admin app's API base.
+          NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+          # Admin URL: store's proxy.ts CORS allowlist must match the admin app's origin.
+          ADMIN_APP_URL: ${{ vars.ADMIN_APP_URL }}
+
           # ── Database ─────────────────────────────────────────────────────────
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
