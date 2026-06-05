@@ -5,6 +5,7 @@ import { isValidEmail, isValidPhone } from "@/lib/validation";
 import { generateOrderId } from "@/lib/order-id";
 import { resolveRain } from "@/lib/delivery";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { fetchWithTimeout, FetchTimeoutError } from "@/lib/fetch-with-timeout";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_BASE   = "https://api.paystack.co";
@@ -222,14 +223,29 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const psRes = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
-      method: "POST",
-      headers: {
-        Authorization:  `Bearer ${PAYSTACK_SECRET}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(paystackPayload),
-    });
+    // 10s timeout: payment init can be slow but we never want to hold a
+    // customer's spinner for the full Lambda 29s if Paystack is degraded.
+    let psRes: Response;
+    try {
+      psRes = await fetchWithTimeout(`${PAYSTACK_BASE}/transaction/initialize`, {
+        method: "POST",
+        headers: {
+          Authorization:  `Bearer ${PAYSTACK_SECRET}`,
+          "Content-Type": "application/json",
+        },
+        body:      JSON.stringify(paystackPayload),
+        timeoutMs: 10_000,
+      });
+    } catch (err) {
+      if (err instanceof FetchTimeoutError) {
+        console.warn("paystack init timed out", { url: err.target });
+        return NextResponse.json(
+          { error: "Payment service is slow right now. Please try again in a moment." },
+          { status: 503 },
+        );
+      }
+      throw err;
+    }
 
     const psData = await psRes.json();
 
@@ -329,9 +345,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid reference" }, { status: 400 });
     }
 
-    const res = await fetch(
+    // 5s timeout: the success page polls this; failing fast lets the UI retry
+    // rather than locking up for 29s on a slow Paystack response.
+    const res = await fetchWithTimeout(
       `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
-      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } },
+      {
+        headers:   { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+        timeoutMs: 5_000,
+      },
     );
 
     const data = await res.json();

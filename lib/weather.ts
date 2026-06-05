@@ -7,6 +7,8 @@
  * Free tier: 1,000,000 calls/month — with 15-min caching we use ~3,000/month.
  */
 
+import { fetchWithTimeout, FetchTimeoutError } from "./fetch-with-timeout";
+
 const WEATHER_KEY  = process.env.WEATHER_API_KEY;
 const ACCRA_QUERY  = "5.6037,-0.1870"; // "lat,lon" for Accra
 
@@ -37,8 +39,11 @@ export async function getAccraWeather(): Promise<WeatherSnapshot> {
       `https://api.weatherapi.com/v1/current.json` +
       `?key=${WEATHER_KEY}&q=${ACCRA_QUERY}&aqi=no`;
 
-    const res = await fetch(url, {
+    // 3s timeout: weather is non-critical; if it's slow we'd rather use the
+    // fallback than make every checkout page load wait.
+    const res = await fetchWithTimeout(url, {
       next: { revalidate: 900 }, // 15-minute cache
+      timeoutMs: 3000,
     });
 
     if (!res.ok) return FALLBACK;
@@ -59,7 +64,10 @@ export async function getAccraWeather(): Promise<WeatherSnapshot> {
       icon:        "",
       temp:        Math.round(cur.temp_c ?? 30),
     };
-  } catch {
+  } catch (err) {
+    if (err instanceof FetchTimeoutError) {
+      console.warn("weather: WeatherAPI timed out, using fallback");
+    }
     return FALLBACK;
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { notifyAdminNewOrder } from "@/lib/notify";
+import { fetchWithTimeout, FetchTimeoutError } from "@/lib/fetch-with-timeout";
 
 // Register this URL in Paystack Dashboard → Settings → Webhooks:
 // https://yourdomain.com/api/paystack/webhook
@@ -53,11 +54,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    // 3. Verify with Paystack before trusting the webhook
+    // 3. Verify with Paystack before trusting the webhook.
+    //    5s timeout: webhooks must respond fast; Paystack retries failed deliveries,
+    //    so it's safe to bail on a slow verify and let the next retry succeed.
     try {
-      const verify = await fetch(
+      const verify = await fetchWithTimeout(
         `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
-        { headers: { Authorization: `Bearer ${secret}` } },
+        {
+          headers:   { Authorization: `Bearer ${secret}` },
+          timeoutMs: 5_000,
+        },
       );
       const vData = await verify.json();
       if (!verify.ok || vData.data?.status !== "success") {
@@ -65,7 +71,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true });
       }
     } catch (err) {
-      console.error(`Webhook: error verifying ${reference}:`, err);
+      if (err instanceof FetchTimeoutError) {
+        console.warn(`Webhook: Paystack verify timed out for ${reference}; Paystack will retry`);
+      } else {
+        console.error(`Webhook: error verifying ${reference}:`, err);
+      }
+      // Ack with 200 to keep current behaviour (Paystack won't retry).
+      // The order stays PENDING; a follow-up reconciliation job or manual
+      // admin action can resolve it. Changing this to 5xx would make Paystack
+      // retry — worth considering separately as a reliability improvement.
       return NextResponse.json({ received: true });
     }
 
