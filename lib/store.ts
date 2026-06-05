@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { trackEvent } from "./events";
 
 export interface CartItem {
   productId: string;
@@ -48,14 +49,27 @@ export const useCartStore = create<CartStore>()(
             items: [...state.items, { ...item, quantity: item.quantity ?? 1 }],
           }));
         }
+        // Custom-studio products use synthetic ids prefixed with "custom-";
+        // send null for productId so analytics doesn't try to join them.
+        trackEvent({
+          eventType: "CART_ADD",
+          productId: productId.startsWith("custom-") ? null : productId,
+          metadata:  { size, color: item.color, quantity: item.quantity ?? 1 },
+        });
       },
 
-      removeItem: (productId, size) =>
+      removeItem: (productId, size) => {
         set((state) => ({
           items: state.items.filter(
             (i) => !(i.productId === productId && i.size === size)
           ),
-        })),
+        }));
+        trackEvent({
+          eventType: "CART_REMOVE",
+          productId: productId.startsWith("custom-") ? null : productId,
+          metadata:  { size },
+        });
+      },
 
       updateQuantity: (productId, size, qty) => {
         if (qty <= 0) {

@@ -202,6 +202,34 @@ model Settings {
 }
 
 // ─────────────────────────────────────────────
+// ANALYTICS  (anonymous product interaction events)
+// ─────────────────────────────────────────────
+enum EventType {
+  VIEW              // product page mounted
+  TIME_SPENT        // product page unmounted with duration
+  WISHLIST_ADD
+  WISHLIST_REMOVE
+  CART_ADD
+  CART_REMOVE
+}
+
+model ProductEvent {
+  id          String    @id @default(cuid())
+  productId   String?                    // null for custom-studio items
+  eventType   EventType
+  sessionId   String                     // anonymous client-side UUID, persists per browser
+  durationSec Int?                       // only set for TIME_SPENT
+  metadata    Json?                      // optional: size, color, source page
+  createdAt   DateTime  @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([productId, eventType, createdAt])
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("product_events")
+}
+
+// ─────────────────────────────────────────────
 // SUBSCRIBERS  (newsletter / mailing list)
 // ─────────────────────────────────────────────
 model Subscriber {

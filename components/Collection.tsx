@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PRODUCTS, type Product } from "@/lib/products";
 import { useCartStore } from "@/lib/store";
+import { trackEvent } from "@/lib/events";
 
 // products prop is optional — falls back to hardcoded PRODUCTS if not provided
 
@@ -109,7 +110,17 @@ function PhotoCard({ p, i, featured }: { p: Product; i: number; featured?: boole
 
       {/* Wishlist */}
       <button
-        onClick={(e) => { e.preventDefault(); setLiked((l) => !l); }}
+        onClick={(e) => {
+          e.preventDefault();
+          setLiked((l) => {
+            const next = !l;
+            trackEvent({
+              eventType: next ? "WISHLIST_ADD" : "WISHLIST_REMOVE",
+              productId: p.id,
+            });
+            return next;
+          });
+        }}
         className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
       >
         <Heart size={12} className={liked ? "fill-white text-white" : "text-white/70"} />

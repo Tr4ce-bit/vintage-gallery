@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, ArrowLeft, Check, ChevronDown, Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCartStore } from "@/lib/store";
+import { trackEvent } from "@/lib/events";
 import Footer from "@/components/Footer";
 import type { Product } from "@/lib/products";
 
@@ -44,13 +45,35 @@ export default function ProductClient({ product, related }: Props) {
     return null;
   };
 
+  // VIEW event on mount; TIME_SPENT (via sendBeacon) when the page is left.
+  useEffect(() => {
+    trackEvent({ eventType: "VIEW", productId: product.id });
+    const start = Date.now();
+    return () => {
+      const durationSec = Math.round((Date.now() - start) / 1000);
+      if (durationSec > 0 && durationSec < 7200) {
+        trackEvent(
+          { eventType: "TIME_SPENT", productId: product.id, durationSec },
+          { beacon: true },
+        );
+      }
+    };
+  }, [product.id]);
+
   const handleWishlist = () => {
     if (!isSignedIn) {
       setAuthToast(true);
       setTimeout(() => setAuthToast(false), 3000);
       return;
     }
-    setWishlisted((w) => !w);
+    setWishlisted((w) => {
+      const next = !w;
+      trackEvent({
+        eventType: next ? "WISHLIST_ADD" : "WISHLIST_REMOVE",
+        productId: product.id,
+      });
+      return next;
+    });
   };
 
   const handleAddToCart = () => {

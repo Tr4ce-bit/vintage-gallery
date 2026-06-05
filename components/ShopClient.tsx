@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCartStore } from "@/lib/store";
+import { trackEvent } from "@/lib/events";
 import Footer from "@/components/Footer";
 import type { Product } from "@/lib/products";
 
@@ -60,7 +61,14 @@ export default function ShopClient({ products }: { products: Product[] }) {
       setTimeout(() => setAuthToast(false), 3000);
       return;
     }
-    setLiked((l) => ({ ...l, [id]: !l[id] }));
+    setLiked((l) => {
+      const next = !l[id];
+      trackEvent({
+        eventType: next ? "WISHLIST_ADD" : "WISHLIST_REMOVE",
+        productId: id,
+      });
+      return { ...l, [id]: next };
+    });
   };
 
   return (
