@@ -39,6 +39,14 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      # Sync schema.prisma -> RDS before deploy. Non-destructive changes only;
+      # if a destructive change is detected (drop column / change type), this
+      # step fails the deploy on purpose — safer than --accept-data-loss.
+      - name: Sync database schema (prisma db push)
+        run: npx prisma db push --skip-generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       # ── Debug — confirm secrets are actually being injected ──────────────────
       # Reports the LENGTH of each secret, never the value. Lengths should be:
       #   AWS_DEPLOY_ACCESS_KEY_ID    = 20 (AKIA...)

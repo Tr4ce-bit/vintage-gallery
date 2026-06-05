@@ -202,6 +202,22 @@ model Settings {
 }
 
 // ─────────────────────────────────────────────
+// SUBSCRIBERS  (newsletter / mailing list)
+// ─────────────────────────────────────────────
+model Subscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  source       String?                  // e.g. "newsletter", "checkout", "footer"
+  unsubscribed Boolean  @default(false) // soft-delete: keep history but exclude from sends
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([unsubscribed])
+  @@map("subscribers")
+}
+
+// ─────────────────────────────────────────────
 // STUDIO DESIGNS  (uploadable graphics for the custom studio)
 // ─────────────────────────────────────────────
 model StudioDesign {
