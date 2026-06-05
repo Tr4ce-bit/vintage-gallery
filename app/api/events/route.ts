@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
@@ -94,15 +95,17 @@ function normalise(e: InboundEvent) {
     eventType:   type as EventTypeStr,
     sessionId,
     durationSec,
-    metadata:    metadata ?? undefined,
+    // Prisma's Json field expects InputJsonValue; we've already round-tripped
+    // through JSON.stringify/parse so the value is guaranteed serialisable.
+    metadata:    metadata ?? Prisma.JsonNull,
   };
 }
 
-function truncateJson(obj: unknown): Record<string, unknown> | null {
+function truncateJson(obj: unknown): Prisma.InputJsonValue | null {
   try {
     const s = JSON.stringify(obj);
     if (s.length > 1024) return null;
-    return JSON.parse(s);
+    return JSON.parse(s) as Prisma.InputJsonValue;
   } catch {
     return null;
   }
