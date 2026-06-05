@@ -6,29 +6,6 @@ import Image from "next/image";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
-// ─── Marquee ──────────────────────────────────────────────────────────────────
-
-const MARQUEE = [
-  "Vintage Gallery", "·", "Premium Streetwear", "·",
-  "Ghana's Finest",  "·", "Limited Drops",       "·",
-  "SS '25",          "·", "Accra",               "·",
-];
-
-function Marquee() {
-  const d = [...MARQUEE, ...MARQUEE];
-  return (
-    <div className="overflow-hidden bg-zinc-950 border-y border-zinc-800 py-3.5">
-      <div className="animate-marquee flex whitespace-nowrap gap-10">
-        {d.map((t, i) => (
-          <span key={i} className={`font-sans text-[10px] tracking-[0.4em] uppercase ${t === "·" ? "text-zinc-700" : "text-zinc-400 font-light"}`}>
-            {t}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 const STATS = [
@@ -91,19 +68,6 @@ export default function Hero() {
         {/* Text — pinned left */}
         <motion.div style={{ y: textY, opacity }} className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-10">
           <div className="max-w-xl">
-
-            {/* Season pill */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.6 }}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 mb-10"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse" />
-              <span className="font-sans text-[10px] tracking-[0.3em] uppercase text-white/50 font-light">
-                New Drop — SS&apos;25
-              </span>
-            </motion.div>
 
             {/* Headline — big, confident, editorial */}
             <motion.h1
@@ -169,7 +133,6 @@ export default function Hero() {
         </motion.div>
       </div>
 
-      <Marquee />
       <Stats />
     </section>
   );
