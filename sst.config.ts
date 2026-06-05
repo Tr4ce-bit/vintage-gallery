@@ -108,6 +108,9 @@ export default $config({
         timeout:      "29 seconds",
         // arm64 Graviton: ~20% faster and cheaper. Prisma schema has matching binary target.
         architecture: "arm64",
+        // Node 20 hit EOL on 2026-04-30 (no patches); updates blocked from 2027-03-03.
+        // Node 22 is the current LTS, supported until April 2027.
+        runtime:      "nodejs22.x",
       },
 
       // Grant the Lambda role direct S3 + SNS access.
