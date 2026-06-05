@@ -25,7 +25,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Matches the Lambda runtime (nodejs22.x) set in sst.config.ts.
+          # Node 20 hit EOL on 2026-04-30.
+          node-version: "22"
           cache: "npm"
 
       - name: Install root dependencies

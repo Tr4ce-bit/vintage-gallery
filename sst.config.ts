@@ -160,6 +160,9 @@ export default $config({
         memory:       "512 MB",
         timeout:      "29 seconds",
         architecture: "arm64",
+        // Node 20 hit EOL on 2026-04-30 (no patches); updates blocked from 2027-03-03.
+        // Node 22 is the current LTS, supported until April 2027.
+        runtime:      "nodejs22.x",
       },
 
       permissions: [
