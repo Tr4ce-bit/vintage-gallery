@@ -90,7 +90,7 @@ export default function PaymentsPage() {
     <div className="px-4 md:px-8 py-6 md:py-8">
       {/* Header */}
       <div className="mb-6">
-        <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Money</p>
+        <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-500 dark:text-zinc-300 font-medium mb-1">Money</p>
         <h1 className="font-serif text-zinc-900 dark:text-zinc-50" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>
           Payments
         </h1>
@@ -245,7 +245,7 @@ function Kpi({ icon, label, value }: { icon: React.ReactNode; label: string; val
     <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl p-4">
       <div className="flex items-center gap-2 text-zinc-400 dark:text-zinc-500">
         {icon}
-        <span className="font-sans text-[9px] tracking-[0.3em] uppercase font-light">{label}</span>
+        <span className="font-sans text-[9px] tracking-[0.3em] uppercase font-medium text-zinc-500 dark:text-zinc-300">{label}</span>
       </div>
       <p className="mt-2 font-serif text-xl text-zinc-900 dark:text-zinc-50" style={{ fontWeight: 300 }}>{value}</p>
     </div>

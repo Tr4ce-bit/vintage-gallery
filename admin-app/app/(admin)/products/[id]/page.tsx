@@ -79,7 +79,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       <Link href="/products" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-300 dark:text-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors mb-8">
         <ArrowLeft size={12} /> Products
       </Link>
-      <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Catalog</p>
+      <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-500 dark:text-zinc-300 font-medium mb-1">Catalog</p>
       <h1 className="font-serif text-zinc-900 dark:text-zinc-50 mb-8" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>Edit Product</h1>
       <AdminProductForm mode="edit" initial={initial!} />
     </div>

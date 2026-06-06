@@ -111,7 +111,7 @@ export default function SubscribersPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Management</p>
+          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-500 dark:text-zinc-300 font-medium mb-1">Management</p>
           <h1 className="font-serif text-zinc-900 dark:text-zinc-50" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>
             Subscribers
           </h1>

@@ -4,7 +4,8 @@
  * <SkeletonRow /> for table rows, <SkeletonKpi /> for the dashboard tiles.
  */
 
-const BASE = "animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-700/40";
+// Darker shade so the pulse is actually visible on white admin surfaces.
+const BASE = "animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700/70";
 
 export function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`${BASE} ${className}`} />;

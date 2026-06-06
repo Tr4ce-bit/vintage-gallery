@@ -5,7 +5,9 @@
  * Uses Tailwind's `animate-pulse` and zinc shades that work in light + dark.
  */
 
-const BASE = "animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800/60";
+// zinc-200 on white is visibly darker than the old zinc-100 (#e4e4e7 vs #f4f4f5),
+// so the pulse actually reads as a loading state instead of fading into the page.
+const BASE = "animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700/70";
 
 export function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`${BASE} ${className}`} />;
