@@ -168,7 +168,8 @@ export default function Collection({ products: propProducts }: { products?: Prod
         </div>
 
         {/* Product grid — real photos only */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {/* 2-col on mobile (was 1) for two-up product browsing on phones. */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {products.map((p, i) => (
             <PhotoCard key={p.id} p={p} i={i} featured={p.featured && products.length > 2} />
           ))}

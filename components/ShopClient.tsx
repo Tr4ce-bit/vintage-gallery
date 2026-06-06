@@ -114,7 +114,9 @@ export default function ShopClient({ products }: { products: Product[] }) {
           </div>
 
           {/* Grid */}
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* 2-col on mobile (was 1) so customers see two products at a glance.
+              Smaller gap on mobile so the cards don't get crushed. */}
+          <motion.div layout className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             <AnimatePresence mode="popLayout">
               {filtered.map((p) => (
                 <motion.article
