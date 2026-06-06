@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
+import { SkeletonRow } from "@/components/Skeleton";
 
 interface Order {
   id: string; orderNumber: string; paystackReference: string; status: string;
@@ -68,9 +69,7 @@ export default function OrdersPage() {
 
       <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
-          </div>
+          <div>{Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={5} />)}</div>
         ) : shown.length === 0 ? (
           <p className="px-6 py-12 font-sans text-sm text-zinc-300 dark:text-zinc-600 text-center">No orders found.</p>
         ) : (

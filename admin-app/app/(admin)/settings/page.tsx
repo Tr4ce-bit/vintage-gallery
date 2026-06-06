@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Save, CloudRain, Truck, Zap, ToggleLeft, ToggleRight, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl }  from "@/lib/api";
+import { Skeleton, SkeletonCard } from "@/components/Skeleton";
 
 interface DeliverySettings {
   delivery_standard:               string;
@@ -107,8 +108,12 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-5 h-5 border-2 border-zinc-700 border-t-white rounded-full animate-spin" />
+      <div className="px-4 md:px-8 py-6 md:py-8 space-y-4 max-w-3xl">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-10 w-48 mb-4" />
+        <SkeletonCard rows={3} />
+        <SkeletonCard rows={4} />
+        <SkeletonCard rows={3} />
       </div>
     );
   }

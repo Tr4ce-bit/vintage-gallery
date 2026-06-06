@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
+import { SkeletonRow } from "@/components/Skeleton";
 
 const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
@@ -100,9 +101,7 @@ export default function ProductsPage() {
 
       <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
-          </div>
+          <div>{Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={5} />)}</div>
         ) : products.length === 0 ? (
           <div className="px-6 py-12 text-center">
             <p className="font-sans text-sm text-zinc-300 dark:text-zinc-600 mb-4">No products yet.</p>

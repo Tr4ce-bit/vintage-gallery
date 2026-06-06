@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/Skeleton";
 
 interface Order {
   id: string;
@@ -68,8 +69,17 @@ export default function OrdersPage() {
 
         <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl overflow-hidden">
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-white border border-zinc-100 rounded-2xl p-5 flex items-center gap-4">
+                  <Skeleton className="h-16 w-16 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3 w-1/3" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              ))}
             </div>
           ) : orders.length === 0 ? (
             <div className="px-6 py-16 text-center">

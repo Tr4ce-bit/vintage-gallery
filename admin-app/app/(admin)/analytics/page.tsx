@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Eye, Heart, ShoppingBag, Users, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
+import { Skeleton, SkeletonKpi } from "@/components/Skeleton";
 
 interface ProductRow {
   productId:       string;
@@ -97,9 +98,26 @@ export default function AnalyticsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
-        </div>
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+            {Array.from({ length: 5 }).map((_, i) => <SkeletonKpi key={i} />)}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl p-5">
+                <Skeleton className="h-3 w-32 mb-4" />
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <div key={j} className="flex items-center gap-3">
+                      <Skeleton className="h-3 flex-1" />
+                      <Skeleton className="h-3 w-12" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       ) : !data ? (
         <p className="text-zinc-400 font-sans text-sm">Could not load analytics.</p>
       ) : (

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { CreditCard, Wallet, BadgeCheck, Clock, XCircle, RotateCcw, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
+import { Skeleton, SkeletonKpi, SkeletonRow } from "@/components/Skeleton";
 
 interface PaymentRow {
   id:                string;
@@ -158,8 +159,13 @@ export default function PaymentsPage() {
       {/* Table */}
       <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
+          <div>
+            <div className="px-4 py-3 flex items-center gap-4 border-b border-zinc-100 dark:border-zinc-700">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <Skeleton key={i} className="h-3 flex-1 max-w-[80px]" />
+              ))}
+            </div>
+            {Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={7} />)}
           </div>
         ) : !data || data.payments.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-2">

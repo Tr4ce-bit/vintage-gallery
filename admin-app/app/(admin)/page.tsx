@@ -5,6 +5,7 @@ import Link from "next/link";
 import { TrendingUp, Clock, CheckCircle2, Package } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
+import { SkeletonKpi, SkeletonRow, Skeleton } from "@/components/Skeleton";
 
 interface Order {
   id: string; orderNumber: string; paystackReference: string; status: string;
@@ -56,8 +57,15 @@ export default function AdminDashboard() {
   const recent         = orders.slice(0, 5);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
+    <div className="px-4 md:px-8 py-6 md:py-8">
+      <Skeleton className="h-10 w-48 mb-6" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        {Array.from({ length: 4 }).map((_, i) => <SkeletonKpi key={i} />)}
+      </div>
+      <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl overflow-hidden">
+        <Skeleton className="h-3 w-32 m-5" />
+        {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} cols={4} />)}
+      </div>
     </div>
   );
 

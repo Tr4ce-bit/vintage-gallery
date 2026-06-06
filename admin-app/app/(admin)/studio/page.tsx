@@ -8,6 +8,7 @@ import {
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
+import { Skeleton, SkeletonRow } from "@/components/Skeleton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -205,8 +206,16 @@ export default function StudioSettingsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-32">
-          <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
+        <div className="space-y-4 max-w-3xl">
+          <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl p-5 space-y-3">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl overflow-hidden">
+            <Skeleton className="h-3 w-32 m-5" />
+            {Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={3} />)}
+          </div>
         </div>
       ) : (
         <div className="max-w-2xl space-y-8">
@@ -393,8 +402,10 @@ export default function StudioSettingsPage() {
               </p>
 
               {designsLoad ? (
-                <div className="flex items-center justify-center h-24">
-                  <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="aspect-square rounded-xl" />
+                  ))}
                 </div>
               ) : designs.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 py-10 text-center">
