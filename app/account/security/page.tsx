@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Shield, Smartphone, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Skeleton } from "@/components/Skeleton";
 import {
   setUpTOTP,
   verifyTOTPSetup,
@@ -90,8 +91,22 @@ export default function SecurityPage() {
 
   if (!isLoaded || !prefLoaded) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
+      <div className="min-h-screen bg-white pt-[60px]">
+        <div className="max-w-2xl mx-auto px-5 md:px-8 py-14 space-y-6">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-10 w-2/3" />
+          <div className="bg-white border border-zinc-100 rounded-2xl p-6 space-y-4">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-5/6" />
+            <Skeleton className="h-11 w-40 rounded-full" />
+          </div>
+          <div className="bg-white border border-zinc-100 rounded-2xl p-6 space-y-4">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+          </div>
+        </div>
       </div>
     );
   }

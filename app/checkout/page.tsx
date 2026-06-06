@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Lock, User, UserPlus, ShoppingBag, CreditCard, S
 import { useCartStore } from "@/lib/store";
 import { useAuth } from "@/hooks/useAuth";
 import Footer from "@/components/Footer";
+import { Skeleton } from "@/components/Skeleton";
 
 type MomoNetwork    = "MTN" | "TELECEL" | "AIRTELTIGO";
 type PaymentMethod  = "momo" | "card" | "bank_transfer";
@@ -413,9 +414,11 @@ export default function CheckoutPage() {
                           <p className={`font-sans text-[10px] mt-0.5 ${deliveryType === "standard" ? "opacity-70" : "text-zinc-400"}`}>
                             2 – 4 business days
                           </p>
-                          <p className="font-sans text-sm font-semibold mt-1.5">
-                            {feesLoading ? "..." : `GH₵ ${fees.standard}`}
-                          </p>
+                          <div className="font-sans text-sm font-semibold mt-1.5">
+                            {feesLoading
+                              ? <Skeleton className="h-4 w-16 inline-block" />
+                              : `GH₵ ${fees.standard}`}
+                          </div>
                         </div>
                       </button>
 
@@ -435,8 +438,10 @@ export default function CheckoutPage() {
                           <p className={`font-sans text-[10px] mt-0.5 ${deliveryType === "sameday" ? "opacity-70" : "text-zinc-400"}`}>
                             Within Accra · Order by 1pm
                           </p>
-                          <p className="font-sans text-sm font-semibold mt-1.5">
-                            {feesLoading ? "..." : `GH₵ ${fees.sameday}`}
+                          <div className="font-sans text-sm font-semibold mt-1.5">
+                            {feesLoading
+                              ? <Skeleton className="h-4 w-16 inline-block" />
+                              : `GH₵ ${fees.sameday}`}
                             {fees.isRaining && !feesLoading && (
                               <span className={`ml-1.5 font-sans text-[9px] font-normal ${
                                 deliveryType === "sameday" ? "opacity-70" : "text-blue-500"
@@ -444,7 +449,7 @@ export default function CheckoutPage() {
                                 incl. +GH₵ {fees.rainSurcharge} rain
                               </span>
                             )}
-                          </p>
+                          </div>
                         </div>
                         {fees.isRaining && !feesLoading && (
                           <CloudRain size={12} className={`shrink-0 self-start mt-1 ${deliveryType === "sameday" ? "opacity-60" : "text-blue-400"}`} />
@@ -718,7 +723,9 @@ export default function CheckoutPage() {
                         </span>
                         <div className="text-right">
                           <span className="font-sans text-sm text-zinc-600 dark:text-zinc-300 font-light">
-                            {feesLoading ? "..." : `GH₵ ${deliveryFee}`}
+                            {feesLoading
+                              ? <Skeleton className="h-4 w-14 inline-block align-middle" />
+                              : `GH₵ ${deliveryFee}`}
                           </span>
                           {fees.isRaining && deliveryType === "sameday" && !feesLoading && (
                             <p className="font-sans text-[9px] text-blue-500 mt-0.5 flex items-center justify-end gap-1">
