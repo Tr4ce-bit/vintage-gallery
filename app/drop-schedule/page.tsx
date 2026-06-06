@@ -21,7 +21,7 @@ const UPCOMING = [
   },
   {
     date:       "Aug 2025",
-    name:       "HOPE Collection SS25 Expansion",
+    name:       "HOPE Collection Expansion",
     desc:       "New colourways and cuts added to the HOPE family.",
     status:     "In Production",
     statusColor:"bg-zinc-100 text-zinc-600",

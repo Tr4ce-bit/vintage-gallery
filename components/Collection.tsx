@@ -143,13 +143,6 @@ export default function Collection({ products: propProducts }: { products?: Prod
         {/* Header */}
         <div ref={hRef} className="flex items-end justify-between mb-12 border-b border-zinc-100 dark:border-zinc-800 pb-8">
           <div>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={hInView ? { opacity: 1 } : {}}
-              className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-3"
-            >
-              SS&apos;25 — Available Now
-            </motion.p>
             <motion.h2
               initial={{ opacity: 0, y: 16 }}
               animate={hInView ? { opacity: 1, y: 0 } : {}}
