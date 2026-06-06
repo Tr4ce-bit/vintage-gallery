@@ -14,14 +14,21 @@ export default function HomeLoading() {
           <Skeleton className="w-full h-full !rounded-none !bg-zinc-900" />
         </div>
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-10">
-          <div className="max-w-xl space-y-6">
-            <Skeleton className="h-14 md:h-16 w-3/4 !bg-zinc-900" />
-            <Skeleton className="h-14 md:h-16 w-1/2 !bg-zinc-900" />
-            <Skeleton className="h-3 w-72 !bg-zinc-900 mt-6" />
-            <Skeleton className="h-3 w-60 !bg-zinc-900" />
-            <div className="flex gap-3 mt-8">
-              <Skeleton className="h-12 w-40 rounded-full !bg-zinc-900" />
+          <div className="max-w-xl">
+            {/* Two huge headline bars — real text uses clamp(3.5rem, 9vw, 7.5rem)
+                = 56px on mobile up to 120px on desktop. */}
+            <Skeleton className="h-14 sm:h-20 md:h-28 lg:h-32 w-2/3 mb-4 !bg-zinc-900" />
+            <Skeleton className="h-14 sm:h-20 md:h-28 lg:h-32 w-2/5 mb-10 !bg-zinc-900" />
+            {/* Sub paragraph — text-base, max-w-sm, wraps to ~3 lines */}
+            <div className="space-y-2 mb-10 max-w-sm">
+              <Skeleton className="h-3 w-full !bg-zinc-900" />
+              <Skeleton className="h-3 w-11/12 !bg-zinc-900" />
+              <Skeleton className="h-3 w-3/4 !bg-zinc-900" />
+            </div>
+            {/* CTAs — two rounded-full pill buttons */}
+            <div className="flex gap-3 flex-wrap">
               <Skeleton className="h-12 w-44 rounded-full !bg-zinc-900" />
+              <Skeleton className="h-12 w-48 rounded-full !bg-zinc-900" />
             </div>
           </div>
         </div>
@@ -34,8 +41,9 @@ export default function HomeLoading() {
             key={i}
             className={`py-9 flex flex-col items-center gap-2 ${i < 3 ? "border-r border-zinc-100 dark:border-zinc-800" : ""} border-b border-zinc-100 dark:border-zinc-800`}
           >
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-2 w-24" />
+            {/* Stat value uses font-serif text-[2.2rem] (~35px) */}
+            <Skeleton className="h-9 w-16" />
+            <Skeleton className="h-2 w-20" />
           </div>
         ))}
       </div>
@@ -44,7 +52,8 @@ export default function HomeLoading() {
       <section className="bg-white dark:bg-zinc-950 py-20 md:py-28 px-5 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-end justify-between mb-12 border-b border-zinc-100 dark:border-zinc-800 pb-8">
-            <Skeleton className="h-12 md:h-16 w-56" />
+            {/* "The Drop." headline uses clamp(2.5rem, 5vw, 4.5rem) — 40px to 72px */}
+            <Skeleton className="h-10 sm:h-14 md:h-16 lg:h-20 w-48 md:w-64" />
             <Skeleton className="h-3 w-20 hidden md:block" />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
