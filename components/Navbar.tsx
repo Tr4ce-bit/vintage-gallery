@@ -79,7 +79,7 @@ export default function Navbar() {
                 className={`font-sans text-[10px] tracking-[0.22em] uppercase font-light transition-colors duration-200 ${
                   onDark
                     ? "text-white/55 hover:text-white"
-                    : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    : "text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                 }`}
               >
                 {link.label}
@@ -96,7 +96,7 @@ export default function Navbar() {
               <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 aria-label="Toggle dark mode"
-                className={`transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}
+                className={`transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"}`}
               >
                 {theme === "dark"
                   ? <Sun size={16} strokeWidth={1.5} />
@@ -105,17 +105,17 @@ export default function Navbar() {
               </button>
             )}
 
-            <Link href="/cart" className={`relative transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}>
+            <Link href="/cart" className={`relative transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"}`}>
               <ShoppingCart size={18} strokeWidth={1.5} />
               {cartCount > 0 && (
-                <span className={`absolute -top-1 -right-1.5 w-[15px] h-[15px] rounded-full text-[7px] font-medium flex items-center justify-center ${onDark ? "bg-white text-zinc-900" : "bg-zinc-900 text-white"}`}>
+                <span className={`absolute -top-1 -right-1.5 w-[15px] h-[15px] rounded-full text-[7px] font-medium flex items-center justify-center ${onDark ? "bg-white text-zinc-900" : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"}`}>
                   {cartCount}
                 </span>
               )}
             </Link>
 
             <button
-              className={`md:hidden transition-colors ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}
+              className={`md:hidden transition-colors ${onDark ? "text-white/55 hover:text-white" : "text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"}`}
               onClick={() => setMenuOpen(o => !o)}
             >
               {menuOpen ? <X size={19} strokeWidth={1.5} /> : <Menu size={19} strokeWidth={1.5} />}
@@ -140,7 +140,7 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
-                  className="font-sans text-[11px] tracking-[0.22em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors font-light"
+                  className="font-sans text-[11px] tracking-[0.22em] uppercase text-zinc-500 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors font-light"
                 >
                   {link.label}
                 </Link>
@@ -148,7 +148,7 @@ export default function Navbar() {
               <Link
                 href="/track"
                 onClick={() => setMenuOpen(false)}
-                className="font-sans text-[11px] tracking-[0.22em] uppercase text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors font-light"
+                className="font-sans text-[11px] tracking-[0.22em] uppercase text-zinc-500 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors font-light"
               >
                 Track Order
               </Link>
@@ -157,7 +157,7 @@ export default function Navbar() {
                 {mounted && (
                   <button
                     onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    className="flex items-center gap-2 font-sans text-[11px] tracking-[0.15em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
+                    className="flex items-center gap-2 font-sans text-[11px] tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors"
                   >
                     {theme === "dark" ? <Sun size={14} strokeWidth={1.5} /> : <Moon size={14} strokeWidth={1.5} />}
                     {theme === "dark" ? "Light" : "Dark"}
