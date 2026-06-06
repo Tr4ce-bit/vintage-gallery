@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -10,6 +10,7 @@ import { useCartStore } from "@/lib/store";
 import { useAuth } from "@/hooks/useAuth";
 import Footer from "@/components/Footer";
 import { Skeleton } from "@/components/Skeleton";
+import { samedayRegions, SAMEDAY_CUTOFF_LABEL } from "@/lib/sameday";
 
 type MomoNetwork    = "MTN" | "TELECEL" | "AIRTELTIGO";
 type PaymentMethod  = "momo" | "card" | "bank_transfer";
@@ -141,6 +142,28 @@ export default function CheckoutPage() {
 
   const deliveryFee = deliveryType === "sameday" ? fees.sameday : fees.standard;
   const total       = subtotal + deliveryFee;
+
+  // ── Same-day region rules ────────────────────────────────────────────────
+  // Recompute every 60s so the list flips at the 12:30 cutoff without a refresh.
+  const [now, setNow] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const allowedSamedayRegions = useMemo(() => samedayRegions(now), [now]);
+  const availableRegions = deliveryType === "sameday" ? allowedSamedayRegions : GHANA_REGIONS;
+
+  // If the user picked a region that's no longer valid (switched to sameday with
+  // a non-Accra/Ashanti region, or crossed the 12:30 cutoff with Ashanti picked),
+  // clear it so the form re-prompts cleanly rather than silently submitting a
+  // mismatched value (the server validates this too — belt + suspenders).
+  useEffect(() => {
+    if (deliveryType === "sameday" &&
+        form.region &&
+        !allowedSamedayRegions.includes(form.region)) {
+      setForm(f => ({ ...f, region: "" }));
+    }
+  }, [deliveryType, allowedSamedayRegions, form.region]);
 
   const [authMode, setAuthMode] = useState<AuthMode>(null);
 
@@ -506,10 +529,18 @@ export default function CheckoutPage() {
                         <select value={form.region} onChange={set("region")} required
                           className={`${inputCls} appearance-none cursor-pointer`}>
                           <option value="" disabled>Select region…</option>
-                          {GHANA_REGIONS.map(r => (
+                          {availableRegions.map(r => (
                             <option key={r} value={r}>{r}</option>
                           ))}
                         </select>
+                        {deliveryType === "sameday" && (
+                          <p className="mt-2 font-sans text-[10px] text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                            Same-day delivery is available in {allowedSamedayRegions.join(" and ")} only.
+                            {!allowedSamedayRegions.includes("Ashanti") && (
+                              <> Ashanti reopens before {SAMEDAY_CUTOFF_LABEL.replace(" Ghana time", "")} tomorrow.</>
+                            )}
+                          </p>
+                        )}
                       </div>
 
                       {/* City */}

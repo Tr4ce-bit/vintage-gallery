@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, ShoppingBag, Package, Paintbrush, SlidersHorizontal, LogOut, ExternalLink, Menu, X, Moon, Sun, Mail, BarChart3, CreditCard } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, Paintbrush, SlidersHorizontal, LogOut, ExternalLink, Menu, X, Mail, BarChart3, CreditCard } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/ThemeProvider";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
   .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
@@ -26,7 +27,7 @@ const NAV = [
 
 export default function AdminShellLayout({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn, user, signOut, getAccessToken } = useAuth();
-  const { theme, toggle: toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const router   = useRouter();
   const pathname = usePathname();
   const [checked,      setChecked]      = useState(false);
@@ -143,17 +144,13 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
           View Store
         </a>
 
-        {/* Dark / Light mode toggle */}
-        <button
-          onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-sans text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
-          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {theme === "dark"
-            ? <Sun  size={15} strokeWidth={1.5} />
-            : <Moon size={15} strokeWidth={1.5} />}
-          {theme === "dark" ? "Light Mode" : "Dark Mode"}
-        </button>
+        {/* Dark / Light mode toggle — slide switch */}
+        <div className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl">
+          <span className="font-sans text-sm text-zinc-400">
+            {theme === "dark" ? "Dark mode" : "Light mode"}
+          </span>
+          <ThemeToggle />
+        </div>
 
         <button
           onClick={async () => { await signOut(); router.replace("/sign-in"); }}

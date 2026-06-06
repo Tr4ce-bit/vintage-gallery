@@ -6,6 +6,7 @@ import { generateOrderId } from "@/lib/order-id";
 import { resolveRain } from "@/lib/delivery";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { fetchWithTimeout, FetchTimeoutError } from "@/lib/fetch-with-timeout";
+import { isSamedayRegionAllowed, samedayRegions } from "@/lib/sameday";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_BASE   = "https://api.paystack.co";
@@ -95,6 +96,20 @@ export async function POST(req: NextRequest) {
     }
 
     const method: string = VALID_PAYMENT_METHODS.has(paymentMethod) ? paymentMethod : "momo";
+
+    // Same-day region rule: only Greater Accra (always) and Ashanti (before 12:30
+    // Ghana time) qualify. We validate the *server's* current time so a client
+    // can't lie about which region is allowed.
+    if (validDeliveryType === "sameday") {
+      const region = (deliveryInfo?.region ?? "").toString();
+      if (!isSamedayRegionAllowed(region)) {
+        const allowed = samedayRegions();
+        return NextResponse.json(
+          { error: `Same-day delivery is currently available only in ${allowed.join(" and ")}. Please pick a same-day-eligible region or switch to standard delivery.` },
+          { status: 400 },
+        );
+      }
+    }
 
     // MoMo-specific validation only when method is momo
     if (method === "momo") {
