@@ -288,7 +288,7 @@ export async function POST(req: NextRequest) {
             : momoPhone)
         : null;
 
-      await prisma.order.create({
+      const order = await prisma.order.create({
         data: {
           orderNumber:        generateOrderId(),
           userId:             profileId,           // null for guests
@@ -320,9 +320,31 @@ export async function POST(req: NextRequest) {
           },
         },
       });
+
+      // Create a PENDING Payment row so the admin Payments page sees the
+      // attempt the moment it's initiated, not just on webhook confirmation.
+      // The webhook will flip status to SUCCESS / REFUNDED later.
+      await prisma.payment.create({
+        data: {
+          orderId:           order.id,
+          provider:          "PAYSTACK",
+          providerReference: reference,
+          status:            "PENDING",
+          method:            method === "momo"
+            ? "MOMO"
+            : method === "card"
+              ? "CARD"
+              : method === "bank_transfer"
+                ? "BANK_TRANSFER"
+                : "OTHER",
+          amount:            totalGHS,
+          currency:          "GHS",
+          customerEmail:     email,
+        },
+      });
     } catch (dbErr) {
       // Don't block payment if DB write fails — log and continue
-      console.error("Order DB creation failed (payment still proceeds):", dbErr);
+      console.error("Order/Payment DB creation failed (payment still proceeds):", dbErr);
     }
 
     return NextResponse.json({

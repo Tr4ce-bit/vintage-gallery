@@ -92,12 +92,67 @@ export async function POST(req: NextRequest) {
     });
     const sizeStockMap = Object.fromEntries(products.map(p => [p.id, p.sizeStock]));
 
+    // Pull paystack-side details (channel, fees) for the Payment record.
+    // We already verified above; safe to re-read the response we got there.
+    // Re-fetching is cheap and keeps this block self-contained.
+    let verifyData: { channel?: string; fees?: number; channelText?: string } = {};
+    try {
+      const v = await fetchWithTimeout(
+        `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+        { headers: { Authorization: `Bearer ${secret}` }, timeoutMs: 5_000 },
+      );
+      const j = await v.json();
+      verifyData = {
+        channel:     j.data?.channel,                   // e.g. "card", "mobile_money"
+        fees:        typeof j.data?.fees === "number" ? j.data.fees / 100 : undefined,
+        channelText: j.data?.channel,
+      };
+    } catch { /* non-fatal; Payment row will still be marked SUCCESS */ }
+
+    const channelToMethod = (c?: string) => {
+      switch ((c ?? "").toLowerCase()) {
+        case "card":         return "CARD";
+        case "mobile_money": return "MOMO";
+        case "bank":
+        case "bank_transfer":return "BANK_TRANSFER";
+        case "ussd":         return "USSD";
+        case "qr":           return "QR";
+        default:             return undefined;
+      }
+    };
+    const paymentMethod = channelToMethod(verifyData.channel);
+
     try {
       await prisma.$transaction([
         // Mark order paid
         prisma.order.update({
           where: { paystackReference: reference },
           data:  { status: "PAID" },
+        }),
+        // Mark the matching Payment row SUCCESS (upsert covers any orphan
+        // payments that came in via a backfill or external initiation).
+        prisma.payment.upsert({
+          where:  { providerReference: reference },
+          update: {
+            status:  "SUCCESS",
+            paidAt:  new Date(),
+            fee:     verifyData.fees,
+            channel: verifyData.channelText,
+            ...(paymentMethod ? { method: paymentMethod as "CARD" | "MOMO" | "BANK_TRANSFER" | "USSD" | "QR" } : {}),
+          },
+          create: {
+            orderId:           existing.id,
+            provider:          "PAYSTACK",
+            providerReference: reference,
+            status:            "SUCCESS",
+            paidAt:            new Date(),
+            method:            (paymentMethod ?? "OTHER") as "CARD" | "MOMO" | "BANK_TRANSFER" | "USSD" | "QR" | "OTHER",
+            amount:            existing.totalAmount,
+            currency:          "GHS",
+            customerEmail:     existing.guestEmail ?? undefined,
+            fee:               verifyData.fees,
+            channel:           verifyData.channelText,
+          },
         }),
         // Decrement global stock + sizeStock only for items with a real productId
         ...existing.items.flatMap(item => {
@@ -173,6 +228,11 @@ export async function POST(req: NextRequest) {
       await prisma.$transaction([
         prisma.order.update({
           where: { paystackReference: transaction_reference },
+          data:  { status: "REFUNDED" },
+        }),
+        // Flip the matching Payment to REFUNDED (no-op if no row exists).
+        prisma.payment.updateMany({
+          where: { providerReference: transaction_reference },
           data:  { status: "REFUNDED" },
         }),
         ...existing.items.flatMap(item => {

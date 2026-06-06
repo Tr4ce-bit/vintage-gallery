@@ -150,6 +150,7 @@ model Order {
 
   user                UserProfile? @relation(fields: [userId], references: [id])
   items               OrderItem[]
+  payments            Payment[]                       // 0..N payments per order (init, retries, refunds)
 
   @@index([userId])
   @@index([paystackReference])
@@ -188,6 +189,60 @@ enum MomoNetwork {
   MTN
   TELECEL
   AIRTELTIGO
+}
+
+// ─────────────────────────────────────────────
+// PAYMENTS  (provider-agnostic — Paystack today, more later)
+// ─────────────────────────────────────────────
+enum PaymentProvider {
+  PAYSTACK
+  // To add another provider:
+  //   1) Add its enum value here
+  //   2) Create app/api/<provider>/webhook/route.ts following the Paystack pattern
+  //   3) Have it write rows to this same Payment table
+  // The admin UI is provider-agnostic and will pick it up automatically.
+}
+
+enum PaymentStatus {
+  PENDING     // initiated, awaiting confirmation
+  SUCCESS     // confirmed via webhook + verification
+  FAILED      // provider returned a definitive failure
+  REFUNDED    // refunded after success
+  CANCELLED   // explicitly cancelled before capture
+}
+
+enum PaymentMethod {
+  CARD
+  MOMO
+  BANK_TRANSFER
+  USSD
+  QR
+  OTHER
+}
+
+model Payment {
+  id                String          @id @default(cuid())
+  orderId           String?                              // null for orphan/test payments
+  provider          PaymentProvider
+  providerReference String          @unique              // Paystack reference, Stripe pi_*, etc.
+  status            PaymentStatus   @default(PENDING)
+  method            PaymentMethod?
+  amount            Float                                // in major units (GHS)
+  currency          String          @default("GHS")
+  fee               Float?                               // provider fee if reported
+  channel           String?                              // raw channel string from provider
+  customerEmail     String?
+  rawMetadata       Json?                                // truncated raw payload for debugging
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  paidAt            DateTime?                            // set when status transitions to SUCCESS
+
+  order             Order? @relation(fields: [orderId], references: [id])
+
+  @@index([provider, status, createdAt])
+  @@index([status, createdAt])
+  @@index([orderId])
+  @@map("payments")
 }
 
 // ─────────────────────────────────────────────

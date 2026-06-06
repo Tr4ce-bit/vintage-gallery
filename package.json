@@ -11,6 +11,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "backfill:payments": "ts-node --project tsconfig.seed.json scripts/backfill-payments.ts",
     "sst:dev": "sst dev",
     "sst:deploy": "sst deploy --stage staging",
     "sst:deploy:prod": "sst deploy --stage production",

@@ -47,6 +47,14 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
+      # One-shot, idempotent: ensures every historical order with a paystackReference
+      # has a corresponding row in the payments table. After the first successful
+      # run it's effectively a no-op since the live webhook keeps things in sync.
+      - name: Backfill payments from existing orders (idempotent)
+        run: npm run backfill:payments
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       # ── Debug — confirm secrets are actually being injected ──────────────────
       # Reports the LENGTH of each secret, never the value. Lengths should be:
       #   AWS_DEPLOY_ACCESS_KEY_ID    = 20 (AKIA...)
