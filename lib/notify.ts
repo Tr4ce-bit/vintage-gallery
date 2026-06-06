@@ -144,11 +144,14 @@ function buildHtml(o: OrderNotification): string {
 
     <!-- Footer -->
     <div style="padding:20px 36px;background:#f9f9f9;border-top:1px solid #eee;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">
+      <p style="margin:0 0 6px;font-size:11px;color:#bbb;">
         Open the
         <a href="${process.env.ADMIN_APP_URL ?? ""}/orders"
           style="color:#111;font-weight:600;text-decoration:none;">admin portal</a>
         to process this order.
+      </p>
+      <p style="margin:0;font-size:10px;color:#bbb;font-style:italic;">
+        Automated notification — replies to this email are not monitored.
       </p>
     </div>
   </div>
@@ -312,8 +315,12 @@ function buildCustomerHtml(o: StatusUpdateNotification): string {
 
     <!-- Footer -->
     <div style="padding:20px 36px;background:#f9f9f9;border-top:1px solid #eee;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">
-        Questions? Reply to this email or WhatsApp us at +233 53 847 7072
+      <p style="margin:0 0 6px;font-size:11px;color:#bbb;">
+        Questions? WhatsApp us at +233 53 847 7072 or email
+        <a href="mailto:vintagegallerystore@gmail.com" style="color:#777;text-decoration:underline;">vintagegallerystore@gmail.com</a>.
+      </p>
+      <p style="margin:0;font-size:10px;color:#bbb;font-style:italic;">
+        This is an automated message — please don't reply directly, replies are not monitored.
       </p>
     </div>
   </div>
@@ -345,7 +352,9 @@ export async function notifyCustomerStatusUpdate(order: StatusUpdateNotification
       `• ${i.productName ?? "Custom item"} · ${i.size} × ${i.quantity}`
     ),
     ``,
-    `Questions? Email us at vintagegallerystore@gmail.com or WhatsApp +233538477072`,
+    `Questions? Email vintagegallerystore@gmail.com or WhatsApp +233538477072.`,
+    ``,
+    `This is an automated message — please don't reply directly, replies are not monitored.`,
   ].join("\n");
 
   try {
