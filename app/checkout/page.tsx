@@ -152,18 +152,9 @@ export default function CheckoutPage() {
   }, []);
   const allowedSamedayRegions = useMemo(() => samedayRegions(now), [now]);
   const availableRegions = deliveryType === "sameday" ? allowedSamedayRegions : GHANA_REGIONS;
-
-  // If the user picked a region that's no longer valid (switched to sameday with
-  // a non-Accra/Ashanti region, or crossed the 12:30 cutoff with Ashanti picked),
-  // clear it so the form re-prompts cleanly rather than silently submitting a
-  // mismatched value (the server validates this too — belt + suspenders).
-  useEffect(() => {
-    if (deliveryType === "sameday" &&
-        form.region &&
-        !allowedSamedayRegions.includes(form.region)) {
-      setForm(f => ({ ...f, region: "" }));
-    }
-  }, [deliveryType, allowedSamedayRegions, form.region]);
+  // NOTE: the "auto-clear invalid region" effect lives further down, after
+  //       the `form` state is declared. Don't move it back up here —
+  //       referencing `form` before `useState` triggers a TDZ error.
 
   const [authMode, setAuthMode] = useState<AuthMode>(null);
 
@@ -182,6 +173,16 @@ export default function CheckoutPage() {
       setForm(f => ({ ...f, email: user.email! }));
     }
   }, [isSignedIn, user]);
+
+  // Auto-clear region if the user's prior selection isn't valid for the new
+  // delivery type / cutoff. Belt + suspenders alongside the server-side check.
+  useEffect(() => {
+    if (deliveryType === "sameday" &&
+        form.region &&
+        !allowedSamedayRegions.includes(form.region)) {
+      setForm(f => ({ ...f, region: "" }));
+    }
+  }, [deliveryType, allowedSamedayRegions, form.region]);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("momo");
   const [network,       setNetwork]       = useState<MomoNetwork | "">("");
