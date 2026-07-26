@@ -73,7 +73,17 @@ export async function GET(req: NextRequest) {
 }
 
 function escapeCsv(s: string): string {
+  // Neutralise spreadsheet formula injection before anything else. Excel,
+  // Google Sheets and LibreOffice execute a cell that starts with = + - @ (or
+  // a leading tab/CR). `name` and `source` here are attacker-controlled via the
+  // public /api/subscribe endpoint, so someone could sign up as
+  //   =HYPERLINK("https://evil.example","Click me")
+  // and have it run on the admin's machine when they open the export.
+  // A leading apostrophe forces the cell to be treated as text.
+  let out = s;
+  if (/^[=+\-@\t\r]/.test(out)) out = `'${out}`;
+
   // Quote if it contains a comma, quote, or newline; double-up internal quotes.
-  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
+  if (/[",\n\r]/.test(out)) return `"${out.replace(/"/g, '""')}"`;
+  return out;
 }
