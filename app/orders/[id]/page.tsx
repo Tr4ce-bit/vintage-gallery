@@ -176,9 +176,21 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
-    </div>
+    <main className="min-h-screen bg-white pt-[60px]">
+      <div className="max-w-3xl mx-auto px-5 md:px-8 py-10 space-y-4">
+        <div className="bg-white border border-zinc-100 rounded-2xl p-6 space-y-3">
+          <div className="animate-pulse h-3 w-24 rounded-md bg-zinc-100" />
+          <div className="animate-pulse h-8 w-1/2 rounded-md bg-zinc-100" />
+          <div className="animate-pulse h-3 w-3/4 rounded-md bg-zinc-100" />
+          <div className="animate-pulse h-3 w-full rounded-md bg-zinc-100" />
+        </div>
+        <div className="bg-white border border-zinc-100 rounded-2xl p-6 space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="animate-pulse h-3 w-full rounded-md bg-zinc-100" />
+          ))}
+        </div>
+      </div>
+    </main>
   );
   if (!order) return (
     <main className="min-h-screen bg-white pt-[60px]">

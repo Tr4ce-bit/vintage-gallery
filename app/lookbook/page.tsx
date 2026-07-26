@@ -9,7 +9,7 @@ export const metadata = { title: "Lookbook" };
 const EDITORIALS = [
   {
     image:      "/asset/product-hope.jpg",
-    season:     "SS '25",
+    season:     "Spring 2025",
     title:      "HOPE",
     subtitle:   "Accra, April 2025",
     desc:       "Shot across the streets of Accra. The HOPE collection styled the way it was meant to be worn — loose, confident, lived in.",

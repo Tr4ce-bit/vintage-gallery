@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PRODUCTS, type Product } from "@/lib/products";
 import { useCartStore } from "@/lib/store";
+import { trackEvent } from "@/lib/events";
 
 // products prop is optional — falls back to hardcoded PRODUCTS if not provided
 
@@ -109,7 +110,17 @@ function PhotoCard({ p, i, featured }: { p: Product; i: number; featured?: boole
 
       {/* Wishlist */}
       <button
-        onClick={(e) => { e.preventDefault(); setLiked((l) => !l); }}
+        onClick={(e) => {
+          e.preventDefault();
+          setLiked((l) => {
+            const next = !l;
+            trackEvent({
+              eventType: next ? "WISHLIST_ADD" : "WISHLIST_REMOVE",
+              productId: p.id,
+            });
+            return next;
+          });
+        }}
         className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
       >
         <Heart size={12} className={liked ? "fill-white text-white" : "text-white/70"} />
@@ -132,13 +143,6 @@ export default function Collection({ products: propProducts }: { products?: Prod
         {/* Header */}
         <div ref={hRef} className="flex items-end justify-between mb-12 border-b border-zinc-100 dark:border-zinc-800 pb-8">
           <div>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={hInView ? { opacity: 1 } : {}}
-              className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-3"
-            >
-              SS&apos;25 — Available Now
-            </motion.p>
             <motion.h2
               initial={{ opacity: 0, y: 16 }}
               animate={hInView ? { opacity: 1, y: 0 } : {}}
@@ -164,7 +168,8 @@ export default function Collection({ products: propProducts }: { products?: Prod
         </div>
 
         {/* Product grid — real photos only */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {/* 2-col on mobile (was 1) for two-up product browsing on phones. */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {products.map((p, i) => (
             <PhotoCard key={p.id} p={p} i={i} featured={p.featured && products.length > 2} />
           ))}

@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Production env file — use GitHub Actions secrets instead
 .env.production
+
+# Local AWS config snapshots saved before risky CLI updates
+.cognito-template-backup-*.json

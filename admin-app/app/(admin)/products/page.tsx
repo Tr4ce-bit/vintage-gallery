@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
+import { SkeletonRow } from "@/components/Skeleton";
 
 const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
@@ -73,7 +74,7 @@ export default function ProductsPage() {
     <div className="px-4 md:px-8 py-6 md:py-8">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-8">
         <div>
-          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Catalog</p>
+          <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-500 dark:text-zinc-300 font-medium mb-1">Catalog</p>
           <h1 className="font-serif text-zinc-900 dark:text-zinc-50" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>Products</h1>
         </div>
         <Link href="/products/new"
@@ -100,9 +101,7 @@ export default function ProductsPage() {
 
       <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
-          </div>
+          <div>{Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={5} />)}</div>
         ) : products.length === 0 ? (
           <div className="px-6 py-12 text-center">
             <p className="font-sans text-sm text-zinc-300 dark:text-zinc-600 mb-4">No products yet.</p>

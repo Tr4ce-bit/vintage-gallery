@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { notifyAdminNewOrder } from "@/lib/notify";
+import { fetchWithTimeout, FetchTimeoutError } from "@/lib/fetch-with-timeout";
 
 // Register this URL in Paystack Dashboard → Settings → Webhooks:
 // https://yourdomain.com/api/paystack/webhook
@@ -53,11 +54,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    // 3. Verify with Paystack before trusting the webhook
+    // 3. Verify with Paystack before trusting the webhook.
+    //    5s timeout: webhooks must respond fast; Paystack retries failed deliveries,
+    //    so it's safe to bail on a slow verify and let the next retry succeed.
     try {
-      const verify = await fetch(
+      const verify = await fetchWithTimeout(
         `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
-        { headers: { Authorization: `Bearer ${secret}` } },
+        {
+          headers:   { Authorization: `Bearer ${secret}` },
+          timeoutMs: 5_000,
+        },
       );
       const vData = await verify.json();
       if (!verify.ok || vData.data?.status !== "success") {
@@ -65,7 +71,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true });
       }
     } catch (err) {
-      console.error(`Webhook: error verifying ${reference}:`, err);
+      if (err instanceof FetchTimeoutError) {
+        console.warn(`Webhook: Paystack verify timed out for ${reference}; Paystack will retry`);
+      } else {
+        console.error(`Webhook: error verifying ${reference}:`, err);
+      }
+      // Ack with 200 to keep current behaviour (Paystack won't retry).
+      // The order stays PENDING; a follow-up reconciliation job or manual
+      // admin action can resolve it. Changing this to 5xx would make Paystack
+      // retry — worth considering separately as a reliability improvement.
       return NextResponse.json({ received: true });
     }
 
@@ -78,12 +92,67 @@ export async function POST(req: NextRequest) {
     });
     const sizeStockMap = Object.fromEntries(products.map(p => [p.id, p.sizeStock]));
 
+    // Pull paystack-side details (channel, fees) for the Payment record.
+    // We already verified above; safe to re-read the response we got there.
+    // Re-fetching is cheap and keeps this block self-contained.
+    let verifyData: { channel?: string; fees?: number; channelText?: string } = {};
+    try {
+      const v = await fetchWithTimeout(
+        `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+        { headers: { Authorization: `Bearer ${secret}` }, timeoutMs: 5_000 },
+      );
+      const j = await v.json();
+      verifyData = {
+        channel:     j.data?.channel,                   // e.g. "card", "mobile_money"
+        fees:        typeof j.data?.fees === "number" ? j.data.fees / 100 : undefined,
+        channelText: j.data?.channel,
+      };
+    } catch { /* non-fatal; Payment row will still be marked SUCCESS */ }
+
+    const channelToMethod = (c?: string) => {
+      switch ((c ?? "").toLowerCase()) {
+        case "card":         return "CARD";
+        case "mobile_money": return "MOMO";
+        case "bank":
+        case "bank_transfer":return "BANK_TRANSFER";
+        case "ussd":         return "USSD";
+        case "qr":           return "QR";
+        default:             return undefined;
+      }
+    };
+    const paymentMethod = channelToMethod(verifyData.channel);
+
     try {
       await prisma.$transaction([
         // Mark order paid
         prisma.order.update({
           where: { paystackReference: reference },
           data:  { status: "PAID" },
+        }),
+        // Mark the matching Payment row SUCCESS (upsert covers any orphan
+        // payments that came in via a backfill or external initiation).
+        prisma.payment.upsert({
+          where:  { providerReference: reference },
+          update: {
+            status:  "SUCCESS",
+            paidAt:  new Date(),
+            fee:     verifyData.fees,
+            channel: verifyData.channelText,
+            ...(paymentMethod ? { method: paymentMethod as "CARD" | "MOMO" | "BANK_TRANSFER" | "USSD" | "QR" } : {}),
+          },
+          create: {
+            orderId:           existing.id,
+            provider:          "PAYSTACK",
+            providerReference: reference,
+            status:            "SUCCESS",
+            paidAt:            new Date(),
+            method:            (paymentMethod ?? "OTHER") as "CARD" | "MOMO" | "BANK_TRANSFER" | "USSD" | "QR" | "OTHER",
+            amount:            existing.totalAmount,
+            currency:          "GHS",
+            customerEmail:     existing.guestEmail ?? undefined,
+            fee:               verifyData.fees,
+            channel:           verifyData.channelText,
+          },
         }),
         // Decrement global stock + sizeStock only for items with a real productId
         ...existing.items.flatMap(item => {
@@ -159,6 +228,11 @@ export async function POST(req: NextRequest) {
       await prisma.$transaction([
         prisma.order.update({
           where: { paystackReference: transaction_reference },
+          data:  { status: "REFUNDED" },
+        }),
+        // Flip the matching Payment to REFUNDED (no-op if no row exists).
+        prisma.payment.updateMany({
+          where: { providerReference: transaction_reference },
           data:  { status: "REFUNDED" },
         }),
         ...existing.items.flatMap(item => {

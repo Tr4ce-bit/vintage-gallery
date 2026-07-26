@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
+import { Skeleton, SkeletonCard } from "@/components/Skeleton";
 
 interface OrderItem {
   id: string; size: string; color: string; quantity: number;
@@ -73,8 +74,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
+    <div className="px-4 md:px-8 py-6 md:py-8 space-y-4">
+      <Skeleton className="h-3 w-24" />
+      <Skeleton className="h-10 w-2/3 md:w-1/3" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div className="md:col-span-2 space-y-4">
+          <SkeletonCard rows={5} />
+          <SkeletonCard rows={4} />
+        </div>
+        <SkeletonCard rows={6} />
+      </div>
     </div>
   );
   if (!order) return <div className="px-4 md:px-8 py-6 md:py-8 font-sans text-sm text-zinc-400">Order not found.</div>;

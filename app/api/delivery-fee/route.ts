@@ -7,9 +7,12 @@
  */
 import { NextResponse } from "next/server";
 import { prisma }       from "@/lib/db";
-import { getAccraWeather } from "@/lib/weather";
+import { resolveRain }  from "@/lib/delivery";
 
-export const revalidate = 600; // edge cache 10 min
+// Always read current settings from the DB so admin price changes show
+// in the store immediately. This is a tiny query; weather is still
+// cached 15 min inside getAccraWeather(), so no external API hammering.
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
@@ -22,6 +25,7 @@ export async function GET() {
             "delivery_sameday",
             "delivery_sameday_rain_surcharge",
             "delivery_rain_enabled",
+            "delivery_rain_mode",
           ],
         },
       },
@@ -33,14 +37,11 @@ export async function GET() {
     const standardFee   = Number(cfg.delivery_standard                ?? 30);
     const samedayBase   = Number(cfg.delivery_sameday                 ?? 50);
     const rainSurcharge = Number(cfg.delivery_sameday_rain_surcharge  ?? 20);
-    const rainEnabled   = cfg.delivery_rain_enabled !== "false"; // default on
 
-    // Check Accra weather (cached 15 min server-side)
-    const weather = rainEnabled
-      ? await getAccraWeather()
-      : { isRaining: false, description: "N/A", icon: "01d", temp: 30 };
+    // Single source of truth for rain (auto weather OR manual override)
+    const rain = await resolveRain(cfg);
 
-    const samedayTotal = weather.isRaining
+    const samedayTotal = rain.isRaining
       ? samedayBase + rainSurcharge
       : samedayBase;
 
@@ -48,11 +49,12 @@ export async function GET() {
       standard:           standardFee,
       sameday:            samedayTotal,
       samedayBase,
-      rainSurcharge:      weather.isRaining ? rainSurcharge : 0,
-      isRaining:          weather.isRaining,
-      weatherDescription: weather.description,
-      weatherIcon:        weather.icon,
-      weatherTemp:        weather.temp,
+      rainSurcharge:      rain.isRaining ? rainSurcharge : 0,
+      isRaining:          rain.isRaining,
+      rainSource:         rain.source, // "auto" | "manual" | "disabled"
+      weatherDescription: rain.description,
+      weatherIcon:        rain.icon,
+      weatherTemp:        rain.temp,
     });
   } catch (err) {
     console.error("delivery-fee error:", err);

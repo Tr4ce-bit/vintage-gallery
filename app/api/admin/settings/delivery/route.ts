@@ -13,6 +13,7 @@ const KEYS = [
   "delivery_sameday",
   "delivery_sameday_rain_surcharge",
   "delivery_rain_enabled",
+  "delivery_rain_mode",
 ] as const;
 
 type Key = typeof KEYS[number];
@@ -23,6 +24,7 @@ function defaults(): Record<Key, string> {
     delivery_sameday:                 "50",
     delivery_sameday_rain_surcharge:  "20",
     delivery_rain_enabled:            "true",
+    delivery_rain_mode:               "auto", // "auto" | "on" | "off"
   };
 }
 
@@ -71,6 +73,16 @@ export async function PUT(req: NextRequest) {
     if (body.delivery_rain_enabled !== "true" && body.delivery_rain_enabled !== "false") {
       return NextResponse.json(
         { error: "delivery_rain_enabled must be 'true' or 'false'" },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Validate rain mode
+  if ("delivery_rain_mode" in body) {
+    if (!["auto", "on", "off"].includes(body.delivery_rain_mode as string)) {
+      return NextResponse.json(
+        { error: "delivery_rain_mode must be 'auto', 'on', or 'off'" },
         { status: 400 }
       );
     }

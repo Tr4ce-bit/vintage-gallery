@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,6 +9,8 @@ import { ArrowLeft, ArrowRight, Lock, User, UserPlus, ShoppingBag, CreditCard, S
 import { useCartStore } from "@/lib/store";
 import { useAuth } from "@/hooks/useAuth";
 import Footer from "@/components/Footer";
+import { Skeleton } from "@/components/Skeleton";
+import { samedayRegions, SAMEDAY_CUTOFF_LABEL } from "@/lib/sameday";
 
 type MomoNetwork    = "MTN" | "TELECEL" | "AIRTELTIGO";
 type PaymentMethod  = "momo" | "card" | "bank_transfer";
@@ -141,6 +143,19 @@ export default function CheckoutPage() {
   const deliveryFee = deliveryType === "sameday" ? fees.sameday : fees.standard;
   const total       = subtotal + deliveryFee;
 
+  // ── Same-day region rules ────────────────────────────────────────────────
+  // Recompute every 60s so the list flips at the 12:30 cutoff without a refresh.
+  const [now, setNow] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const allowedSamedayRegions = useMemo(() => samedayRegions(now), [now]);
+  const availableRegions = deliveryType === "sameday" ? allowedSamedayRegions : GHANA_REGIONS;
+  // NOTE: the "auto-clear invalid region" effect lives further down, after
+  //       the `form` state is declared. Don't move it back up here —
+  //       referencing `form` before `useState` triggers a TDZ error.
+
   const [authMode, setAuthMode] = useState<AuthMode>(null);
 
   const [form, setForm] = useState({
@@ -158,6 +173,16 @@ export default function CheckoutPage() {
       setForm(f => ({ ...f, email: user.email! }));
     }
   }, [isSignedIn, user]);
+
+  // Auto-clear region if the user's prior selection isn't valid for the new
+  // delivery type / cutoff. Belt + suspenders alongside the server-side check.
+  useEffect(() => {
+    if (deliveryType === "sameday" &&
+        form.region &&
+        !allowedSamedayRegions.includes(form.region)) {
+      setForm(f => ({ ...f, region: "" }));
+    }
+  }, [deliveryType, allowedSamedayRegions, form.region]);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("momo");
   const [network,       setNetwork]       = useState<MomoNetwork | "">("");
@@ -413,9 +438,11 @@ export default function CheckoutPage() {
                           <p className={`font-sans text-[10px] mt-0.5 ${deliveryType === "standard" ? "opacity-70" : "text-zinc-400"}`}>
                             2 – 4 business days
                           </p>
-                          <p className="font-sans text-sm font-semibold mt-1.5">
-                            {feesLoading ? "..." : `GH₵ ${fees.standard}`}
-                          </p>
+                          <div className="font-sans text-sm font-semibold mt-1.5">
+                            {feesLoading
+                              ? <Skeleton className="h-4 w-16 inline-block" />
+                              : `GH₵ ${fees.standard}`}
+                          </div>
                         </div>
                       </button>
 
@@ -435,8 +462,10 @@ export default function CheckoutPage() {
                           <p className={`font-sans text-[10px] mt-0.5 ${deliveryType === "sameday" ? "opacity-70" : "text-zinc-400"}`}>
                             Within Accra · Order by 1pm
                           </p>
-                          <p className="font-sans text-sm font-semibold mt-1.5">
-                            {feesLoading ? "..." : `GH₵ ${fees.sameday}`}
+                          <div className="font-sans text-sm font-semibold mt-1.5">
+                            {feesLoading
+                              ? <Skeleton className="h-4 w-16 inline-block" />
+                              : `GH₵ ${fees.sameday}`}
                             {fees.isRaining && !feesLoading && (
                               <span className={`ml-1.5 font-sans text-[9px] font-normal ${
                                 deliveryType === "sameday" ? "opacity-70" : "text-blue-500"
@@ -444,7 +473,7 @@ export default function CheckoutPage() {
                                 incl. +GH₵ {fees.rainSurcharge} rain
                               </span>
                             )}
-                          </p>
+                          </div>
                         </div>
                         {fees.isRaining && !feesLoading && (
                           <CloudRain size={12} className={`shrink-0 self-start mt-1 ${deliveryType === "sameday" ? "opacity-60" : "text-blue-400"}`} />
@@ -501,10 +530,18 @@ export default function CheckoutPage() {
                         <select value={form.region} onChange={set("region")} required
                           className={`${inputCls} appearance-none cursor-pointer`}>
                           <option value="" disabled>Select region…</option>
-                          {GHANA_REGIONS.map(r => (
+                          {availableRegions.map(r => (
                             <option key={r} value={r}>{r}</option>
                           ))}
                         </select>
+                        {deliveryType === "sameday" && (
+                          <p className="mt-2 font-sans text-[10px] text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                            Same-day delivery is available in {allowedSamedayRegions.join(" and ")} only.
+                            {!allowedSamedayRegions.includes("Ashanti") && (
+                              <> Ashanti reopens before {SAMEDAY_CUTOFF_LABEL.replace(" Ghana time", "")} tomorrow.</>
+                            )}
+                          </p>
+                        )}
                       </div>
 
                       {/* City */}
@@ -718,7 +755,9 @@ export default function CheckoutPage() {
                         </span>
                         <div className="text-right">
                           <span className="font-sans text-sm text-zinc-600 dark:text-zinc-300 font-light">
-                            {feesLoading ? "..." : `GH₵ ${deliveryFee}`}
+                            {feesLoading
+                              ? <Skeleton className="h-4 w-14 inline-block align-middle" />
+                              : `GH₵ ${deliveryFee}`}
                           </span>
                           {fees.isRaining && deliveryType === "sameday" && !feesLoading && (
                             <p className="font-sans text-[9px] text-blue-500 mt-0.5 flex items-center justify-end gap-1">

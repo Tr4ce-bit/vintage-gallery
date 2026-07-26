@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl } from "@/lib/api";
 import AdminProductForm from "@/components/AdminProductForm";
+import { Skeleton, SkeletonCard } from "@/components/Skeleton";
 
 interface ProductData {
   id: string; name: string; slug: string; collection: string;
@@ -60,8 +61,13 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   }, [id]); // eslint-disable-line
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-800 dark:border-t-white rounded-full animate-spin" />
+    <div className="px-4 md:px-8 py-6 md:py-8 space-y-4">
+      <Skeleton className="h-3 w-24" />
+      <Skeleton className="h-10 w-2/3 md:w-1/2" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <SkeletonCard rows={6} />
+        <SkeletonCard rows={6} />
+      </div>
     </div>
   );
   if (notFound) return (
@@ -73,7 +79,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       <Link href="/products" className="inline-flex items-center gap-2 font-sans text-[10px] tracking-[0.2em] uppercase text-zinc-300 dark:text-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors mb-8">
         <ArrowLeft size={12} /> Products
       </Link>
-      <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 font-light mb-1">Catalog</p>
+      <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-500 dark:text-zinc-300 font-medium mb-1">Catalog</p>
       <h1 className="font-serif text-zinc-900 dark:text-zinc-50 mb-8" style={{ fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 300 }}>Edit Product</h1>
       <AdminProductForm mode="edit" initial={initial!} />
     </div>

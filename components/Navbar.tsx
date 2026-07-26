@@ -5,10 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Menu, X, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { ShoppingCart, Menu, X } from "lucide-react";
 import NavbarAuth from "@/components/NavbarAuth";
 import { useCartStore } from "@/lib/store";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const NAV_LINKS = [
   { label: "Shop",        href: "/shop"      },
@@ -21,12 +21,8 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [mounted,  setMounted]  = useState(false);
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
   const pathname   = usePathname();
-  const { theme, setTheme } = useTheme();
-
-  useEffect(() => { setMounted(true); }, []);
 
   // Only use transparent/dark-mode navbar on the homepage hero
   const isHomepage = pathname === "/";
@@ -79,7 +75,7 @@ export default function Navbar() {
                 className={`font-sans text-[10px] tracking-[0.22em] uppercase font-light transition-colors duration-200 ${
                   onDark
                     ? "text-white/55 hover:text-white"
-                    : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    : "text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                 }`}
               >
                 {link.label}
@@ -91,31 +87,20 @@ export default function Navbar() {
           <div className="relative flex items-center gap-4">
             <NavbarAuth onDark={onDark} />
 
-            {/* Theme toggle */}
-            {mounted && (
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                aria-label="Toggle dark mode"
-                className={`transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}
-              >
-                {theme === "dark"
-                  ? <Sun size={16} strokeWidth={1.5} />
-                  : <Moon size={16} strokeWidth={1.5} />
-                }
-              </button>
-            )}
+            {/* Theme toggle — slide-switch UI, visible against any background */}
+            <ThemeToggle />
 
-            <Link href="/cart" className={`relative transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}>
+            <Link href="/cart" className={`relative transition-colors duration-200 ${onDark ? "text-white/55 hover:text-white" : "text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"}`}>
               <ShoppingCart size={18} strokeWidth={1.5} />
               {cartCount > 0 && (
-                <span className={`absolute -top-1 -right-1.5 w-[15px] h-[15px] rounded-full text-[7px] font-medium flex items-center justify-center ${onDark ? "bg-white text-zinc-900" : "bg-zinc-900 text-white"}`}>
+                <span className={`absolute -top-1 -right-1.5 w-[15px] h-[15px] rounded-full text-[7px] font-medium flex items-center justify-center ${onDark ? "bg-white text-zinc-900" : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"}`}>
                   {cartCount}
                 </span>
               )}
             </Link>
 
             <button
-              className={`md:hidden transition-colors ${onDark ? "text-white/55 hover:text-white" : "text-zinc-400 hover:text-zinc-900"}`}
+              className={`md:hidden transition-colors ${onDark ? "text-white/55 hover:text-white" : "text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"}`}
               onClick={() => setMenuOpen(o => !o)}
             >
               {menuOpen ? <X size={19} strokeWidth={1.5} /> : <Menu size={19} strokeWidth={1.5} />}
@@ -140,7 +125,7 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
-                  className="font-sans text-[11px] tracking-[0.22em] uppercase text-zinc-400 hover:text-zinc-900 transition-colors font-light"
+                  className="font-sans text-[11px] tracking-[0.22em] uppercase text-zinc-500 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors font-light"
                 >
                   {link.label}
                 </Link>
@@ -148,21 +133,16 @@ export default function Navbar() {
               <Link
                 href="/track"
                 onClick={() => setMenuOpen(false)}
-                className="font-sans text-[11px] tracking-[0.22em] uppercase text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors font-light"
+                className="font-sans text-[11px] tracking-[0.22em] uppercase text-zinc-500 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors font-light"
               >
                 Track Order
               </Link>
               <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800">
                 <NavbarAuth mobile onDark={false} onClose={() => setMenuOpen(false)} />
-                {mounted && (
-                  <button
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    className="flex items-center gap-2 font-sans text-[11px] tracking-[0.15em] uppercase text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
-                  >
-                    {theme === "dark" ? <Sun size={14} strokeWidth={1.5} /> : <Moon size={14} strokeWidth={1.5} />}
-                    {theme === "dark" ? "Light" : "Dark"}
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  <span className="font-sans text-[11px] tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-300 font-light">Theme</span>
+                  <ThemeToggle />
+                </div>
               </div>
             </nav>
           </motion.div>

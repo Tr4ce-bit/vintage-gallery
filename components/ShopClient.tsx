@@ -5,9 +5,10 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Heart } from "lucide-react";
+import { ShoppingBag, Heart, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCartStore } from "@/lib/store";
+import { trackEvent } from "@/lib/events";
 import Footer from "@/components/Footer";
 import type { Product } from "@/lib/products";
 
@@ -60,7 +61,14 @@ export default function ShopClient({ products }: { products: Product[] }) {
       setTimeout(() => setAuthToast(false), 3000);
       return;
     }
-    setLiked((l) => ({ ...l, [id]: !l[id] }));
+    setLiked((l) => {
+      const next = !l[id];
+      trackEvent({
+        eventType: next ? "WISHLIST_ADD" : "WISHLIST_REMOVE",
+        productId: id,
+      });
+      return { ...l, [id]: next };
+    });
   };
 
   return (
@@ -70,9 +78,6 @@ export default function ShopClient({ products }: { products: Product[] }) {
         {/* Header */}
         <div className="border-b border-zinc-100 dark:border-zinc-800 px-5 md:px-8 py-14">
           <div className="max-w-7xl mx-auto">
-            <p className="font-sans text-[9px] tracking-[0.4em] uppercase text-zinc-400 dark:text-zinc-500 font-light mb-3">
-              SS&apos;25 — Available Now
-            </p>
             <h1 className="font-serif text-zinc-900 dark:text-zinc-50 leading-none"
               style={{ fontSize: "clamp(2.8rem, 6vw, 5rem)", fontWeight: 300 }}>
               The Collection.
@@ -82,28 +87,36 @@ export default function ShopClient({ products }: { products: Product[] }) {
 
         <div className="max-w-7xl mx-auto px-5 md:px-8 py-10">
 
-          {/* Filter bar */}
-          <div className="flex items-center gap-2 flex-wrap mb-10">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setActive(f)}
-                className={`font-sans text-[10px] tracking-[0.2em] uppercase px-5 py-2 rounded-full border transition-all duration-200 font-light ${
-                  active === f
-                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white"
-                    : "border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200"
-                }`}
+          {/* Collection selector — replaces the pill row.
+              Native <select> for accessibility + browser-handled keyboard nav,
+              styled to match the editorial aesthetic. */}
+          <div className="flex items-center gap-3 mb-10 flex-wrap">
+            <label htmlFor="collection-select"
+              className="font-sans text-[10px] tracking-[0.25em] uppercase text-zinc-400 dark:text-zinc-500 font-light">
+              Collection
+            </label>
+            <div className="relative">
+              <select
+                id="collection-select"
+                value={active}
+                onChange={(e) => setActive(e.target.value)}
+                className="appearance-none bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-full font-sans text-[11px] tracking-[0.15em] uppercase text-zinc-800 dark:text-zinc-100 font-light px-5 pr-11 py-2.5 hover:border-zinc-400 dark:hover:border-zinc-500 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-colors cursor-pointer min-w-[220px]"
               >
-                {f}
-              </button>
-            ))}
-            <span className="font-sans text-[10px] text-zinc-400 dark:text-zinc-500 font-light ml-2">
+                {FILTERS.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+              <ChevronDown size={12} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400" />
+            </div>
+            <span className="font-sans text-[10px] text-zinc-400 dark:text-zinc-500 font-light ml-auto">
               {filtered.length} {filtered.length === 1 ? "piece" : "pieces"}
             </span>
           </div>
 
           {/* Grid */}
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* 2-col on mobile (was 1) so customers see two products at a glance.
+              Smaller gap on mobile so the cards don't get crushed. */}
+          <motion.div layout className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             <AnimatePresence mode="popLayout">
               {filtered.map((p) => (
                 <motion.article

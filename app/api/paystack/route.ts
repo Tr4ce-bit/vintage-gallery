@@ -3,8 +3,10 @@ import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-server";
 import { isValidEmail, isValidPhone } from "@/lib/validation";
 import { generateOrderId } from "@/lib/order-id";
-import { getAccraWeather } from "@/lib/weather";
+import { resolveRain } from "@/lib/delivery";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { fetchWithTimeout, FetchTimeoutError } from "@/lib/fetch-with-timeout";
+import { isSamedayRegionAllowed, samedayRegions } from "@/lib/sameday";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_BASE   = "https://api.paystack.co";
@@ -20,6 +22,7 @@ async function resolveDeliveryFee(deliveryType: "standard" | "sameday" = "standa
             "delivery_sameday",
             "delivery_sameday_rain_surcharge",
             "delivery_rain_enabled",
+            "delivery_rain_mode",
           ],
         },
       },
@@ -28,14 +31,11 @@ async function resolveDeliveryFee(deliveryType: "standard" | "sameday" = "standa
     for (const r of rows) cfg[r.key] = r.value;
 
     if (deliveryType === "sameday") {
-      const base         = Number(cfg.delivery_sameday                ?? 50);
-      const surcharge    = Number(cfg.delivery_sameday_rain_surcharge ?? 20);
-      const rainEnabled  = cfg.delivery_rain_enabled !== "false";
-      if (rainEnabled) {
-        const weather = await getAccraWeather();
-        return weather.isRaining ? base + surcharge : base;
-      }
-      return base;
+      const base      = Number(cfg.delivery_sameday                ?? 50);
+      const surcharge = Number(cfg.delivery_sameday_rain_surcharge ?? 20);
+      // Same resolver the display endpoint uses — charge matches what's shown.
+      const rain = await resolveRain(cfg);
+      return rain.isRaining ? base + surcharge : base;
     }
 
     return Number(cfg.delivery_standard ?? 30);
@@ -96,6 +96,20 @@ export async function POST(req: NextRequest) {
     }
 
     const method: string = VALID_PAYMENT_METHODS.has(paymentMethod) ? paymentMethod : "momo";
+
+    // Same-day region rule: only Greater Accra (always) and Ashanti (before 12:30
+    // Ghana time) qualify. We validate the *server's* current time so a client
+    // can't lie about which region is allowed.
+    if (validDeliveryType === "sameday") {
+      const region = (deliveryInfo?.region ?? "").toString();
+      if (!isSamedayRegionAllowed(region)) {
+        const allowed = samedayRegions();
+        return NextResponse.json(
+          { error: `Same-day delivery is currently available only in ${allowed.join(" and ")}. Please pick a same-day-eligible region or switch to standard delivery.` },
+          { status: 400 },
+        );
+      }
+    }
 
     // MoMo-specific validation only when method is momo
     if (method === "momo") {
@@ -224,14 +238,29 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const psRes = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
-      method: "POST",
-      headers: {
-        Authorization:  `Bearer ${PAYSTACK_SECRET}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(paystackPayload),
-    });
+    // 10s timeout: payment init can be slow but we never want to hold a
+    // customer's spinner for the full Lambda 29s if Paystack is degraded.
+    let psRes: Response;
+    try {
+      psRes = await fetchWithTimeout(`${PAYSTACK_BASE}/transaction/initialize`, {
+        method: "POST",
+        headers: {
+          Authorization:  `Bearer ${PAYSTACK_SECRET}`,
+          "Content-Type": "application/json",
+        },
+        body:      JSON.stringify(paystackPayload),
+        timeoutMs: 10_000,
+      });
+    } catch (err) {
+      if (err instanceof FetchTimeoutError) {
+        console.warn("paystack init timed out", { url: err.target });
+        return NextResponse.json(
+          { error: "Payment service is slow right now. Please try again in a moment." },
+          { status: 503 },
+        );
+      }
+      throw err;
+    }
 
     const psData = await psRes.json();
 
@@ -274,7 +303,7 @@ export async function POST(req: NextRequest) {
             : momoPhone)
         : null;
 
-      await prisma.order.create({
+      const order = await prisma.order.create({
         data: {
           orderNumber:        generateOrderId(),
           userId:             profileId,           // null for guests
@@ -306,9 +335,31 @@ export async function POST(req: NextRequest) {
           },
         },
       });
+
+      // Create a PENDING Payment row so the admin Payments page sees the
+      // attempt the moment it's initiated, not just on webhook confirmation.
+      // The webhook will flip status to SUCCESS / REFUNDED later.
+      await prisma.payment.create({
+        data: {
+          orderId:           order.id,
+          provider:          "PAYSTACK",
+          providerReference: reference,
+          status:            "PENDING",
+          method:            method === "momo"
+            ? "MOMO"
+            : method === "card"
+              ? "CARD"
+              : method === "bank_transfer"
+                ? "BANK_TRANSFER"
+                : "OTHER",
+          amount:            totalGHS,
+          currency:          "GHS",
+          customerEmail:     email,
+        },
+      });
     } catch (dbErr) {
       // Don't block payment if DB write fails — log and continue
-      console.error("Order DB creation failed (payment still proceeds):", dbErr);
+      console.error("Order/Payment DB creation failed (payment still proceeds):", dbErr);
     }
 
     return NextResponse.json({
@@ -331,9 +382,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid reference" }, { status: 400 });
     }
 
-    const res = await fetch(
+    // 5s timeout: the success page polls this; failing fast lets the UI retry
+    // rather than locking up for 29s on a slow Paystack response.
+    const res = await fetchWithTimeout(
       `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
-      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } },
+      {
+        headers:   { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+        timeoutMs: 5_000,
+      },
     );
 
     const data = await res.json();

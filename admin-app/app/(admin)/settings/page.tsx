@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { Save, CloudRain, Truck, Zap, ToggleLeft, ToggleRight, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiUrl }  from "@/lib/api";
+import { Skeleton, SkeletonCard } from "@/components/Skeleton";
 
 interface DeliverySettings {
   delivery_standard:               string;
   delivery_sameday:                string;
   delivery_sameday_rain_surcharge: string;
   delivery_rain_enabled:           string;
+  delivery_rain_mode:              string; // "auto" | "on" | "off"
 }
 
 interface WeatherInfo {
@@ -33,6 +35,7 @@ export default function SettingsPage() {
     delivery_sameday:                "50",
     delivery_sameday_rain_surcharge: "20",
     delivery_rain_enabled:           "true",
+    delivery_rain_mode:              "auto",
   });
 
   const [weather,  setWeather]  = useState<WeatherInfo | null>(null);
@@ -105,8 +108,12 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-5 h-5 border-2 border-zinc-700 border-t-white rounded-full animate-spin" />
+      <div className="px-4 md:px-8 py-6 md:py-8 space-y-4 max-w-3xl">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-10 w-48 mb-4" />
+        <SkeletonCard rows={3} />
+        <SkeletonCard rows={4} />
+        <SkeletonCard rows={3} />
       </div>
     );
   }
@@ -209,10 +216,43 @@ export default function SettingsPage() {
 
         <div className="px-6 py-6 space-y-5">
           <p className="font-sans text-[11px] text-zinc-400 font-light leading-relaxed">
-            When enabled, customers choosing Same-Day Delivery see an automatic surcharge added
-            whenever it is currently raining in Accra. Weather is checked live via OpenWeatherMap
-            and cached for 15 minutes.
+            When enabled, customers choosing Same-Day Delivery see a surcharge added when it&apos;s
+            raining in Accra. Choose how rain is detected below.
           </p>
+
+          {/* Rain detection mode */}
+          <div className={rainEnabled ? "" : "opacity-40 pointer-events-none"}>
+            <label className="font-sans text-[9px] tracking-[0.25em] uppercase text-zinc-400 font-light block mb-2">
+              Rain Detection
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { val: "auto", label: "Auto",  hint: "Live weather" },
+                { val: "on",   label: "On",    hint: "Force raining" },
+                { val: "off",  label: "Off",   hint: "Force clear" },
+              ] as const).map(opt => {
+                const active = (settings.delivery_rain_mode ?? "auto") === opt.val;
+                return (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    onClick={() => setSettings(s => ({ ...s, delivery_rain_mode: opt.val }))}
+                    className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                      active
+                        ? "border-blue-400 bg-blue-500/10"
+                        : "border-zinc-800 bg-zinc-900 hover:border-zinc-600"
+                    }`}
+                  >
+                    <span className={`block font-sans text-sm ${active ? "text-blue-300" : "text-white"}`}>{opt.label}</span>
+                    <span className="block font-sans text-[10px] text-zinc-500">{opt.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="font-sans text-[10px] text-zinc-600 mt-1.5">
+              Auto uses OpenWeatherMap (needs WEATHER_API_KEY). On/Off override the weather manually.
+            </p>
+          </div>
 
           {/* Rain surcharge amount */}
           <div className={rainEnabled ? "" : "opacity-40 pointer-events-none"}>
@@ -290,7 +330,7 @@ export default function SettingsPage() {
               </div>
             ) : (
               <p className="font-sans text-xs text-zinc-600">
-                {wxLoading ? "Loading weather…" : "Weather unavailable (check OPENWEATHER_API_KEY env var)"}
+                {wxLoading ? "Loading weather…" : "Weather unavailable (check WEATHER_API_KEY env var)"}
               </p>
             )}
           </div>

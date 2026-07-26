@@ -10,13 +10,29 @@ export default function Newsletter() {
   const [email, setEmail]         = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 900));
-    setSubmitted(true);
-    setLoading(false);
+    setError(null);
+    try {
+      const res = await fetch("/api/subscribe", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ email, source: "newsletter" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,26 +85,31 @@ export default function Newsletter() {
                 <span className="font-sans text-sm tracking-[0.15em] uppercase font-light">You&apos;re on the list.</span>
               </motion.div>
             ) : (
-              <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2.5 max-w-md">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  required
-                  className="flex-1 min-w-0 bg-white/8 border border-white/10 rounded-full px-5 py-3.5 font-sans text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white/20 transition-colors"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full sm:w-auto bg-white text-zinc-900 font-sans font-medium text-[10px] tracking-[0.15em] uppercase px-6 py-3.5 rounded-full hover:bg-zinc-100 transition-colors disabled:opacity-50 shrink-0 flex items-center justify-center gap-2"
-                >
-                  {loading
-                    ? <span className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-900 rounded-full animate-spin" />
-                    : <><span>Subscribe</span><ArrowRight size={12} /></>
-                  }
-                </button>
-              </form>
+              <div className="max-w-md">
+                <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2.5">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    required
+                    className="flex-1 min-w-0 bg-white/8 border border-white/10 rounded-full px-5 py-3.5 font-sans text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white/20 transition-colors"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full sm:w-auto bg-white text-zinc-900 font-sans font-medium text-[10px] tracking-[0.15em] uppercase px-6 py-3.5 rounded-full hover:bg-zinc-100 transition-colors disabled:opacity-50 shrink-0 flex items-center justify-center gap-2"
+                  >
+                    {loading
+                      ? <span className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-900 rounded-full animate-spin" />
+                      : <><span>Subscribe</span><ArrowRight size={12} /></>
+                    }
+                  </button>
+                </form>
+                {error && (
+                  <p className="mt-3 font-sans text-xs text-red-300/80 font-light">{error}</p>
+                )}
+              </div>
             )}
           </div>
         </motion.div>

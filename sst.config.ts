@@ -108,6 +108,9 @@ export default $config({
         timeout:      "29 seconds",
         // arm64 Graviton: ~20% faster and cheaper. Prisma schema has matching binary target.
         architecture: "arm64",
+        // Node 20 hit EOL on 2026-04-30 (no patches); updates blocked from 2027-03-03.
+        // Node 22 is the current LTS, supported until April 2027.
+        runtime:      "nodejs22.x",
       },
 
       // Grant the Lambda role direct S3 + SNS access.
@@ -146,7 +149,7 @@ export default $config({
         ADMIN_APP_URL:       adminUrl,
         NEXT_PUBLIC_APP_URL: storeUrl,
 
-        OPENWEATHER_API_KEY: process.env.OPENWEATHER_API_KEY ?? "",
+        WEATHER_API_KEY: process.env.WEATHER_API_KEY ?? "",
         FAL_KEY:             process.env.FAL_KEY             ?? "",
       },
     });
@@ -160,6 +163,9 @@ export default $config({
         memory:       "512 MB",
         timeout:      "29 seconds",
         architecture: "arm64",
+        // Node 20 hit EOL on 2026-04-30 (no patches); updates blocked from 2027-03-03.
+        // Node 22 is the current LTS, supported until April 2027.
+        runtime:      "nodejs22.x",
       },
 
       permissions: [
@@ -176,6 +182,14 @@ export default $config({
         S3_REGION: process.env.S3_REGION ?? "us-east-1",
 
         ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? "",
+
+        // Client-side admin gate in admin-app/app/(admin)/layout.tsx reads this.
+        // Baked into the JS bundle at build time — must be set during `next build`.
+        // Without it the admin allowlist is empty and EVERY user is denied.
+        NEXT_PUBLIC_ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? "",
+
+        // "View Store" link in the admin sidebar
+        NEXT_PUBLIC_STORE_URL: storeUrl,
 
         // The admin app's browser code fetches /api/admin/* on the main store.
         // Also used in the admin CSP connect-src header (admin-app/next.config.js).
