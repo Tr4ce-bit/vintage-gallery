@@ -19,6 +19,30 @@ interface InboundEvent {
   metadata?:    Record<string, unknown>;
 }
 
+// ── Retention ────────────────────────────────────────────────────────────────
+// product_events gets a row per view / dwell / wishlist / cart action, so with
+// no pruning it becomes the biggest table in the DB and slowly degrades the
+// admin analytics groupBy queries (and eats RDS free-tier storage).
+//
+// Rather than a cron + extra Lambda, we prune opportunistically: a small random
+// share of ingestion requests fires a background delete. That self-balances
+// with traffic — busy periods prune more often, and no traffic means no growth
+// to prune. The delete is indexed on createdAt and never blocks the response.
+const RETENTION_DAYS      = 180;
+const CLEANUP_SAMPLE_RATE = 0.002; // ~1 request in 500
+
+function maybePruneOldEvents(): void {
+  if (Math.random() > CLEANUP_SAMPLE_RATE) return;
+  const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  // Fire-and-forget: analytics housekeeping must never slow down or fail a request.
+  prisma.productEvent
+    .deleteMany({ where: { createdAt: { lt: cutoff } } })
+    .then(r => {
+      if (r.count > 0) console.log(`events: pruned ${r.count} rows older than ${RETENTION_DAYS}d`);
+    })
+    .catch(err => console.warn("events: prune failed", err));
+}
+
 // POST /api/events
 //   Body can be a single event object, or an array of events (for batching).
 //   Anonymous — no auth required. The sessionId is a client-generated UUID
@@ -55,6 +79,8 @@ export async function POST(req: NextRequest) {
   if (rows.length === 0) {
     return new NextResponse(null, { status: 400 });
   }
+
+  maybePruneOldEvents();
 
   try {
     await prisma.productEvent.createMany({ data: rows });
