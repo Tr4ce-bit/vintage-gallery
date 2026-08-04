@@ -57,24 +57,33 @@ export function rateLimit(
   return { allowed: true, remaining: limit - hits.length, retryAfterMs: 0 };
 }
 
-// Proxy hops we trust in front of this app. The architecture is
-// Browser → CloudFront → Lambda Function URL, and CloudFront is the only hop
-// that appends to X-Forwarded-For, so the real client sits 1 entry from the end.
-const TRUSTED_PROXY_HOPS = 1;
-
-// Real client IP, read from the END of X-Forwarded-For.
+// Real client IP for rate-limit bucketing.
 //
-// CloudFront APPENDS the viewer's IP to whatever the client already sent, so
-// every entry before the last one is attacker-controlled. Reading the FIRST
-// entry (the previous behaviour) let a caller send `X-Forwarded-For: <random>`
-// and land in a fresh bucket on every request — bypassing every limiter here.
+// X-Forwarded-For is NOT usable here. Verified against this deployment: a request
+// carrying `X-Forwarded-For: 198.51.100.42` arrives at the Lambda with exactly
+// that value and a chain length of 1 — CloudFront forwards the viewer's header
+// verbatim rather than appending to it. So every entry, first or last, is
+// attacker-controlled, and rotating it per request yields a fresh bucket every
+// time. That defeated every limiter in this app.
 //
-// Returns "unknown" when the header is absent (direct or local access). All
-// such callers then share a single bucket, which fails closed, not open.
+// CloudFront-Viewer-Address is set by CloudFront itself and overwrites anything
+// the client sends, so it cannot be forged. Format is `IP:port`, for both IPv4
+// ("143.105.1.2:48592") and IPv6 ("2600:1f18::1:50000"), hence splitting on the
+// LAST colon to keep IPv6 addresses intact.
+//
+// Falls back to X-Forwarded-For only for environments with no CloudFront in
+// front (local dev). Returns "unknown" when nothing identifies the caller, so
+// those requests share one bucket — restrictive, not permissive.
 export function clientIp(req: Request): string {
+  const viewer = req.headers.get("cloudfront-viewer-address");
+  if (viewer) {
+    const cut = viewer.lastIndexOf(":");
+    const ip = cut > 0 ? viewer.slice(0, cut) : viewer;
+    if (ip) return ip;
+  }
+
   const xff = req.headers.get("x-forwarded-for");
   if (!xff) return "unknown";
   const parts = xff.split(",").map(s => s.trim()).filter(Boolean);
-  if (parts.length === 0) return "unknown";
-  return parts[parts.length - TRUSTED_PROXY_HOPS] ?? parts[parts.length - 1];
+  return parts[parts.length - 1] ?? "unknown";
 }
