@@ -6,6 +6,20 @@ on:
       - master   # → production
       - staging  # → staging
 
+  # Manual trigger, so a stage can be redeployed without inventing a commit.
+  # Useful when only external state changed (DNS delegation, a rotated secret,
+  # a Paystack key swap) and the code itself is already correct.
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Stage to deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
 # Only one deployment per branch at a time.
 # A new push cancels the in-flight deploy on that branch.
 concurrency:
@@ -14,7 +28,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy (${{ github.ref_name == 'master' && 'production' || 'staging' }})
+    name: Deploy (${{ inputs.stage || (github.ref_name == 'master' && 'production' || 'staging') }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -92,7 +106,7 @@ jobs:
       # ── Deploy ──────────────────────────────────────────────────────────────
       # master → production stage, any other branch → staging stage
       - name: Deploy to AWS
-        run: npx sst deploy --stage ${{ github.ref_name == 'master' && 'production' || 'staging' }}
+        run: npx sst deploy --stage ${{ inputs.stage || (github.ref_name == 'master' && 'production' || 'staging') }}
         env:
           # ── Domains (set in GitHub Variables, not Secrets — these are not sensitive) ─
           STORE_DOMAIN: ${{ vars.STORE_DOMAIN }}
