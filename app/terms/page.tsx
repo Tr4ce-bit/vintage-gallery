@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 
 export const metadata = { title: "Terms of Service" };
 
-const LAST_UPDATED = "21 May 2026";
+const LAST_UPDATED = "7 August 2026";
 
 export default function TermsPage() {
   return (
@@ -35,7 +35,7 @@ export default function TermsPage() {
                 1. Agreement to Terms
               </h2>
               <p>
-                By accessing or using the Vintage Gallery website (vintagegallerystore.com) and placing an order, you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.
+                By accessing or using the Vintage Gallery website (vintagegallery.store) and placing an order, you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.
               </p>
             </section>
 

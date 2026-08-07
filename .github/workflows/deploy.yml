@@ -32,6 +32,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # Binds the job to a GitHub Environment so payment credentials are scoped
+    # per stage. Environment secrets override repository secrets of the same
+    # name, so 'staging' gets Paystack TEST keys and 'Production' gets LIVE
+    # keys — a checkout test on staging can never charge a real card.
+    # Shared, non-payment secrets (AWS creds, DATABASE_URL, WEATHER_API_KEY)
+    # stay at repository level and are inherited by both.
+    environment: ${{ inputs.stage == 'production' && 'Production' || (github.ref_name == 'master' && 'Production' || 'staging') }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
