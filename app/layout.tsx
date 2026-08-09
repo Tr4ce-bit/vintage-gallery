@@ -32,11 +32,9 @@ export const metadata: Metadata = {
     template: "%s · Vintage Gallery",
   },
   description: "Curated vintage streetwear. Limited drops. Delivered across Ghana.",
-  icons: {
-    icon:             "/icon.svg",
-    shortcut:         "/icon.svg",
-    apple:            "https://vintage-gallery-products.s3.amazonaws.com/branding/logo.png",
-  },
+  // Icons are picked up automatically from app/icon.png and app/apple-icon.png,
+  // which are generated from the real VG monogram. No manual config needed —
+  // declaring it here would override the file-based convention.
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
