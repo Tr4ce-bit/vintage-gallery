@@ -140,6 +140,10 @@ export default $config({
         // On Lambda, the IAM role above provides S3 access via the default credential chain.
         // For local dev (sst dev), keep them in your .env.local file.
 
+        // Email — lib/mailer.ts prefers Resend and falls back to Gmail SMTP,
+        // so leaving RESEND_API_KEY empty keeps the existing behaviour.
+        RESEND_API_KEY:     process.env.RESEND_API_KEY     ?? "",
+        MAIL_FROM:          process.env.MAIL_FROM          ?? "",
         GMAIL_USER:         process.env.GMAIL_USER         ?? "",
         GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD ?? "",
         ADMIN_EMAILS:       process.env.ADMIN_EMAILS        ?? "",

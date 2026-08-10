@@ -151,4 +151,8 @@ jobs:
 
           # ── External APIs ─────────────────────────────────────────────────────
           WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+
+          # Email — Resend preferred, Gmail SMTP as fallback (see lib/mailer.ts)
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAIL_FROM:      ${{ vars.MAIL_FROM }}
           FAL_KEY:         ${{ secrets.FAL_KEY }}

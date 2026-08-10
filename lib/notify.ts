@@ -1,29 +1,22 @@
 /**
- * Admin notifications — fired when a new order is paid.
+ * Order notifications — customer status updates and admin new-order alerts.
  *
- * EMAIL  → Gmail SMTP via nodemailer (unlimited, free)
+ * EMAIL  → lib/mailer.ts (Resend when RESEND_API_KEY is set, Gmail SMTP otherwise)
  * SMS    → AWS SNS (100 free SMS/month; hard-stops at 100 and resumes next month)
  *
- * Required env vars:
- *   GMAIL_USER         — vintagegallerystore@gmail.com
+ * Env vars:
+ *   RESEND_API_KEY     — preferred email provider; falls back to Gmail if absent
+ *   MAIL_FROM          — optional, defaults to orders@vintagegallery.store
+ *   GMAIL_USER         — SMTP fallback account
  *   GMAIL_APP_PASSWORD — 16-char App Password (Google Account → Security → App Passwords)
  *   ADMIN_EMAILS       — comma-separated admin emails
  *   ADMIN_PHONE        — E.164 format, e.g. +233503662903
  *   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — already set for S3; must also have sns:Publish
  */
 
-import nodemailer              from "nodemailer";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
-import { prisma }              from "@/lib/db";
-
-// ── Gmail SMTP transporter ───────────────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+import { prisma }   from "@/lib/db";
+import { sendMail, mailerConfigured } from "@/lib/mailer";
 
 // ── SNS client (us-east-1 handles global SMS) ────────────────────────────────
 // On Lambda the IAM role provides credentials automatically.
@@ -332,10 +325,8 @@ export async function notifyCustomerStatusUpdate(order: StatusUpdateNotification
   const copy = STATUS_COPY[order.newStatus];
   if (!copy) return; // don't email for PENDING or unknown statuses
 
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD;
-  if (!gmailUser || !gmailPass) {
-    console.warn("Customer status email skipped — GMAIL_USER or GMAIL_APP_PASSWORD not set");
+  if (!mailerConfigured()) {
+    console.warn("Customer status email skipped — no mail provider configured");
     return;
   }
 
@@ -357,25 +348,22 @@ export async function notifyCustomerStatusUpdate(order: StatusUpdateNotification
     `This is an automated message — please don't reply directly, replies are not monitored.`,
   ].join("\n");
 
-  try {
-    await transporter.sendMail({
-      from:    `"Vintage Gallery" <${gmailUser}>`,
-      to:      order.customerEmail,
-      subject: `${copy.subject} — ${orderLabel}`,
-      text:    textBody,
-      html:    buildCustomerHtml(order),
-    });
-    console.log(`Customer status email (${order.newStatus}) sent → ${order.customerEmail}`);
-  } catch (err) {
-    console.error("Customer status email failed:", err);
+  const sent = await sendMail({
+    to:      order.customerEmail,
+    subject: `${copy.subject} — ${orderLabel}`,
+    text:    textBody,
+    html:    buildCustomerHtml(order),
+  });
+  if (sent.ok) {
+    console.log(`Customer status email (${order.newStatus}) sent via ${sent.provider} → ${order.customerEmail}`);
+  } else {
+    console.error(`Customer status email failed (${sent.provider}):`, sent.error);
   }
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function notifyAdminNewOrder(order: OrderNotification): Promise<void> {
-  const gmailUser   = process.env.GMAIL_USER;
-  const gmailPass   = process.env.GMAIL_APP_PASSWORD;
   const adminEmails = (process.env.ADMIN_EMAILS ?? "")
     .split(",").map(e => e.trim()).filter(Boolean);
   const adminPhone  = process.env.ADMIN_PHONE; // E.164, e.g. +233503662903
@@ -383,8 +371,8 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
   const shortRef  = order.paystackReference.slice(-8).toUpperCase();
   const orderLabel = fmtOrderNum(order.orderNumber);
 
-  // ── Email via Gmail (unlimited) ──────────────────────────────────────────────
-  if (gmailUser && gmailPass && adminEmails.length > 0) {
+  // ── Email ───────────────────────────────────────────────────────────────────
+  if (mailerConfigured() && adminEmails.length > 0) {
     const textBody = [
       `NEW ORDER ${orderLabel} — ${shortRef}`,
       `Customer : ${order.deliveryFullName} (${order.deliveryPhone})`,
@@ -398,20 +386,19 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
       `Ref: ${order.paystackReference}`,
     ].join("\n");
 
-    try {
-      await transporter.sendMail({
-        from:    `"Vintage Gallery" <${gmailUser}>`,
-        to:      adminEmails.join(", "),
-        subject: `🛍 Order ${orderLabel} · GH₵${order.totalAmount.toFixed(0)} · ${order.deliveryFullName}`,
-        text:    textBody,
-        html:    buildHtml(order),
-      });
-      console.log(`Admin email sent → ${adminEmails.join(", ")}`);
-    } catch (err) {
-      console.error("Admin email (Gmail) failed:", err);
+    const sent = await sendMail({
+      to:      adminEmails,
+      subject: `🛍 Order ${orderLabel} · GH₵${order.totalAmount.toFixed(0)} · ${order.deliveryFullName}`,
+      text:    textBody,
+      html:    buildHtml(order),
+    });
+    if (sent.ok) {
+      console.log(`Admin email sent via ${sent.provider} → ${adminEmails.join(", ")}`);
+    } else {
+      console.error(`Admin email failed (${sent.provider}):`, sent.error);
     }
   } else {
-    console.warn("Admin email skipped — GMAIL_USER or GMAIL_APP_PASSWORD not set");
+    console.warn("Admin email skipped — no mail provider configured");
   }
 
   // ── SMS via AWS SNS — stops at 100/month (free tier) ────────────────────────
