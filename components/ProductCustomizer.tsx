@@ -65,7 +65,72 @@ function loadImg(src: string): Promise<HTMLImageElement> {
   });
 }
 
-// ─── Canvas shirt ─────────────────────────────────────────────────────────────
+// ─── Print zone geometry ──────────────────────────────────────────────────────
+// Single source of truth. The fabric-shading overlay inside PrintZone derives
+// its offsets from these, so the shirt photo lines up exactly with the parent.
+const PZ = { left: 26, right: 26, top: 36, height: 26 } as const;
+const PZ_W = 100 - PZ.left - PZ.right;
+
+// ─── Light-base renderer (the realistic path) ─────────────────────────────────
+//
+// Requires a WHITE/light garment photo with a transparent background at
+// /tee-front.png and /tee-back.png.
+//
+// A white garment holds the full tonal range — every fold, seam and shadow is
+// present in the pixels. Painting colour on with `multiply` darkens toward the
+// target while preserving all of it, which is how commercial mockup tools work.
+// Recolouring a *black* photo cannot do this: there is no highlight detail to
+// recover, so light colours come out flat and noisy.
+//
+// Layers, bottom to top:
+//   1. the garment photo            — tonal foundation
+//   2. solid colour, multiply       — masked to the garment silhouette
+//   3. the print                    — user's text or graphic
+//   4. the garment photo again      — multiplied *over* the print, clipped to
+//                                     the print zone, so folds run through the
+//                                     artwork instead of it floating on top
+function LightBaseShirt({
+  src, color, children,
+}: {
+  src: string; color: ShirtColor; children?: React.ReactNode;
+}) {
+  return (
+    <div className="relative w-full h-full" style={{ isolation: "isolate" }}>
+      {/* 1 — garment photo */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:    `url(${src})`,
+          backgroundSize:     "contain",
+          backgroundPosition: "center",
+          backgroundRepeat:   "no-repeat",
+        }}
+      />
+
+      {/* 2 — colour, multiplied, masked to the garment */}
+      <div
+        className="absolute inset-0 transition-colors duration-500"
+        style={{
+          backgroundColor:    color.hex,
+          mixBlendMode:       "multiply",
+          maskImage:          `url(${src})`,
+          WebkitMaskImage:    `url(${src})`,
+          maskSize:           "contain",
+          WebkitMaskSize:     "contain",
+          maskPosition:       "center",
+          WebkitMaskPosition: "center",
+          maskRepeat:         "no-repeat",
+          WebkitMaskRepeat:   "no-repeat",
+        }}
+      />
+
+      {/* 3 + 4 — print, with fabric shading over it */}
+      {children}
+    </div>
+  );
+}
+
+// ─── Canvas shirt (fallback for the dark base photo) ──────────────────────────
 
 function ShirtCanvas({
   color, side = "front", children,
@@ -207,15 +272,109 @@ function FallbackShirt({ color, light, flip = false, children }: {
   );
 }
 
+// ─── Renderer selection ───────────────────────────────────────────────────────
+//
+// Prefers the light-base photos when they are present, because they produce a
+// materially better result (see LightBaseShirt). Falls back to recolouring the
+// dark photo otherwise, so the studio keeps working until the new assets land.
+// Probed once per session and cached.
+
+const LIGHT_BASE = { front: "/tee-front.png", back: "/tee-back.png" } as const;
+
+let _lightBaseAvailable: boolean | null = null;
+
+function useLightBase(): boolean | null {
+  const [available, setAvailable] = useState<boolean | null>(_lightBaseAvailable);
+
+  useEffect(() => {
+    if (_lightBaseAvailable !== null) return;
+    let cancelled = false;
+    loadImg(LIGHT_BASE.front)
+      .then(() => { _lightBaseAvailable = true;  if (!cancelled) setAvailable(true);  })
+      .catch(() => { _lightBaseAvailable = false; if (!cancelled) setAvailable(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  return available;
+}
+
+function ShirtRender({
+  color, side = "front", design,
+}: {
+  color: ShirtColor; side?: "front" | "back"; design: SideDesign;
+}) {
+  const lightBase = useLightBase();
+
+  // Hold the frame until the probe resolves — avoids a visible swap between
+  // the two rendering paths on first paint.
+  if (lightBase === null) {
+    return (
+      <div className="relative w-full h-full flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-white/10 border-t-white/40 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (lightBase) {
+    const src = side === "back" ? LIGHT_BASE.back : LIGHT_BASE.front;
+    return (
+      <LightBaseShirt src={src} color={color}>
+        <PrintZone light={color.light} design={design} shadingSrc={src} />
+      </LightBaseShirt>
+    );
+  }
+
+  return (
+    <ShirtCanvas color={color} side={side}>
+      <PrintZone light={color.light} design={design} />
+    </ShirtCanvas>
+  );
+}
+
 // ─── Print zone ───────────────────────────────────────────────────────────────
 
-function PrintZone({ light, design }: { light: boolean; design: SideDesign }) {
+function PrintZone({ light, design, shadingSrc }: {
+  light: boolean;
+  design: SideDesign;
+  /** When set, the garment photo is multiplied over the print so folds show through. */
+  shadingSrc?: string;
+}) {
   if (design.type === "none") return null;
   const textCol   = light ? "rgba(0,0,0,0.80)"  : "rgba(255,255,255,0.92)";
   const borderCol = light ? "rgba(0,0,0,0.16)"  : "rgba(255,255,255,0.20)";
+  const hasArt    = (design.type === "text" && design.text) || (design.type === "graphic" && design.graphic);
   return (
-    <div className="absolute pointer-events-none flex items-center justify-center"
-      style={{ left: "26%", right: "26%", top: "36%", height: "26%" }}>
+    <div className="absolute flex items-center justify-center pointer-events-none"
+      style={{
+        left: `${PZ.left}%`, right: `${PZ.right}%`, top: `${PZ.top}%`, height: `${PZ.height}%`,
+        overflow: "hidden",
+      }}>
+      {/*
+        Fabric shading. Renders the garment photo at exactly the parent's scale
+        and position, but clipped to this box, then multiplies it over the
+        artwork. Offsets are derived from PZ so the two always align:
+        the element is sized to 100% of the parent and shifted back by the
+        zone's own inset, expressed relative to the zone's dimensions.
+      */}
+      {shadingSrc && hasArt && (
+        <div
+          aria-hidden
+          className="absolute pointer-events-none"
+          style={{
+            left:   `${-(PZ.left / PZ_W) * 100}%`,
+            top:    `${-(PZ.top / PZ.height) * 100}%`,
+            width:  `${(100 / PZ_W) * 100}%`,
+            height: `${(100 / PZ.height) * 100}%`,
+            backgroundImage:    `url(${shadingSrc})`,
+            backgroundSize:     "contain",
+            backgroundPosition: "center",
+            backgroundRepeat:   "no-repeat",
+            mixBlendMode:       "multiply",
+            opacity:            0.45,
+            zIndex:             2,
+          }}
+        />
+      )}
       {design.type === "text" && design.text && (
         <motion.span initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.2 }} className="font-serif text-center leading-tight break-words w-full"
@@ -599,15 +758,11 @@ export default function ProductCustomizer() {
       >
         {/* Front */}
         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
-          <ShirtCanvas color={color} side="front">
-            <PrintZone light={color.light} design={frontDesign} />
-          </ShirtCanvas>
+          <ShirtRender color={color} side="front" design={frontDesign} />
         </div>
         {/* Back */}
         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-          <ShirtCanvas color={color} side="back">
-            <PrintZone light={color.light} design={backDesign} />
-          </ShirtCanvas>
+          <ShirtRender color={color} side="back" design={backDesign} />
         </div>
       </div>
     </div>
