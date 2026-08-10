@@ -185,6 +185,9 @@ export interface StatusUpdateNotification {
   customerEmail:    string;
   customerName:     string;
   totalAmount:      number;
+  /** True when the order was placed without an account. Guests have no login,
+   *  so the email must point at the public /track page rather than /orders. */
+  isGuest?:         boolean;
   items: {
     productName: string | null;
     size:        string;
@@ -300,9 +303,11 @@ function buildCustomerHtml(o: StatusUpdateNotification): string {
         </table>
       </div>
 
-      <a href="${storeUrl}/orders"
+      <a href="${o.isGuest
+          ? `${storeUrl}/track?order=${encodeURIComponent(o.orderNumber)}&email=${encodeURIComponent(o.customerEmail)}`
+          : `${storeUrl}/orders`}"
         style="display:inline-block;background:#111;color:#fff;font-size:11px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;padding:12px 28px;border-radius:100px;">
-        View My Orders
+        ${o.isGuest ? "Track My Order" : "View My Orders"}
       </a>
     </div>
 

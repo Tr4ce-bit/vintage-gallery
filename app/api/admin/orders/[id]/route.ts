@@ -90,6 +90,9 @@ export async function PATCH(
           newStatus:         status,
           customerEmail,
           customerName,
+          // No linked profile means this was a guest checkout — they have no
+          // account to sign into, so the email links to /track instead.
+          isGuest:           !order.user,
           totalAmount:       order.totalAmount,
           items: order.items.map(i => ({
             productName: i.productName,
