@@ -142,7 +142,8 @@ export default $config({
 
         // Email — lib/mailer.ts prefers Resend and falls back to Gmail SMTP,
         // so leaving RESEND_API_KEY empty keeps the existing behaviour.
-        RESEND_API_KEY:     process.env.RESEND_API_KEY     ?? "",
+        RESEND_API_KEY:         process.env.RESEND_API_KEY         ?? "",
+        RESEND_WEBHOOK_SECRET:  process.env.RESEND_WEBHOOK_SECRET  ?? "",
         MAIL_FROM:          process.env.MAIL_FROM          ?? "",
         GMAIL_USER:         process.env.GMAIL_USER         ?? "",
         GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD ?? "",
