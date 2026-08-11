@@ -66,6 +66,11 @@ export default function PaymentsPage() {
   const [search,   setSearch]   = useState("");
   const [page,     setPage]     = useState(1);
 
+  // Depends on primitives only. getAccessToken is a fresh function reference on
+  // every render of useAuth, so including it here made `load` unstable, which
+  // re-fired the effect below on every render — an infinite fetch loop that left
+  // the page stuck on its skeleton. Every other admin page keys off primitives
+  // for the same reason.
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -77,12 +82,16 @@ export default function PaymentsPage() {
       setData(await res.json());
     } catch { setData(null); }
     finally   { setLoading(false); }
-  }, [days, status, search, page, getAccessToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, status, search, page]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Reset page when filters change
-  useEffect(() => { setPage(1); }, [days, status, search]);
+  // Reset to the first page when a filter changes. Guarded so it can't feed
+  // back into the fetch effect when already on page 1.
+  useEffect(() => {
+    setPage(p => (p === 1 ? p : 1));
+  }, [days, status, search]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
 

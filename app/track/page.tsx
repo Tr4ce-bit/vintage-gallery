@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, ArrowLeft, CheckCircle2, Circle, XCircle, Package } from "lucide-react";
@@ -66,23 +67,23 @@ function fmt(d: string) {
   });
 }
 
-export default function TrackPage() {
+function TrackPageInner() {
+  const searchParams = useSearchParams();
   const [orderNumber, setOrderNumber] = useState("");
   const [identifier,  setIdentifier]  = useState("");   // email or phone
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
   const [order,       setOrder]       = useState<TrackedOrder | null>(null);
 
-  async function handleTrack(e: React.FormEvent) {
-    e.preventDefault();
+  const lookup = useCallback(async (rawOrder: string, rawIdent: string) => {
     setError("");
     setOrder(null);
     setLoading(true);
 
-    const cleaned = orderNumber.trim().replace(/^#/, "").toUpperCase();
+    const cleaned = rawOrder.trim().replace(/^#/, "").toUpperCase();
     if (!cleaned || cleaned.length < 4) { setError("Please enter a valid Order ID."); setLoading(false); return; }
 
-    const trimmed = identifier.trim();
+    const trimmed = rawIdent.trim();
     // Detect email vs phone
     const isEmail = trimmed.includes("@");
     const params  = new URLSearchParams({ orderNumber: cleaned });
@@ -99,6 +100,23 @@ export default function TrackPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Guest order emails link here as /track?order=VG4KX9M2&email=… so the
+  // customer lands on their order rather than an empty form. Runs once on
+  // mount; the fields stay editable if the lookup fails.
+  useEffect(() => {
+    const o = searchParams.get("order") ?? searchParams.get("orderNumber");
+    const e = searchParams.get("email") ?? searchParams.get("phone");
+    if (!o) return;
+    setOrderNumber(o);
+    if (e) setIdentifier(e);
+    if (o && e) void lookup(o, e);
+  }, [searchParams, lookup]);
+
+  async function handleTrack(e: React.FormEvent) {
+    e.preventDefault();
+    await lookup(orderNumber, identifier);
   }
 
   const isCancelled   = order?.status === "CANCELLED" || order?.status === "REFUNDED";
@@ -319,5 +337,26 @@ export default function TrackPage() {
         )}
       </div>
     </main>
+  );
+}
+
+// useSearchParams needs a Suspense boundary in the App Router, otherwise the
+// whole route is forced into client-side rendering at build time.
+export default function TrackPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-white dark:bg-zinc-950 pt-[60px]">
+          <div className="max-w-2xl mx-auto px-5 md:px-8 py-14 space-y-4">
+            <div className="animate-pulse h-3 w-24 rounded-md bg-zinc-200 dark:bg-zinc-800" />
+            <div className="animate-pulse h-10 w-2/3 rounded-md bg-zinc-200 dark:bg-zinc-800" />
+            <div className="animate-pulse h-11 w-full rounded-xl bg-zinc-200 dark:bg-zinc-800 mt-8" />
+            <div className="animate-pulse h-11 w-full rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+          </div>
+        </main>
+      }
+    >
+      <TrackPageInner />
+    </Suspense>
   );
 }
