@@ -57,12 +57,20 @@ export default function AnalyticsPage() {
 
   async function load() {
     setLoading(true);
-    const token = await getAccessToken();
     try {
+      const token = await getAccessToken();
+      if (!token) { setData(null); return; }
+
       const res = await fetch(apiUrl(`/api/admin/analytics?days=${days}`), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setData(await res.json());
+
+      // An error body has no `totals`, and storing it would make the render
+      // throw on data.totals.uniqueSessions — killing the page mid-render.
+      if (!res.ok) { setData(null); return; }
+
+      const body = await res.json();
+      setData(body && body.totals ? body : null);
     } catch { setData(null); }
     finally   { setLoading(false); }
   }

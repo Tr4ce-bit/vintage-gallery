@@ -65,6 +65,7 @@ export default function PaymentsPage() {
   const [status,   setStatus]   = useState<typeof STATUSES[number]>("all");
   const [search,   setSearch]   = useState("");
   const [page,     setPage]     = useState(1);
+  const [loadError, setLoadError] = useState("");
 
   // Depends on primitives only. getAccessToken is a fresh function reference on
   // every render of useAuth, so including it here made `load` unstable, which
@@ -73,15 +74,46 @@ export default function PaymentsPage() {
   // for the same reason.
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const token = await getAccessToken();
+      if (!token) {
+        setData(null);
+        setLoadError("Your session has expired. Sign out and back in.");
+        return;
+      }
+
       const qs = new URLSearchParams({ days, status, search, page: String(page), limit: "50" });
       const res = await fetch(apiUrl(`/api/admin/payments?${qs}`), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setData(await res.json());
-    } catch { setData(null); }
-    finally   { setLoading(false); }
+
+      // An error body carries no `payments` or `totals`. Storing it as data
+      // made the render throw on data.totals.successRevenue, which killed the
+      // component mid-render and left the skeleton on screen forever.
+      if (!res.ok) {
+        setData(null);
+        setLoadError(
+          res.status === 403
+            ? "Not authorised to view payments — your session may have expired."
+            : `Could not load payments (HTTP ${res.status}).`
+        );
+        return;
+      }
+
+      const body = await res.json();
+      if (!body || !Array.isArray(body.payments) || !body.totals) {
+        setData(null);
+        setLoadError("Payments response was not in the expected format.");
+        return;
+      }
+      setData(body);
+    } catch (err) {
+      setData(null);
+      setLoadError(err instanceof Error ? `Network error: ${err.message}` : "Network error.");
+    } finally {
+      setLoading(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days, status, search, page]);
 
@@ -164,6 +196,20 @@ export default function PaymentsPage() {
           />
         </div>
       </div>
+
+      {/* A failed load must say so. Previously it fell through to the empty
+          state, which read as "no payments yet" and hid the real problem. */}
+      {loadError && !loading && (
+        <div className="mb-4 rounded-2xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-5 py-4">
+          <p className="font-sans text-sm text-rose-700 dark:text-rose-300">{loadError}</p>
+          <button
+            onClick={() => load()}
+            className="mt-3 font-sans text-[10px] tracking-[0.15em] uppercase px-4 py-1.5 rounded-full border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl overflow-hidden">
