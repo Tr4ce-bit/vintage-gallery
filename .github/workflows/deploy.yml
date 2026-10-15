@@ -1,159 +1,59 @@
 name: Deploy
 
+# master → staging account, then production after an approval in the
+# "production" GitHub Environment. Credentials are short-lived (OIDC); no AWS
+# keys are stored in GitHub. Off until the repository variable
+# DEPLOY_ENABLED is set to "true" (see README, "Setting up AWS").
+
 on:
   push:
-    branches:
-      - master   # → production
-      - staging  # → staging
-
-  # Manual trigger, so a stage can be redeployed without inventing a commit.
-  # Useful when only external state changed (DNS delegation, a rotated secret,
-  # a Paystack key swap) and the code itself is already correct.
+    branches: [master]
   workflow_dispatch:
-    inputs:
-      stage:
-        description: "Stage to deploy"
-        required: true
-        default: "staging"
-        type: choice
-        options:
-          - staging
-          - production
 
-# Only one deployment per branch at a time.
-# A new push cancels the in-flight deploy on that branch.
+permissions:
+  contents: read
+  id-token: write
+
 concurrency:
-  group: deploy-${{ github.ref_name }}
-  cancel-in-progress: true
+  group: deploy
+  cancel-in-progress: false # never stop an sst deploy halfway
 
 jobs:
-  deploy:
-    name: Deploy (${{ inputs.stage || (github.ref_name == 'master' && 'production' || 'staging') }})
+  staging:
+    if: vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    # Binds the job to a GitHub Environment so payment credentials are scoped
-    # per stage. Environment secrets override repository secrets of the same
-    # name, so 'staging' gets Paystack TEST keys and 'Production' gets LIVE
-    # keys — a checkout test on staging can never charge a real card.
-    # Shared, non-payment secrets (AWS creds, DATABASE_URL, WEATHER_API_KEY)
-    # stay at repository level and are inherited by both.
-    environment: ${{ inputs.stage == 'production' && 'Production' || (github.ref_name == 'master' && 'Production' || 'staging') }}
-
+    environment: staging
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          # Matches the Lambda runtime (nodejs22.x) set in sst.config.ts.
-          # Node 20 hit EOL on 2026-04-30.
-          node-version: "22"
-          cache: "npm"
-
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Install admin-app dependencies
-        run: cd admin-app && npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      # Sync schema.prisma -> RDS before deploy. Non-destructive changes only;
-      # if a destructive change is detected (drop column / change type), this
-      # step fails the deploy on purpose — safer than --accept-data-loss.
-      - name: Sync database schema (prisma db push)
-        run: npx prisma db push --skip-generate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-      # One-shot, idempotent: ensures every historical order with a paystackReference
-      # has a corresponding row in the payments table. After the first successful
-      # run it's effectively a no-op since the live webhook keeps things in sync.
-      - name: Backfill payments from existing orders (idempotent)
-        run: npm run backfill:payments
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-      # ── Debug — confirm secrets are actually being injected ──────────────────
-      # Reports the LENGTH of each secret, never the value. Lengths should be:
-      #   AWS_DEPLOY_ACCESS_KEY_ID    = 20 (AKIA...)
-      #   AWS_DEPLOY_SECRET_ACCESS_KEY = 40
-      # If length is 0, the secret is missing or misnamed in GitHub.
-      - name: Debug — verify secret presence
-        run: |
-          if [ -z "$KEY_ID" ]; then
-            echo "::error::AWS_DEPLOY_ACCESS_KEY_ID is EMPTY — secret not found in GitHub. Check Settings → Secrets and variables → Actions → Secrets tab"
-            exit 1
-          fi
-          if [ -z "$SECRET" ]; then
-            echo "::error::AWS_DEPLOY_SECRET_ACCESS_KEY is EMPTY — secret not found in GitHub. Check Settings → Secrets and variables → Actions → Secrets tab"
-            exit 1
-          fi
-          echo "AWS_DEPLOY_ACCESS_KEY_ID length: ${#KEY_ID} (expected 20)"
-          echo "AWS_DEPLOY_SECRET_ACCESS_KEY length: ${#SECRET} (expected 40)"
-        env:
-          KEY_ID: ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
-          SECRET: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
-
-      # ── Configure AWS credentials ────────────────────────────────────────────
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
-          aws-access-key-id:     ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
-          aws-region:            us-east-1
-          mask-aws-account-id:   true
-
-      # ── Sanity check — proves the keys actually work against AWS ─────────────
-      - name: Verify AWS identity
-        run: aws sts get-caller-identity
-
-      # ── Deploy ──────────────────────────────────────────────────────────────
-      # master → production stage, any other branch → staging stage
-      - name: Deploy to AWS
-        run: npx sst deploy --stage ${{ inputs.stage || (github.ref_name == 'master' && 'production' || 'staging') }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+      - name: Deploy (migrations run inside the VPC before the app updates)
+        run: npx sst deploy --stage staging
         env:
-          # ── Domains (set in GitHub Variables, not Secrets — these are not sensitive) ─
-          STORE_DOMAIN: ${{ vars.STORE_DOMAIN }}
-          ADMIN_DOMAIN: ${{ vars.ADMIN_DOMAIN }}
+          SST_TELEMETRY_DISABLED: "1"
 
-          # ── Cross-app URLs (CloudFront URLs in staging; real domains take over in prod) ─
-          # Store URL: used for Paystack callback, email links, and as the admin app's API base.
-          NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
-          # Admin URL: store's proxy.ts CORS allowlist must match the admin app's origin.
-          ADMIN_APP_URL: ${{ vars.ADMIN_APP_URL }}
-
-          # ── Database ─────────────────────────────────────────────────────────
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-          # ── Cognito (public IDs — can live in Variables) ─────────────────────
-          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ vars.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
-          NEXT_PUBLIC_COGNITO_CLIENT_ID:    ${{ vars.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
-
-          # ── Paystack ─────────────────────────────────────────────────────────
-          PAYSTACK_SECRET_KEY:             ${{ secrets.PAYSTACK_SECRET_KEY }}
-          NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY }}
-
-          # ── Email + SMS ───────────────────────────────────────────────────────
-          GMAIL_USER:         ${{ vars.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          ADMIN_PHONE:        ${{ vars.ADMIN_PHONE }}
-
-          # ── Admin config ──────────────────────────────────────────────────────
-          ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS }}
-
-          # ── AWS services ──────────────────────────────────────────────────────
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
-          S3_REGION: ${{ vars.S3_REGION }}
-
-          # ── External APIs ─────────────────────────────────────────────────────
-          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
-
-          # Email — Resend preferred, Gmail SMTP as fallback (see lib/mailer.ts)
-          RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
-          RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
-          MAIL_FROM:      ${{ vars.MAIL_FROM }}
-          FAL_KEY:         ${{ secrets.FAL_KEY }}
+  production:
+    needs: staging
+    runs-on: ubuntu-latest
+    environment: production # requires your approval in GitHub
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+      - run: npx sst deploy --stage production
+        env:
+          SST_TELEMETRY_DISABLED: "1"

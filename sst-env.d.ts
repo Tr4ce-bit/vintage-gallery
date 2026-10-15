@@ -6,13 +6,31 @@
 
 declare module "sst" {
   export interface Resource {
-    "VintageAdmin": {
-      "type": "sst.aws.Nextjs"
-      "url": string
+    "AdminWebClient": {
+      "id": string
+      "secret": string
+      "type": "sst.aws.CognitoUserPoolClient"
     }
-    "VintageStore": {
-      "type": "sst.aws.Nextjs"
-      "url": string
+    "Database": {
+      "database": string
+      "host": string
+      "password": string
+      "port": number
+      "type": "sst.aws.Postgres"
+      "username": string
+    }
+    "ProductImages": {
+      "name": string
+      "type": "sst.aws.Bucket"
+    }
+    "ShopWebClient": {
+      "id": string
+      "secret": string
+      "type": "sst.aws.CognitoUserPoolClient"
+    }
+    "StudioUploads": {
+      "name": string
+      "type": "sst.aws.Bucket"
     }
   }
 }

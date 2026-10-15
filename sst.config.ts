@@ -1,210 +1,172 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
-// ─── Vintage Gallery — SST Ion (v3) deployment ───────────────────────────────
-//
-// First-time setup (run once, then commit the generated .sst/ scaffolding):
-//   npm install
-//   npx sst init          ← creates .sst/platform/  (needed for the types above)
-//
-// Local dev against real AWS (live Lambda tunnel):
-//   cp .env.example .env.local   ← fill in your values
-//   npm run sst:dev
-//
-// Deploy staging:
-//   npm run sst:deploy            ← deploys to "staging" stage
-//
-// Deploy production:
-//   npm run sst:deploy:prod       ← deploys to "production" stage
-//
-// Required env vars at deploy time — set in CI (GitHub Actions) or shell:
-//   STORE_DOMAIN         e.g. vintagegallery.store
-//   ADMIN_DOMAIN         e.g. admin.vintagegallery.store
-//   DATABASE_URL         postgres://… (RDS endpoint)
-//   PAYSTACK_SECRET_KEY
-//   NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
-//   NEXT_PUBLIC_COGNITO_USER_POOL_ID
-//   NEXT_PUBLIC_COGNITO_CLIENT_ID
-//   GMAIL_USER / GMAIL_APP_PASSWORD
-//   ADMIN_EMAILS / ADMIN_PHONE
-//   S3_BUCKET / S3_REGION
-//   OPENWEATHER_API_KEY
-//   FAL_KEY
+// Vintage Gallery infrastructure. Two stages, each in its own AWS account:
+//   staging     → staging.vintagegallery.store, admin.staging.vintagegallery.store
+//   production  → vintagegallery.store,         admin.vintagegallery.store
+// Any other stage name is a personal dev stage with no custom domain.
+// Region eu-west-1; CloudFront certificates are created in us-east-1 by SST.
+
+const ROOT_DOMAIN = "vintagegallery.store";
 
 export default $config({
   app(input) {
     return {
-      name:    "vintage-gallery",
-      home:    "aws",
-      // "retain" keeps RDS data if `sst remove` is accidentally run in production
+      name: "vintage-gallery",
+      home: "aws",
       removal: input?.stage === "production" ? "retain" : "remove",
       protect: input?.stage === "production",
-      providers: {
-        aws: { region: "us-east-1" },
-      },
+      providers: { aws: { region: "eu-west-1" } },
     };
   },
 
   async run() {
-    const isProd   = $app.stage === "production";
+    const { createHash } = await import("node:crypto");
+    const { readdirSync, readFileSync } = await import("node:fs");
+
+    const isProd = $app.stage === "production";
     const isStaging = $app.stage === "staging";
+    const shopHost = isProd ? ROOT_DOMAIN : isStaging ? `staging.${ROOT_DOMAIN}` : undefined;
+    const adminHost = shopHost ? `admin.${shopHost}` : undefined;
 
-    // ── Domain config ─────────────────────────────────────────────────────────
-    // In staging, append "-staging" to avoid clashing with production records.
-    // e.g. staging store → staging.vintagegallery.store (or no domain at all —
-    // SST will print a CloudFront URL you can use for smoke-testing).
-    const storeDomain = process.env.STORE_DOMAIN;   // e.g. vintagegallery.store
-    const adminDomain = process.env.ADMIN_DOMAIN;   // e.g. admin.vintagegallery.store
+    // ── Network ──────────────────────────────────────────────────────────────
+    // Private subnets for the database and Lambdas; one fck-nat instance
+    // (t4g.nano) for outbound calls to Paystack and other providers.
+    const vpc = new sst.aws.Vpc("Vpc", {
+      az: 2,
+      nat: { type: "ec2", ec2: { instance: "t4g.nano" } },
+    });
 
-    // Domains only in production. Staging uses the auto-generated CloudFront URL.
-    // Route 53 hosted zone must exist before this runs — register the domain first.
-    const storeDomainConfig = storeDomain && isProd ? {
-      domain: {
-        name: storeDomain,
-        dns:  sst.aws.dns(),
+    // ── Database ─────────────────────────────────────────────────────────────
+    const database = new sst.aws.Postgres("Database", {
+      vpc,
+      version: "17",
+      instance: "t4g.micro",
+      storage: "20 GB",
+      transform: {
+        parameterGroup: (args) => {
+          // Refuse any connection that isn't TLS.
+          args.parameters = [{ name: "rds.force_ssl", value: "1" }];
+        },
+        instance: (args) => {
+          args.backupRetentionPeriod = 14;
+          args.deletionProtection = isProd;
+          args.skipFinalSnapshot = !isProd;
+          if (isProd) args.finalSnapshotIdentifier = "vintage-gallery-final";
+          args.copyTagsToSnapshot = true;
+        },
       },
-    } : {};
+    });
 
-    const adminDomainConfig = adminDomain && isProd ? {
-      domain: {
-        name: adminDomain,
-        dns:  sst.aws.dns(),
+    // ── Sign-in ──────────────────────────────────────────────────────────────
+    // Customers: self sign-up with email. A changed email stays unverified and
+    // inactive until confirmed, so nobody can claim an address they don't own.
+    const shopUsers = new sst.aws.CognitoUserPool("ShopUserPool", {
+      usernames: ["email"],
+      transform: {
+        userPool: (args) => {
+          args.userAttributeUpdateSettings = { attributesRequireVerificationBeforeUpdates: ["email"] };
+          args.passwordPolicy = { minimumLength: 10, requireLowercase: true, requireNumbers: true, requireUppercase: false, requireSymbols: false };
+          args.deletionProtection = isProd ? "ACTIVE" : "INACTIVE";
+        },
       },
-    } : {};
+    });
 
-    // ── Shared env vars ───────────────────────────────────────────────────────
-    const storeUrl = storeDomain && isProd
-      ? `https://${storeDomain}`
-      : (process.env.NEXT_PUBLIC_APP_URL ?? "");
+    // Admins: a separate pool, accounts created only by you, MFA required.
+    const adminUsers = new sst.aws.CognitoUserPool("AdminUserPool", {
+      usernames: ["email"],
+      mfa: "on",
+      softwareToken: true,
+      transform: {
+        userPool: (args) => {
+          args.adminCreateUserConfig = { allowAdminCreateUserOnly: true };
+          args.userAttributeUpdateSettings = { attributesRequireVerificationBeforeUpdates: ["email"] };
+          args.passwordPolicy = { minimumLength: 14, requireLowercase: true, requireNumbers: true, requireUppercase: true, requireSymbols: true };
+          args.deletionProtection = isProd ? "ACTIVE" : "INACTIVE";
+        },
+      },
+    });
+    new aws.cognito.UserGroup("AdminGroup", { userPoolId: adminUsers.id, name: "admin" });
 
-    const adminUrl = adminDomain && isProd
-      ? `https://${adminDomain}`
-      : (process.env.ADMIN_APP_URL ?? "");
-
-    const cognitoEnv = {
-      NEXT_PUBLIC_COGNITO_USER_POOL_ID: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
-      NEXT_PUBLIC_COGNITO_CLIENT_ID:    process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!,
+    // Server-side clients with a secret: the browser never talks to Cognito
+    // directly and never holds a token outside an httpOnly cookie.
+    const serverClient = (args: aws.cognito.UserPoolClientArgs, callbackHost?: string, hours = 1) => {
+      args.generateSecret = true;
+      args.explicitAuthFlows = ["ALLOW_USER_SRP_AUTH", "ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"];
+      args.preventUserExistenceErrors = "ENABLED";
+      args.allowedOauthFlows = ["code"];
+      args.allowedOauthScopes = ["openid", "email", "profile"];
+      args.callbackUrls = [callbackHost ? `https://${callbackHost}/auth/callback` : "http://localhost:3000/auth/callback"];
+      args.idTokenValidity = hours;
+      args.accessTokenValidity = hours;
+      args.tokenValidityUnits = { idToken: "hours", accessToken: "hours", refreshToken: "days" };
+      args.refreshTokenValidity = hours > 1 ? 1 : 30;
     };
-
-    // ── VPC config (uncomment if your RDS is in a private subnet) ─────────────
-    // When enabled, Lambda joins the VPC so it can reach RDS privately.
-    // You need the subnet IDs and a security group that allows port 5432 outbound.
-    //
-    // const vpc = {
-    //   vpc: {
-    //     securityGroups: [process.env.LAMBDA_SECURITY_GROUP_ID!],
-    //     subnets:        (process.env.LAMBDA_SUBNET_IDS ?? "").split(","),
-    //   },
-    // };
-    //
-    // Add `...vpc` to both NextjsSite server configs below once filled in.
-
-    // ── Main store (Next.js 16) ───────────────────────────────────────────────
-    const store = new sst.aws.Nextjs("VintageStore", {
-      path: ".",
-      ...storeDomainConfig,
-
-      server: {
-        memory:       "512 MB",
-        timeout:      "29 seconds",
-        // arm64 Graviton: ~20% faster and cheaper. Prisma schema has matching binary target.
-        architecture: "arm64",
-        // Node 20 hit EOL on 2026-04-30 (no patches); updates blocked from 2027-03-03.
-        // Node 22 is the current LTS, supported until April 2027.
-        runtime:      "nodejs22.x",
-      },
-
-      // Grant the Lambda role direct S3 + SNS access.
-      // On Lambda, AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY are auto-injected
-      // from the IAM role — no hardcoded credentials needed.
-      permissions: [
-        {
-          actions:   ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-          resources: [`arn:aws:s3:::${process.env.S3_BUCKET ?? "vintage-gallery-products"}/*`],
-        },
-        {
-          actions:   ["sns:Publish"],
-          resources: ["*"],
-        },
-      ],
-
-      environment: {
-        DATABASE_URL: process.env.DATABASE_URL!,
-        ...cognitoEnv,
-
-        PAYSTACK_SECRET_KEY:             process.env.PAYSTACK_SECRET_KEY!,
-        NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!,
-
-        S3_BUCKET: process.env.S3_BUCKET ?? "vintage-gallery-products",
-        S3_REGION: process.env.S3_REGION ?? "us-east-1",
-        // S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY are intentionally omitted here.
-        // On Lambda, the IAM role above provides S3 access via the default credential chain.
-        // For local dev (sst dev), keep them in your .env.local file.
-
-        // Email — lib/mailer.ts prefers Resend and falls back to Gmail SMTP,
-        // so leaving RESEND_API_KEY empty keeps the existing behaviour.
-        RESEND_API_KEY:         process.env.RESEND_API_KEY         ?? "",
-        RESEND_WEBHOOK_SECRET:  process.env.RESEND_WEBHOOK_SECRET  ?? "",
-        MAIL_FROM:          process.env.MAIL_FROM          ?? "",
-        GMAIL_USER:         process.env.GMAIL_USER         ?? "",
-        GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD ?? "",
-        ADMIN_EMAILS:       process.env.ADMIN_EMAILS        ?? "",
-        ADMIN_PHONE:        process.env.ADMIN_PHONE         ?? "",
-
-        // ADMIN_APP_URL drives CORS in middleware.ts. Must be exact — no trailing slash.
-        ADMIN_APP_URL:       adminUrl,
-        NEXT_PUBLIC_APP_URL: storeUrl,
-
-        WEATHER_API_KEY: process.env.WEATHER_API_KEY ?? "",
-        FAL_KEY:             process.env.FAL_KEY             ?? "",
-      },
+    const shopClient = shopUsers.addClient("ShopWebClient", {
+      transform: { client: (args) => { serverClient(args, shopHost); } },
+    });
+    const adminClient = adminUsers.addClient("AdminWebClient", {
+      transform: { client: (args) => { serverClient(args, adminHost, 8); } },
     });
 
-    // ── Admin app (Next.js 15, admin-app/ subfolder) ──────────────────────────
-    const admin = new sst.aws.Nextjs("VintageAdmin", {
-      path: "admin-app",
-      ...adminDomainConfig,
-
-      server: {
-        memory:       "512 MB",
-        timeout:      "29 seconds",
-        architecture: "arm64",
-        // Node 20 hit EOL on 2026-04-30 (no patches); updates blocked from 2027-03-03.
-        // Node 22 is the current LTS, supported until April 2027.
-        runtime:      "nodejs22.x",
-      },
-
-      permissions: [
-        {
-          actions:   ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-          resources: [`arn:aws:s3:::${process.env.S3_BUCKET ?? "vintage-gallery-products"}/*`],
-        },
-      ],
-
-      environment: {
-        ...cognitoEnv,
-
-        S3_BUCKET: process.env.S3_BUCKET ?? "vintage-gallery-products",
-        S3_REGION: process.env.S3_REGION ?? "us-east-1",
-
-        ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? "",
-
-        // Client-side admin gate in admin-app/app/(admin)/layout.tsx reads this.
-        // Baked into the JS bundle at build time — must be set during `next build`.
-        // Without it the admin allowlist is empty and EVERY user is denied.
-        NEXT_PUBLIC_ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? "",
-
-        // "View Store" link in the admin sidebar
-        NEXT_PUBLIC_STORE_URL: storeUrl,
-
-        // The admin app's browser code fetches /api/admin/* on the main store.
-        // Also used in the admin CSP connect-src header (admin-app/next.config.js).
-        NEXT_PUBLIC_API_URL: storeUrl,
-      },
+    // ── Storage ──────────────────────────────────────────────────────────────
+    // Product photos: private, readable only through CloudFront.
+    const productImages = new sst.aws.Bucket("ProductImages", {
+      access: "cloudfront",
+      versioning: true,
     });
+    // Customer studio uploads: private, deleted after 30 days.
+    const studioUploads = new sst.aws.Bucket("StudioUploads", {
+      lifecycle: [{ expiresIn: "30 days" }],
+    });
+
+    // ── Migrations ───────────────────────────────────────────────────────────
+    // Runs inside the VPC on every deploy where prisma/migrations changed,
+    // before the web app updates. A failed migration fails the deploy.
+    const migrator = new sst.aws.Function("Migrator", {
+      handler: "functions/migrate.handler",
+      vpc,
+      link: [database],
+      timeout: "5 minutes",
+      architecture: "arm64",
+      copyFiles: [{ from: "prisma/migrations", to: "migrations" }],
+      environment: { NODE_EXTRA_CA_CERTS: "/var/runtime/ca-cert.pem" },
+    });
+    const migrationsHash = createHash("sha256");
+    for (const dir of readdirSync("prisma/migrations", { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort()) {
+      migrationsHash.update(dir).update(readFileSync(`prisma/migrations/${dir}/migration.sql`));
+    }
+    const migrations = new aws.lambda.Invocation("RunMigrations", {
+      functionName: migrator.name,
+      input: JSON.stringify({}),
+      triggers: { migrations: migrationsHash.digest("hex") },
+    });
+
+    // ── Web app: shop + admin ────────────────────────────────────────────────
+    const web = new sst.aws.Nextjs(
+      "Web",
+      {
+        vpc,
+        link: [database, shopClient, adminClient, productImages, studioUploads],
+        environment: {
+          NODE_EXTRA_CA_CERTS: "/var/runtime/ca-cert.pem",
+          SHOP_USER_POOL_ID: shopUsers.id,
+          ADMIN_USER_POOL_ID: adminUsers.id,
+        },
+        server: { memory: "1024 MB", architecture: "arm64" },
+        // Lambda URLs answer only to CloudFront. Edge signing keeps Paystack's
+        // webhook POSTs working without the caller signing the body.
+        protection: "oac-with-edge-signing",
+        domain: shopHost
+          ? { name: shopHost, aliases: [adminHost!], dns: sst.aws.dns() }
+          : undefined,
+      },
+      { dependsOn: [migrations] },
+    );
 
     return {
-      storeUrl: store.url,
-      adminUrl: admin.url,
+      shop: shopHost ? `https://${shopHost}` : web.url,
+      admin: adminHost ? `https://${adminHost}` : "admin.localhost (dev only)",
+      adminUserPool: adminUsers.id,
     };
   },
 });

@@ -1,114 +1,61 @@
 # Vintage Gallery
 
-A production e-commerce platform for a streetwear brand in Accra, Ghana. Built with
-Next.js and TypeScript, running on AWS Lambda behind CloudFront.
+The shop at **vintagegallery.store** and its admin panel at **admin.vintagegallery.store**, served by one Next.js app on AWS. This is the rebuild described in the design doc, [Vintage Gallery: built from scratch](https://claude.ai/code/artifact/92b025e7-e1f7-41a6-9e2d-61a044da96a3). The original code is kept on the `legacy-v1` branch.
 
-This is a real store handling real orders — mobile money payments through Paystack,
-weather-aware delivery pricing, and a separate admin application for catalog, orders,
-payments, and analytics.
+## How it fits together
 
----
+| Piece | Where |
+| --- | --- |
+| Shop, API and admin panel | One Next.js app (`app/`), deployed with SST to Lambda behind CloudFront |
+| Shop vs admin | `proxy.ts` routes by host name. `admin.*` serves `app/admin`, and the shop host returns 404 for anything admin. |
+| Admin access | A separate Cognito user pool with no self sign-up and MFA required, checked on the server (`lib/auth/admin.ts`) |
+| Database | Postgres 17 on RDS in private subnets, TLS required (`sst.config.ts`) |
+| Schema | `prisma/schema.prisma`. Money is whole pesewas, and stock lives in `Variant` rows. |
+| Migrations | Files in `prisma/migrations`, applied in AWS by `functions/migrate.ts` before each app update |
+| Money rules | `lib/domain/` (pricing, delivery, order states) and `lib/orders/mark-paid.ts` |
 
-## Architecture
+## Local development
 
-```
-Browser
-  │
-  ▼
-CloudFront ──────────────┬────────────────────────┐
-  │                      │                        │
-  ▼                      ▼                        ▼
-Store (Lambda)      Admin (Lambda)          S3 (static assets
-Next.js 16          Next.js 15               + product images)
-  │                      │
-  └──────────┬───────────┘
-             ▼
-   ┌─────────────────────┐
-   │ RDS PostgreSQL      │  ← Prisma ORM
-   │ Cognito (auth)      │
-   │ Paystack (payments) │
-   │ WeatherAPI          │
-   └─────────────────────┘
-```
-
-Two independently deployed Next.js applications sharing one database. Infrastructure
-is defined as code with [SST Ion](https://sst.dev) (`sst.config.ts`) and deployed by
-GitHub Actions on push.
-
----
-
-## The interesting parts
-
-If you're reading this to evaluate the code, these are the files worth your time.
-
-### Payments — never trust the client with money
-
-| File | What it does |
-|---|---|
-| [`app/api/paystack/route.ts`](app/api/paystack/route.ts) | Initialises a transaction. **Every price is recalculated server-side from the database** — the client-supplied cart is treated as a list of intents, not amounts. Also enforces the same-day delivery region rule against server time so it can't be spoofed. |
-| [`app/api/paystack/webhook/route.ts`](app/api/paystack/webhook/route.ts) | Verifies an HMAC-SHA512 signature before trusting anything. Idempotent — a replayed `charge.success` is a no-op. Marks the order paid and decrements per-size stock in a **single atomic transaction**, so a partial failure can't oversell inventory. |
-
-### Business logic specific to this market
-
-| File | What it does |
-|---|---|
-| [`lib/weather.ts`](lib/weather.ts) | Live Accra conditions from WeatherAPI, cached 15 minutes, with a 3-second timeout and a neutral fallback. Rain triggers a same-day delivery surcharge. |
-| [`lib/sameday.ts`](lib/sameday.ts) | Same-day delivery is available in Greater Accra all day, but Ashanti only before 12:30 Ghana time. Pure functions that give the same answer on the server and in the browser, so the rule resets at midnight with no cron job. |
-
-### Reliability on serverless
-
-| File | What it does |
-|---|---|
-| [`lib/db.ts`](lib/db.ts) | Prisma singleton that injects `connection_limit=1` when running on Lambda. Without this, concurrent Lambda instances each open a pool and exhaust RDS connections. |
-| [`lib/fetch-with-timeout.ts`](lib/fetch-with-timeout.ts) | Every outbound HTTP call is bounded. An unbounded `fetch` can hang a Lambda for its full timeout, burning GB-seconds and stalling the user — and it prevents graceful fallback code from ever running. |
-| [`lib/rate-limit.ts`](lib/rate-limit.ts) | Sliding-window limiter. Reads the client IP from the **end** of `X-Forwarded-For`, because CloudFront appends the real viewer IP and everything before it is attacker-controlled. |
-
-### Analytics
-
-| File | What it does |
-|---|---|
-| [`app/api/events/route.ts`](app/api/events/route.ts) | Anonymous product interaction events — views, dwell time, wishlist, cart. Identified only by a client-generated session UUID, never linked to a user account. Prunes its own table opportunistically to stay bounded. |
-| [`lib/events.ts`](lib/events.ts) | Client sender. Uses `sendBeacon` on page unload so dwell-time events survive tab close, `keepalive` fetch otherwise. Failures are silent by design — analytics must never degrade the shopping experience. |
-
----
-
-## Stack
-
-- **Next.js 16 / 15**, React, TypeScript, Tailwind
-- **Prisma** → PostgreSQL on Amazon RDS
-- **AWS Lambda** (arm64) + CloudFront + S3, deployed via SST Ion
-- **Cognito** for authentication, group-based admin authorisation
-- **Paystack** for card, mobile money, and bank transfer payments
-
----
-
-## Running locally
+You need Node 22 and Postgres 16 or newer (local or Docker).
 
 ```bash
-npm install
-cp .env.example .env      # fill in your own values
-npx prisma generate
-npx prisma db push
-npm run dev               # store on :3000
-
-cd admin-app && npm install && npm run dev   # admin on :3001
+cp .env.example .env          # local database only, never a deployed one
+npm install                   # also generates the Prisma client
+npx prisma migrate dev        # create/update the local database
+npm run dev
 ```
 
-Deploying requires AWS credentials:
+The shop is at http://localhost:3000 and the admin panel at http://admin.localhost:3000.
+
+Before pushing, run these checks. CI runs the same ones on every pull request.
 
 ```bash
-npx sst deploy --stage staging
+npm run lint
+npm run typecheck             # needs `npx sst install --stage dev` once
+npm test                      # database tests run when TEST_DATABASE_URL is set
 ```
 
----
+### Changing the database
 
-## Repository layout
+1. Edit `prisma/schema.prisma`.
+2. Run `npx prisma migrate dev --name what_changed` against your local database. This writes a new folder in `prisma/migrations`.
+3. Commit both. Never edit a migration that has been deployed, because the migrator will refuse to run.
+4. Make changes additive: add first, then remove in a later release.
 
+## Setting up AWS (one time)
+
+Deploys are off until this is done.
+
+1. Create an AWS Organization with two member accounts, **vg-staging** and **vg-production**. Don't use the account shared with CDR Africa.
+2. In each account, add an IAM OIDC identity provider for `token.actions.githubusercontent.com`. Then add a deploy role that trusts only this repo's `staging` or `production` GitHub Environment.
+3. Create the Route 53 hosted zone for `vintagegallery.store` in the production account, and point the domain's name servers at it. Staging uses `staging.vintagegallery.store` delegated to the staging account.
+4. In GitHub, create the Environments **staging** and **production**. Set `AWS_DEPLOY_ROLE_ARN` in each, and add yourself as a required reviewer on production.
+5. Set the repository variable `DEPLOY_ENABLED` to `true`.
+6. After the first deploy, create admin accounts in the admin user pool (the stack outputs its id) and add them to the `admin` group:
+
+```bash
+aws cognito-idp admin-create-user --user-pool-id <pool id> --username you@example.com
+aws cognito-idp admin-add-user-to-group --user-pool-id <pool id> --username you@example.com --group-name admin
 ```
-app/              Store — pages and API routes
-admin-app/        Admin application (separate Next.js app)
-lib/              Shared server utilities
-prisma/           Schema and seed
-sst.config.ts     Infrastructure as code
-.github/workflows Deployment pipeline
-```
+
+Pushing to `master` deploys staging, then waits for your approval before deploying production.

@@ -1,0 +1,13 @@
+{
+  "//": "sst.config.ts needs the SST platform types from `sst install` (.sst/platform).",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node"]
+  },
+  "files": ["sst.config.ts"]
+}

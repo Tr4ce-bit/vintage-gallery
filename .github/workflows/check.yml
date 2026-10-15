@@ -1,0 +1,51 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: vg
+          POSTGRES_PASSWORD: vg
+          POSTGRES_DB: vg
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vg" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://vg:vg@localhost:5432/vg
+      SHADOW_DATABASE_URL: postgresql://vg:vg@localhost:5432/vg_shadow
+      TEST_DATABASE_URL: postgresql://vg:vg@localhost:5432/postgres
+      SST_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install SST platform types
+        run: npx sst install --stage ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Create shadow database
+        run: PGPASSWORD=vg psql -h localhost -U vg -d vg -c 'CREATE DATABASE vg_shadow'
+      - name: Schema matches the migrations
+        run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code
+      - run: npm test
+      - name: No known vulnerabilities in production packages
+        run: npm audit --omit=dev --audit-level=moderate
+      - run: npm run build
