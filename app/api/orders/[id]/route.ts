@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth-server";
 import { prisma } from "@/lib/db";
-
-// Statuses where stock has already been decremented
-const STOCK_DECREMENTED_STATUSES = ["PAID", "PROCESSING", "SHIPPED"];
+import { verifyPaystack, markOrderPaid, adjustStock, holdsStock } from "@/lib/orders";
+import { notifyAdminCancellation } from "@/lib/notify";
 
 // Statuses the customer is allowed to cancel from
 const CUSTOMER_CANCELLABLE = ["PENDING", "PAID"];
@@ -97,33 +96,69 @@ export async function PATCH(
       return NextResponse.json({ success: true });
     }
 
+    // A PENDING order may already be paid — the MoMo prompt can complete after
+    // the customer gives up waiting. Ask Paystack first, so we never cancel an
+    // order whose payment then lands with nothing to attach to.
+    let current = order;
+    if (current.status === "PENDING") {
+      let v;
+      try {
+        v = await verifyPaystack(current.paystackReference);
+      } catch {
+        return NextResponse.json(
+          { error: "We couldn't check your payment status. Please try again in a moment." },
+          { status: 503 },
+        );
+      }
+      if (v.ok) {
+        await markOrderPaid(current.paystackReference, v);
+        const fresh = await prisma.order.findUnique({ where: { id }, include: { items: true } });
+        if (fresh) current = fresh;
+      }
+    }
+
     // Block cancellation once admin has confirmed (PROCESSING or later)
-    if (!CUSTOMER_CANCELLABLE.includes(order.status)) {
+    if (!CUSTOMER_CANCELLABLE.includes(current.status)) {
       return NextResponse.json(
         { error: "This order can no longer be cancelled. Please contact us if you need help." },
         { status: 409 }
       );
     }
 
-    const needsStockRestore = STOCK_DECREMENTED_STATUSES.includes(order.status);
+    const wasPaid = holdsStock(current.status);
 
-    // Cancel + optionally restore stock — atomically
-    await prisma.$transaction([
-      prisma.order.update({
-        where: { id },
+    // Cancel + restore stock atomically; the status condition guards against
+    // an admin or webhook changing the order at the same moment.
+    const cancelled = await prisma.$transaction(async (tx) => {
+      const res = await tx.order.updateMany({
+        where: { id, status: current.status },
         data:  { status: "CANCELLED" },
-      }),
-      ...(needsStockRestore
-        ? order.items
-            .filter((item): item is typeof item & { productId: string } => item.productId !== null)
-            .map(item =>
-              prisma.product.update({
-                where: { id: item.productId },
-                data:  { stock: { increment: item.quantity } },
-              })
-            )
-        : []),
-    ]);
+      });
+      if (res.count === 0) return false;
+      if (wasPaid) {
+        await adjustStock(tx, current.items.map(i => ({ ...i, size: String(i.size) })), 1);
+      } else {
+        await tx.payment.updateMany({
+          where: { providerReference: current.paystackReference, status: "PENDING" },
+          data:  { status: "CANCELLED" },
+        });
+      }
+      return true;
+    });
+    if (!cancelled) {
+      return NextResponse.json({ error: "Your order changed while cancelling. Please refresh and try again." }, { status: 409 });
+    }
+
+    // The customer has paid, so someone has to send the money back.
+    if (wasPaid) {
+      await notifyAdminCancellation({
+        orderNumber:       current.orderNumber,
+        paystackReference: current.paystackReference,
+        totalAmount:       current.totalAmount,
+        customerName:      current.deliveryFullName,
+        customerPhone:     current.deliveryPhone,
+      }).catch(err => console.error("notifyAdminCancellation failed:", err));
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {

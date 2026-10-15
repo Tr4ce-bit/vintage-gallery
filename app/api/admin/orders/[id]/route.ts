@@ -3,11 +3,9 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { notifyCustomerStatusUpdate } from "@/lib/notify";
+import { adjustStock, holdsStock } from "@/lib/orders";
 
 const VALID_STATUSES = ["PENDING","PAID","PROCESSING","SHIPPED","DELIVERED","CANCELLED","REFUNDED"];
-
-// Stock was decremented when order reached PAID; restore it on cancel/refund
-const STOCK_DECREMENTED_STATUSES = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"];
 
 export async function GET(
   req: NextRequest,
@@ -52,27 +50,25 @@ export async function PATCH(
     });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const wasPaid    = STOCK_DECREMENTED_STATUSES.includes(existing.status);
-    const isCancelling = status === "CANCELLED" || status === "REFUNDED";
-    const needsStockRestore = isCancelling && wasPaid && existing.status !== "CANCELLED" && existing.status !== "REFUNDED";
-
-    // Run status update + optional stock restore in one transaction
-    await prisma.$transaction([
-      prisma.order.update({
-        where: { id },
+    // Stock is held while an order is PAID → DELIVERED. Moving into that range
+    // (e.g. a manual "mark as paid") takes stock; moving out (cancel/refund)
+    // returns it, including per-size stock.
+    const before = holdsStock(existing.status);
+    const after  = holdsStock(status);
+    const updated = await prisma.$transaction(async (tx) => {
+      const res = await tx.order.updateMany({
+        where: { id, status: existing.status },
         data:  { status },
-      }),
-      ...(needsStockRestore
-        ? existing.items
-            .filter((item): item is typeof item & { productId: string } => item.productId !== null)
-            .map(item =>
-              prisma.product.update({
-                where: { id: item.productId },
-                data:  { stock: { increment: item.quantity } },
-              })
-            )
-        : []),
-    ]);
+      });
+      if (res.count === 0) return false;
+      if (before !== after) {
+        await adjustStock(tx, existing.items.map(i => ({ ...i, size: String(i.size) })), after ? -1 : 1);
+      }
+      return true;
+    });
+    if (!updated) {
+      return NextResponse.json({ error: "Order changed while saving — refresh and try again." }, { status: 409 });
+    }
 
     const order = await prisma.order.findUnique({
       where:   { id },
@@ -83,8 +79,9 @@ export async function PATCH(
     if (order) {
       const customerEmail = order.user?.email ?? order.guestEmail;
       const customerName  = order.deliveryFullName;
-      if (customerEmail) {
-        notifyCustomerStatusUpdate({
+      if (customerEmail && status !== existing.status) {
+        // Awaited: on Lambda an un-awaited send can be frozen mid-flight.
+        await notifyCustomerStatusUpdate({
           orderNumber:       order.orderNumber,
           paystackReference: order.paystackReference,
           newStatus:         status,
