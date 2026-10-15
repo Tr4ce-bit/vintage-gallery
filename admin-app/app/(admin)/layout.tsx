@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { LayoutDashboard, ShoppingBag, Package, Paintbrush, SlidersHorizontal, LogOut, ExternalLink, Menu, X, Mail, BarChart3, CreditCard } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { apiUrl } from "@/lib/api";
 import { useTheme } from "@/components/ThemeProvider";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -48,7 +49,7 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
     async function fetchPending() {
       try {
         const token = await getAccessToken();
-        const res   = await fetch("/api/admin/orders?status=PENDING&limit=1", {
+        const res   = await fetch(apiUrl("/api/admin/orders?status=PENDING&limit=1"), {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
@@ -65,7 +66,7 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
   useEffect(() => {
     if (!checked || pathname.startsWith("/orders")) return;
     getAccessToken().then(token =>
-      fetch("/api/admin/orders?status=PENDING&limit=1", {
+      fetch(apiUrl("/api/admin/orders?status=PENDING&limit=1"), {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(r => r.ok ? r.json() : null)

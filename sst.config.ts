@@ -150,7 +150,7 @@ export default $config({
         ADMIN_EMAILS:       process.env.ADMIN_EMAILS        ?? "",
         ADMIN_PHONE:        process.env.ADMIN_PHONE         ?? "",
 
-        // ADMIN_APP_URL drives CORS in middleware.ts. Must be exact — no trailing slash.
+        // ADMIN_APP_URL is used for admin-portal links in alert emails. No trailing slash.
         ADMIN_APP_URL:       adminUrl,
         NEXT_PUBLIC_APP_URL: storeUrl,
 

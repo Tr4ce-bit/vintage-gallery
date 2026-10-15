@@ -1,0 +1,34 @@
+name: Check
+
+# Runs on every pull request so a type error is caught before it is merged
+# into staging or master (where a push deploys straight to AWS).
+on:
+  pull_request:
+
+jobs:
+  typecheck:
+    name: Type-check store and admin
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install admin-app dependencies
+        run: cd admin-app && npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Type-check store
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Type-check admin
+        run: npx tsc --noEmit -p admin-app/tsconfig.json
