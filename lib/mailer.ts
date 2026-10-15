@@ -29,7 +29,7 @@ const REPLY_TO    = process.env.MAIL_REPLY_TO ?? "vintagegallerystore@gmail.com"
 const gmailUser   = process.env.GMAIL_USER;
 const gmailPass   = process.env.GMAIL_APP_PASSWORD;
 
-let _smtp: nodemailer.Transporter | null = null;
+let _smtp: ReturnType<typeof nodemailer.createTransport> | null = null;
 function smtp() {
   if (!_smtp) {
     _smtp = nodemailer.createTransport({

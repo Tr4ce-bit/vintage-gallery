@@ -16,6 +16,9 @@ function getVerifier() {
 export interface AuthUser {
   userId: string;
   email:  string | null;
+  // Cognito's "email_verified" claim. An unverified address proves nothing
+  // about who owns it, so it must never grant privileges.
+  emailVerified: boolean;
   // Cognito group memberships from the "cognito:groups" JWT claim.
   // Used by requireAdmin() to check for the "admin" group.
   groups: string[];
@@ -32,6 +35,7 @@ export async function getAuthUser(request: Request): Promise<AuthUser | null> {
     return {
       userId: payload.sub,
       email:  (payload.email as string | undefined) ?? null,
+      emailVerified: payload.email_verified === true || payload.email_verified === "true",
       groups: (payload["cognito:groups"] as string[] | undefined) ?? [],
     };
   } catch {

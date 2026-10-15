@@ -29,7 +29,8 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "**.amazonaws.com" },
+      { protocol: "https", hostname: "vintage-gallery-products.s3.amazonaws.com" },
+      { protocol: "https", hostname: "vintage-gallery-products.s3.us-east-1.amazonaws.com" },
     ],
   },
   poweredByHeader: false,

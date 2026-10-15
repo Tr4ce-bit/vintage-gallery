@@ -10,7 +10,7 @@
   "dependencies": {
     "aws-amplify": "^6.17.0",
     "lucide-react": "^0.390.0",
-    "next": "^15.3.0",
+    "next": "^15.5.28",
     "nextjs-toploader": "^3.9.17",
     "react": "^18",
     "react-dom": "^18"
