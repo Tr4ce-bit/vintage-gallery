@@ -35,6 +35,12 @@ export function isValidSlug(slug: unknown): slug is string {
   );
 }
 
+const S3_BUCKET = process.env.S3_BUCKET ?? "vintage-gallery-products";
+const ALLOWED_S3_HOSTS = new Set([
+  `${S3_BUCKET}.s3.amazonaws.com`,
+  `${S3_BUCKET}.s3.${process.env.S3_REGION ?? "us-east-1"}.amazonaws.com`,
+]);
+
 /**
  * Image URL — must be HTTPS and from one of our known image hosts.
  * Mirrors the remotePatterns list in next.config.js so Next <Image> can serve it.
@@ -45,7 +51,7 @@ export function isAllowedImageUrl(url: unknown): url is string {
     const { protocol, hostname } = new URL(url);
     if (protocol !== "https:") return false;
     return (
-      hostname.endsWith(".amazonaws.com") ||
+      ALLOWED_S3_HOSTS.has(hostname) ||
       hostname === "res.cloudinary.com"
     );
   } catch {

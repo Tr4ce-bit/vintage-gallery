@@ -57,6 +57,16 @@ export interface OrderNotification {
 
 // ─── HTML email template ──────────────────────────────────────────────────────
 
+/** Escapes customer-typed text before it goes into an HTML email. */
+function esc(v: unknown): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function fmtOrderNum(n: string) {
   return `#${n}`;
 }
@@ -65,10 +75,10 @@ function buildHtml(o: OrderNotification): string {
   const rows = o.items.map(i => `
     <tr>
       <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#333;">
-        ${i.productName ?? "Custom Studio item"}
+        ${esc(i.productName ?? "Custom Studio item")}
       </td>
       <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:13px;color:#555;">
-        ${i.size}
+        ${esc(i.size)}
       </td>
       <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:13px;color:#555;">
         ${i.quantity}
@@ -99,17 +109,17 @@ function buildHtml(o: OrderNotification): string {
 
       <p style="margin:0 0 3px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Order Number</p>
       <p style="margin:0 0 6px;font-size:22px;font-weight:600;color:#111;">
-        ${fmtOrderNum(o.orderNumber)}
+        ${esc(fmtOrderNum(o.orderNumber))}
       </p>
       <p style="margin:0 0 26px;font-size:12px;color:#aaa;font-family:monospace;">
-        Ref: ${o.paystackReference}
+        Ref: ${esc(o.paystackReference)}
       </p>
 
       <p style="margin:0 0 3px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Customer</p>
-      <p style="margin:0 0 2px;font-size:15px;color:#111;">${o.deliveryFullName}</p>
-      <p style="margin:0 0 2px;font-size:13px;color:#666;">${o.deliveryPhone}</p>
+      <p style="margin:0 0 2px;font-size:15px;color:#111;">${esc(o.deliveryFullName)}</p>
+      <p style="margin:0 0 2px;font-size:13px;color:#666;">${esc(o.deliveryPhone)}</p>
       <p style="margin:0 0 26px;font-size:13px;color:#666;">
-        ${o.deliveryAddress}, ${o.deliveryCity}, ${o.deliveryRegion}
+        ${esc(o.deliveryAddress)}, ${esc(o.deliveryCity)}, ${esc(o.deliveryRegion)}
       </p>
 
       <table width="100%" cellpadding="0" cellspacing="0"
@@ -242,9 +252,9 @@ function buildCustomerHtml(o: StatusUpdateNotification): string {
   const rows = o.items.map(i => `
     <tr>
       <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#333;">
-        ${i.productName ?? "Custom Studio item"}
+        ${esc(i.productName ?? "Custom Studio item")}
       </td>
-      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:13px;color:#555;">${i.size}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:13px;color:#555;">${esc(i.size)}</td>
       <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:13px;color:#555;">${i.quantity}</td>
       <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:13px;color:#111;font-weight:600;">
         GH&#8373; ${(i.unitPrice * i.quantity).toFixed(0)}
@@ -271,13 +281,13 @@ function buildCustomerHtml(o: StatusUpdateNotification): string {
     <!-- Body -->
     <div style="padding:28px 36px;">
       <p style="margin:0 0 20px;font-size:14px;color:#444;line-height:1.6;">
-        Hi ${o.customerName},<br><br>${copy.body}
+        Hi ${esc(o.customerName)},<br><br>${copy.body}
       </p>
 
       <!-- Order pill -->
       <div style="display:inline-block;background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:12px 20px;margin-bottom:24px;">
         <p style="margin:0 0 2px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#aaa;">Order Number</p>
-        <p style="margin:0;font-size:20px;font-weight:700;color:#111;">${fmtOrderNum(o.orderNumber)}</p>
+        <p style="margin:0;font-size:20px;font-weight:700;color:#111;">${esc(fmtOrderNum(o.orderNumber))}</p>
       </div>
 
       <!-- Items table -->

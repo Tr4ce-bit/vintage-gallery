@@ -20,8 +20,10 @@ export async function requireAdmin(req: Request) {
   // Primary: Cognito group membership (registering with an admin email won't help)
   if (auth.groups.includes("admin")) return auth;
 
-  // Fallback: explicit email allowlist
-  if (auth.email && ADMIN_EMAILS.includes(auth.email.toLowerCase())) return auth;
+  // Fallback: explicit email allowlist — only for a VERIFIED email. Otherwise
+  // anyone who can set their email attribute to an admin address (sign-up
+  // before the admin registers, or an attribute update) would get in.
+  if (auth.email && auth.emailVerified && ADMIN_EMAILS.includes(auth.email.toLowerCase())) return auth;
 
   return null;
 }
