@@ -43,7 +43,7 @@ function smtp() {
 export interface MailArgs {
   to:       string | string[];
   subject:  string;
-  html:     string;
+  html?:    string;
   text?:    string;
   replyTo?: string;
 }
@@ -91,7 +91,7 @@ async function sendViaResend(to: string[], args: MailArgs): Promise<MailResult> 
         from:     MAIL_FROM,
         to,
         subject:  args.subject,
-        html:     args.html,
+        ...(args.html ? { html: args.html } : {}),
         ...(args.text ? { text: args.text } : {}),
         reply_to: args.replyTo ?? REPLY_TO,
       }),
@@ -119,7 +119,7 @@ async function sendViaSmtp(to: string[], args: MailArgs): Promise<MailResult> {
       to:      to.join(", "),
       replyTo: args.replyTo ?? REPLY_TO,
       subject: args.subject,
-      html:    args.html,
+      ...(args.html ? { html: args.html } : {}),
       ...(args.text ? { text: args.text } : {}),
     });
     return { ok: true, provider: "gmail", id: info.messageId };

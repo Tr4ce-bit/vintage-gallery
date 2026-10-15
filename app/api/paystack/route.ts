@@ -7,6 +7,8 @@ import { resolveRain } from "@/lib/delivery";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { fetchWithTimeout, FetchTimeoutError } from "@/lib/fetch-with-timeout";
 import { isSamedayRegionAllowed, samedayRegions } from "@/lib/sameday";
+import { verifyPaystack, markOrderPaid } from "@/lib/orders";
+import { randomUUID } from "crypto";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_BASE   = "https://api.paystack.co";
@@ -140,9 +142,17 @@ export async function POST(req: NextRequest) {
       isCustom:    boolean;
     }> = [];
 
+    // Units requested per product+size across all cart lines, for the stock check.
+    const requested = new Map<string, number>();
+
     for (const item of cartItems) {
-      const { productId, quantity, name, size, color } = item;
+      const { productId, quantity, name, color } = item;
+      const size = String(item.size ?? "M");
+      if (!VALID_SIZES.has(size)) {
+        return NextResponse.json({ error: "Invalid size in cart." }, { status: 400 });
+      }
       if (
+        typeof productId !== "string" ||
         !productId ||
         typeof quantity !== "number" ||
         !Number.isInteger(quantity) ||
@@ -166,8 +176,8 @@ export async function POST(req: NextRequest) {
 
         resolvedItems.push({
           productId:   null,
-          productName: name ?? "Custom Studio Tee",
-          size:        size ?? "M",
+          productName: typeof name === "string" ? name.slice(0, 120) : "Custom Studio Tee",
+          size,
           color:       color ?? "",
           quantity,
           unitPrice,
@@ -177,17 +187,33 @@ export async function POST(req: NextRequest) {
         // Regular product — authoritative price from DB
         const product = await prisma.product.findUnique({
           where:  { id: productId },
-          select: { basePrice: true, isActive: true, name: true },
+          select: { basePrice: true, isActive: true, name: true, stock: true, sizeStock: true },
         });
         if (!product || !product.isActive) {
           return NextResponse.json({ error: `Product ${productId} is unavailable.` }, { status: 400 });
         }
+
+        // Stock check — per size when the product tracks sizes, else global.
+        const key   = `${productId}:${size}`;
+        const want  = (requested.get(key) ?? 0) + quantity;
+        requested.set(key, want);
+        const sizes = product.sizeStock as Record<string, number> | null;
+        const available = sizes && Object.keys(sizes).length > 0 ? (sizes[size] ?? 0) : product.stock;
+        if (want > available) {
+          return NextResponse.json(
+            { error: available > 0
+                ? `Only ${available} left of ${product.name} in size ${size}.`
+                : `${product.name} in size ${size} is out of stock.` },
+            { status: 409 },
+          );
+        }
+
         subtotalGHS += product.basePrice * quantity;
 
         resolvedItems.push({
           productId,
           productName: product.name,
-          size:        size ?? "M",
+          size,
           color:       color ?? "",
           quantity,
           unitPrice:   product.basePrice,
@@ -200,7 +226,105 @@ export async function POST(req: NextRequest) {
     const totalGHS      = subtotalGHS + deliveryFee;
     const amountPesewas = Math.round(totalGHS * 100);
 
-    // ── 2. Initialise Paystack transaction ───────────────────────────────────
+    // ── 2. Save the pending order BEFORE sending the customer to pay ─────────
+    // We pick the Paystack reference ourselves so the order exists first. If
+    // this write fails the customer is never charged — previously the order
+    // was saved after initialisation and a failed write was ignored, so a
+    // payment could land with no order behind it.
+    const reference = `vg_${randomUUID().replace(/-/g, "")}`;
+    let orderId: string;
+    try {
+      const authUser = await getAuthUser(req);
+
+      // Signed-in users: link the order to their profile.
+      let profileId: string | null = null;
+      if (authUser) {
+        const profile = await prisma.userProfile.findUnique({
+          where: { cognitoId: authUser.userId },
+        });
+        if (profile) {
+          profileId = profile.id;
+        } else {
+          try {
+            const created = await prisma.userProfile.create({
+              data: {
+                cognitoId: authUser.userId,
+                fullName:  String(deliveryInfo?.fullName ?? "").slice(0, 120),
+                email:     (authUser.email ?? email).toLowerCase(),
+              },
+            });
+            profileId = created.id;
+          } catch (err) {
+            // Email already on another profile (unique) — save as a guest order
+            // rather than failing the checkout.
+            console.warn("Profile create failed; saving order as guest:", err);
+          }
+        }
+      }
+
+      // Mask MoMo phone number (only for MoMo payments)
+      const masked = method === "momo" && momoPhone
+        ? (momoPhone.length >= 4
+            ? momoPhone.slice(0, 3) + "****" + momoPhone.slice(-3)
+            : momoPhone)
+        : null;
+
+      const order = await prisma.order.create({
+        data: {
+          orderNumber:        generateOrderId(),
+          userId:             profileId,           // null for guests
+          guestEmail:         profileId ? null : email, // store email for guest orders
+          paystackReference:  reference,
+          totalAmount:        totalGHS,
+          deliveryFullName:   String(deliveryInfo?.fullName ?? "").slice(0, 120),
+          deliveryPhone:      String(deliveryInfo?.phone    ?? "").slice(0, 20),
+          deliveryAddress:    String(deliveryInfo?.address  ?? "").slice(0, 300),
+          deliveryCity:       String(deliveryInfo?.city     ?? "").slice(0, 100),
+          deliveryRegion:     String(deliveryInfo?.region   ?? "").slice(0, 100),
+          deliveryNotes:      deliveryInfo?.notes ? String(deliveryInfo.notes).slice(0, 500) : null,
+          momoNetwork:        method === "momo" ? momoNetwork as "MTN" | "TELECEL" | "AIRTELTIGO" : null,
+          momoNumberMasked:   masked,
+          status:             "PENDING",
+          items: {
+            create: resolvedItems.map(i => ({
+              productId:   i.productId,
+              productName: i.productName,
+              size:        i.size as "XS" | "S" | "M" | "L" | "XL" | "XXL",
+              color:       String(i.color).slice(0, 40),
+              quantity:    i.quantity,
+              unitPrice:   i.unitPrice,
+              subtotal:    i.unitPrice * i.quantity,
+            })),
+          },
+          // PENDING Payment row so the admin Payments page sees the attempt
+          // immediately. markOrderPaid() flips it to SUCCESS.
+          payments: {
+            create: {
+              provider:          "PAYSTACK",
+              providerReference: reference,
+              status:            "PENDING",
+              method:            method === "momo"
+                ? "MOMO"
+                : method === "card"
+                  ? "CARD"
+                  : "BANK_TRANSFER",
+              amount:            totalGHS,
+              currency:          "GHS",
+              customerEmail:     email,
+            },
+          },
+        },
+      });
+      orderId = order.id;
+    } catch (dbErr) {
+      console.error("Order DB creation failed — checkout stopped before payment:", dbErr);
+      return NextResponse.json(
+        { error: "We couldn't save your order. You have not been charged — please try again." },
+        { status: 500 },
+      );
+    }
+
+    // ── 3. Initialise Paystack transaction ───────────────────────────────────
     // Map our method names to Paystack channel names
     const channelsMap: Record<string, string[]> = {
       momo:          ["mobile_money"],
@@ -210,6 +334,7 @@ export async function POST(req: NextRequest) {
 
     const paystackPayload: Record<string, unknown> = {
       email,
+      reference,
       amount:       amountPesewas,
       currency:     "GHS",
       channels:     channelsMap[method] ?? ["mobile_money"],
@@ -238,6 +363,16 @@ export async function POST(req: NextRequest) {
       };
     }
 
+    // Paystack never took the order — close it so it doesn't sit in PENDING.
+    const abandonOrder = () =>
+      prisma.order.update({
+        where: { id: orderId },
+        data:  {
+          status:   "CANCELLED",
+          payments: { updateMany: { where: { providerReference: reference }, data: { status: "FAILED" } } },
+        },
+      }).catch(err => console.error("Could not close abandoned order:", err));
+
     // 10s timeout: payment init can be slow but we never want to hold a
     // customer's spinner for the full Lambda 29s if Paystack is degraded.
     let psRes: Response;
@@ -252,6 +387,7 @@ export async function POST(req: NextRequest) {
         timeoutMs: 10_000,
       });
     } catch (err) {
+      await abandonOrder();
       if (err instanceof FetchTimeoutError) {
         console.warn("paystack init timed out", { url: err.target });
         return NextResponse.json(
@@ -265,102 +401,19 @@ export async function POST(req: NextRequest) {
     const psData = await psRes.json();
 
     if (!psData.status) {
+      await abandonOrder();
       return NextResponse.json(
         { error: psData.message ?? "Paystack declined the request." },
         { status: 400 }
       );
     }
 
-    const { authorization_url, access_code, reference } = psData.data;
+    const { authorization_url, access_code } = psData.data;
 
-    // ── 3. Save pending order to DB (all users — guests included) ───────────
-    // We do this AFTER getting the reference so we can tie the order to it.
-    try {
-      const authUser = await getAuthUser(req);
-
-      // For signed-in users: upsert their UserProfile so we can link the order
-      let profileId: string | null = null;
-      if (authUser) {
-        let profile = await prisma.userProfile.findUnique({
-          where: { cognitoId: authUser.userId },
-        });
-        if (!profile) {
-          profile = await prisma.userProfile.create({
-            data: {
-              cognitoId: authUser.userId,
-              fullName:  deliveryInfo?.fullName ?? "",
-              email:     email ?? authUser.email ?? "",
-            },
-          });
-        }
-        profileId = profile.id;
-      }
-
-      // Mask MoMo phone number (only for MoMo payments)
-      const masked = method === "momo" && momoPhone
-        ? (momoPhone.length >= 4
-            ? momoPhone.slice(0, 3) + "****" + momoPhone.slice(-3)
-            : momoPhone)
-        : null;
-
-      const order = await prisma.order.create({
-        data: {
-          orderNumber:        generateOrderId(),
-          userId:             profileId,           // null for guests
-          guestEmail:         profileId ? null : email, // store email for guest orders
-          paystackReference:  reference,
-          paystackAccessCode: access_code,
-          totalAmount:        totalGHS,
-          deliveryFullName:   String(deliveryInfo?.fullName ?? "").slice(0, 120),
-          deliveryPhone:      String(deliveryInfo?.phone    ?? "").slice(0, 20),
-          deliveryAddress:    String(deliveryInfo?.address  ?? "").slice(0, 300),
-          deliveryCity:       String(deliveryInfo?.city     ?? "").slice(0, 100),
-          deliveryRegion:     String(deliveryInfo?.region   ?? "").slice(0, 100),
-          deliveryNotes:      deliveryInfo?.notes ? String(deliveryInfo.notes).slice(0, 500) : null,
-          momoNetwork:        method === "momo" ? momoNetwork as "MTN" | "TELECEL" | "AIRTELTIGO" : null,
-          momoNumberMasked:   masked,
-          status:             "PENDING",
-          items: {
-            create: resolvedItems
-              .filter(i => VALID_SIZES.has(i.size))
-              .map(i => ({
-                productId:   i.productId,
-                productName: i.productName,
-                size:        i.size as "XS" | "S" | "M" | "L" | "XL" | "XXL",
-                color:       i.color,
-                quantity:    i.quantity,
-                unitPrice:   i.unitPrice,
-                subtotal:    i.unitPrice * i.quantity,
-              })),
-          },
-        },
-      });
-
-      // Create a PENDING Payment row so the admin Payments page sees the
-      // attempt the moment it's initiated, not just on webhook confirmation.
-      // The webhook will flip status to SUCCESS / REFUNDED later.
-      await prisma.payment.create({
-        data: {
-          orderId:           order.id,
-          provider:          "PAYSTACK",
-          providerReference: reference,
-          status:            "PENDING",
-          method:            method === "momo"
-            ? "MOMO"
-            : method === "card"
-              ? "CARD"
-              : method === "bank_transfer"
-                ? "BANK_TRANSFER"
-                : "OTHER",
-          amount:            totalGHS,
-          currency:          "GHS",
-          customerEmail:     email,
-        },
-      });
-    } catch (dbErr) {
-      // Don't block payment if DB write fails — log and continue
-      console.error("Order/Payment DB creation failed (payment still proceeds):", dbErr);
-    }
+    await prisma.order.update({
+      where: { id: orderId },
+      data:  { paystackAccessCode: access_code },
+    }).catch(err => console.error("Could not store Paystack access code:", err));
 
     return NextResponse.json({
       authorizationUrl: authorization_url,
@@ -384,30 +437,30 @@ export async function GET(req: NextRequest) {
 
     // 5s timeout: the success page polls this; failing fast lets the UI retry
     // rather than locking up for 29s on a slow Paystack response.
-    const res = await fetchWithTimeout(
-      `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
-      {
-        headers:   { Authorization: `Bearer ${PAYSTACK_SECRET}` },
-        timeoutMs: 5_000,
-      },
-    );
+    const v = await verifyPaystack(reference);
 
-    const data = await res.json();
-
-    if (!data.status || data.data?.status !== "success") {
+    if (!v.ok) {
       return NextResponse.json(
-        { verified: false, message: data.data?.gateway_response ?? "Verification failed" },
+        { verified: false, message: v.gatewayResponse ?? "Verification failed" },
         { status: 400 }
       );
+    }
+
+    // Backstop for the webhook: if it hasn't arrived (or failed), mark the
+    // order paid here. markOrderPaid is idempotent, so whichever runs first wins.
+    try {
+      await markOrderPaid(reference, v);
+    } catch (err) {
+      console.error(`Verify: could not mark ${reference} paid (webhook will retry):`, err);
     }
 
     // Only return safe fields — never forward the raw Paystack response to the client
     return NextResponse.json({
       verified:  true,
-      reference: data.data.reference,
-      amount:    data.data.amount,
-      currency:  data.data.currency,
-      status:    data.data.status,
+      reference,
+      amount:    v.amount,
+      currency:  v.currency,
+      status:    v.status,
     });
   } catch (err) {
     console.error("Paystack verify error:", err);

@@ -436,3 +436,40 @@ export async function notifyAdminNewOrder(order: OrderNotification): Promise<voi
     console.warn("Admin SMS skipped — ADMIN_PHONE not set");
   }
 }
+
+// ─── Admin alert: customer cancelled a paid order ────────────────────────────
+
+export interface CancellationNotification {
+  orderNumber:       string;
+  paystackReference: string;
+  totalAmount:       number;
+  customerName:      string;
+  customerPhone:     string;
+}
+
+/** Tells the admins a customer cancelled after paying, so a refund is owed.
+ *  Plain text only — the name and phone are customer-typed. */
+export async function notifyAdminCancellation(order: CancellationNotification): Promise<void> {
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",").map(e => e.trim()).filter(Boolean);
+  if (!mailerConfigured() || adminEmails.length === 0) {
+    console.warn("Admin cancellation email skipped — no mail provider or ADMIN_EMAILS");
+    return;
+  }
+
+  const orderLabel = fmtOrderNum(order.orderNumber);
+  const sent = await sendMail({
+    to:      adminEmails,
+    subject: `Refund needed: order ${orderLabel} cancelled by customer`,
+    text: [
+      `The customer cancelled order ${orderLabel} after paying.`,
+      `Refund GH₵${order.totalAmount.toFixed(2)} in the Paystack dashboard.`,
+      ``,
+      `Customer : ${order.customerName} (${order.customerPhone})`,
+      `Ref      : ${order.paystackReference}`,
+      ``,
+      `Stock has already been returned. Once Paystack processes the refund the order moves to Refunded.`,
+    ].join("\n"),
+  });
+  if (!sent.ok) console.error(`Admin cancellation email failed (${sent.provider}):`, sent.error);
+}
