@@ -20,11 +20,12 @@ on:
           - staging
           - production
 
-# Only one deployment per branch at a time.
-# A new push cancels the in-flight deploy on that branch.
+# Only one deployment per branch at a time. A new push WAITS for the in-flight
+# deploy instead of cancelling it: killing `sst deploy` midway can leave the
+# stage half-deployed with its state lock held.
 concurrency:
   group: deploy-${{ github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -60,6 +61,13 @@ jobs:
 
       - name: Generate Prisma client
         run: npx prisma generate
+
+      # Fail fast on type errors BEFORE the schema push below touches the
+      # database — a broken commit should never get as far as changing RDS.
+      - name: Type-check store and admin
+        run: |
+          npx tsc --noEmit -p tsconfig.json
+          npx tsc --noEmit -p admin-app/tsconfig.json
 
       # Sync schema.prisma -> RDS before deploy. Non-destructive changes only;
       # if a destructive change is detected (drop column / change type), this
@@ -123,7 +131,7 @@ jobs:
           # ── Cross-app URLs (CloudFront URLs in staging; real domains take over in prod) ─
           # Store URL: used for Paystack callback, email links, and as the admin app's API base.
           NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
-          # Admin URL: store's proxy.ts CORS allowlist must match the admin app's origin.
+          # Admin URL: used in admin-alert email links and the admin app's "View Store" counterpart.
           ADMIN_APP_URL: ${{ vars.ADMIN_APP_URL }}
 
           # ── Database ─────────────────────────────────────────────────────────

@@ -83,8 +83,6 @@ const nextConfig = {
         ],
       },
     ];
-    // NOTE: CORS for /api/admin/* is handled dynamically in middleware.ts,
-    // NOT here. Static next.config.js headers cannot vary per-request origin.
   },
 };
 
