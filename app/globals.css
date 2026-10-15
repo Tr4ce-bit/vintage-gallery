@@ -1,62 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
-  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
-  --font-sans:  var(--font-inter), system-ui, sans-serif;
-  --ease-out:   cubic-bezier(0.22, 0.61, 0.36, 1);
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
 }
 
 body {
-  background: #f9f8f6;
-  color: #1a1917;
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
-
-/* Scrollbar — Netflix style: thin, rounded, invisible track */
-::-webkit-scrollbar              { width: 4px; height: 4px; }
-::-webkit-scrollbar-track        { background: transparent; }
-::-webkit-scrollbar-thumb        { background: rgba(0,0,0,0.18); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover  { background: rgba(0,0,0,0.35); }
-
-.dark ::-webkit-scrollbar-thumb       { background: rgba(255,255,255,0.18); }
-.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
-
-/* Firefox */
-* { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.18) transparent; }
-.dark * { scrollbar-color: rgba(255,255,255,0.18) transparent; }
-
-/* Marquee */
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-.animate-marquee { animation: marquee 30s linear infinite; }
-
-/* Scroll indicator */
-@keyframes scroll-line {
-  0%   { transform: scaleY(0); transform-origin: top;    opacity: 1; }
-  50%  { transform: scaleY(1); transform-origin: top;    opacity: 1; }
-  51%  { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
-  100% { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
-}
-.animate-scroll-line { animation: scroll-line 1.8s ease-in-out infinite; }
-
-/* ── Hide Clerk branding on auth pages ───────────────────────────────────── */
-.cl-powered-by-clerk,
-.cl-poweredByClerk,
-[data-clerk-powered-by],
-.cl-footer__pages,
-.cl-footerPages { display: none !important; }

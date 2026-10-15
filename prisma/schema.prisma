@@ -1,79 +1,85 @@
-// Vintage Gallery Store – Prisma Schema
-// Database: PostgreSQL (AWS RDS)
+// Vintage Gallery data model.
+// Money is always integer pesewas (1 GHS = 100 pesewas). Never Float.
+// Migrations are versioned files in prisma/migrations, applied in AWS by
+// functions/migrate.ts. Never `prisma db push` against a deployed database.
 
 generator client {
-  provider      = "prisma-client-js"
-  // "native" covers local dev on any OS.
-  // "rhel-openssl-1.0.x"        = Lambda x86_64 (Amazon Linux 2)
-  // "linux-arm64-openssl-3.0.x" = Lambda arm64  (Graviton — SST default)
-  binaryTargets = ["native", "rhel-openssl-1.0.x", "linux-arm64-openssl-3.0.x"]
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-// ─────────────────────────────────────────────
-// USER PROFILE  (extends Cognito auth)
-// ─────────────────────────────────────────────
-model UserProfile {
+// ── Customers ────────────────────────────────────────────────────────────────
+
+model Customer {
   id               String   @id @default(cuid())
-  cognitoId        String   @unique          // Cognito sub (user ID)
+  cognitoSub       String   @unique
+  email            String
+  // Email is unique only among verified addresses, so an unverified sign-up
+  // can never claim someone else's address.
+  emailVerified    Boolean  @default(false)
   fullName         String
-  email            String   @unique
-  phoneNumber      String?
-  ghanaPostAddress String?                   // Ghana Post Digital Address e.g. GA-123-4567
+  phone            String?
+  ghanaPostAddress String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  orders           Order[]
-  savedDesigns     SavedDesign[]
+  orders       Order[]
+  savedDesigns SavedDesign[]
 
-  @@map("user_profiles")
+  @@unique([email], where: { emailVerified: true }, map: "customers_verified_email_key")
+  @@index([email])
+  @@map("customers")
 }
 
-// ─────────────────────────────────────────────
-// PRODUCTS  (T-shirt variants)
-// ─────────────────────────────────────────────
+// ── Catalogue ────────────────────────────────────────────────────────────────
+
 model Product {
-  id          String   @id @default(cuid())
-  slug        String   @unique @default("")
-  name        String
-  collection  String   @default("")
-  description String?
-  details     String[] @default([])
-  basePrice   Float                           // price in GHS (Ghanaian Cedis)
-  imageUrl    String                          // primary image, points to /public/asset/
-  images      String[] @default([])           // all images
-  color       String   @default("White")
-  sizes       String[] @default(["XS","S","M","L","XL","XXL"])
-  badge       String?                         // e.g. "New", "Limited", "Featured"
-  featured    Boolean  @default(false)
-  stock       Int      @default(100)          // total stock (sum of sizeStock for display)
-  sizeStock   Json?                           // per-size stock e.g. {"XS":5,"S":10,"M":20}
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  collection   String   @default("")
+  description  String?
+  details      String[] @default([])
+  pricePesewas Int
+  images       String[] @default([]) // S3 object keys in the products bucket, first is primary
+  badge        String?
+  featured     Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  variants    ProductVariant[]
-  orderItems  OrderItem[]
+  variants   Variant[]
+  orderItems OrderItem[]
 
+  @@index([isActive, sortOrder])
   @@map("products")
 }
 
-model ProductVariant {
-  id        String  @id @default(cuid())
-  productId String
-  size      Size
-  color     String
-  stock     Int     @default(50)
+model Variant {
+  id           String  @id @default(cuid())
+  productId    String
+  sku          String  @unique
+  size         Size
+  color        String
+  // Overrides Product.pricePesewas when set.
+  pricePesewas Int?
+  // Units on hand and not sold. Reservations are subtracted at read time.
+  // Updated only with conditional UPDATE … WHERE stock >= n (CHECK stock >= 0).
+  stock        Int     @default(0)
+  isActive     Boolean @default(true)
 
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product      Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  reservations StockReservation[]
+  orderItems   OrderItem[]
 
   @@unique([productId, size, color])
-  @@map("product_variants")
+  @@map("variants")
 }
 
 enum Size {
@@ -85,170 +91,210 @@ enum Size {
   XXL
 }
 
-// ─────────────────────────────────────────────
-// DESIGNS  (overlays for the Product Customizer)
-// ─────────────────────────────────────────────
-model Design {
-  id          String   @id @default(cuid())
-  name        String
-  imageUrl    String                          // points to /public/asset/designs/
-  category    String?                         // e.g. "vintage", "graphic", "text"
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
+// Units held for an unpaid order. Paying turns it into a sale (stock is
+// decremented and the reservation marked CONVERTED); expiry releases it.
+model StockReservation {
+  id        String            @id @default(cuid())
+  orderId   String
+  variantId String
+  quantity  Int
+  status    ReservationStatus @default(HELD)
+  expiresAt DateTime
+  createdAt DateTime          @default(now())
 
-  savedDesigns SavedDesign[]
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant Variant @relation(fields: [variantId], references: [id])
 
-  @@map("designs")
+  @@index([variantId, status, expiresAt])
+  @@index([status, expiresAt])
+  @@map("stock_reservations")
 }
 
-model SavedDesign {
-  id          String   @id @default(cuid())
-  userId      String
-  designId    String
-  shirtColor  String   @default("#FFFFFF")
-  shirtSize   Size     @default(M)
-  notes       String?
-  createdAt   DateTime @default(now())
-
-  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
-  design      Design      @relation(fields: [designId], references: [id], onDelete: Cascade)
-
-  @@map("saved_designs")
+enum ReservationStatus {
+  HELD
+  CONVERTED
+  RELEASED
 }
 
-// ─────────────────────────────────────────────
-// ORDERS
-// ─────────────────────────────────────────────
+// ── Orders ───────────────────────────────────────────────────────────────────
+
 model Order {
-  id                  String      @id @default(cuid())
-  orderNumber         String      @unique                             // e.g. "VG4KX9M2" — random, unguessable
-  userId              String?                  // null for guest checkouts
-  paystackReference   String      @unique      // Paystack transaction reference
-  paystackAccessCode  String?                  // for re-querying status
-  status              OrderStatus @default(PENDING)
-  totalAmount         Float                    // in GHS
-  currency            String      @default("GHS")
+  id               String       @id @default(cuid())
+  orderNumber      String       @unique // e.g. VG4KX9M2, random and unguessable
+  reference        String       @unique // our Paystack reference, created before payment starts
+  status           OrderStatus  @default(PENDING_PAYMENT)
+  customerId       String?
+  guestEmail       String?
+  subtotalPesewas  Int
+  deliveryPesewas  Int
+  totalPesewas     Int
+  currency         String       @default("GHS")
+  deliveryType     DeliveryType
+  deliveryFullName String
+  deliveryPhone    String
+  deliveryAddress  String
+  deliveryCity     String
+  deliveryRegion   String
+  deliveryNotes    String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  paidAt           DateTime?
 
-  // Delivery info (copied at order time so profile changes don't affect history)
-  deliveryFullName    String
-  deliveryPhone       String
-  deliveryAddress     String                   // Street address
-  deliveryCity        String   @default("")    // e.g. Accra, Kumasi
-  deliveryRegion      String   @default("")    // e.g. Greater Accra
-  deliveryNotes       String?
+  customer     Customer?          @relation(fields: [customerId], references: [id])
+  items        OrderItem[]
+  payments     Payment[]
+  events       OrderEvent[]
+  reservations StockReservation[]
 
-  // Guest contact email (for orders placed without an account)
-  guestEmail          String?
-
-  // Mobile Money details (non-sensitive — just network & masked number)
-  momoNetwork         MomoNetwork?
-  momoNumberMasked    String?                  // e.g. "024****890"
-
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  user                UserProfile? @relation(fields: [userId], references: [id])
-  items               OrderItem[]
-  payments            Payment[]                       // 0..N payments per order (init, retries, refunds)
-
-  @@index([userId])
-  @@index([paystackReference])
+  @@index([customerId, createdAt])
+  @@index([status, createdAt])
   @@map("orders")
 }
 
-model OrderItem {
-  id          String  @id @default(cuid())
-  orderId     String
-  productId   String?                          // nullable for custom-studio items
-  designId    String?                          // nullable – plain shirt (no custom design)
-  productName String?                          // captured at order time (denormalised)
-  size        Size
-  color       String
-  quantity    Int
-  unitPrice   Float                            // price locked at time of purchase
-  subtotal    Float
-
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product? @relation(fields: [productId], references: [id])
-
-  @@map("order_items")
-}
-
 enum OrderStatus {
-  PENDING       // awaiting payment
-  PAID          // Paystack webhook confirmed
-  PROCESSING    // being prepared
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
   SHIPPED
   DELIVERED
   CANCELLED
+  CANCEL_REQUESTED
+  REFUND_PENDING
   REFUNDED
+  PARTIALLY_REFUNDED
 }
 
-enum MomoNetwork {
-  MTN
-  TELECEL
-  AIRTELTIGO
+enum DeliveryType {
+  STANDARD
+  SAME_DAY
 }
 
-// ─────────────────────────────────────────────
-// PAYMENTS  (provider-agnostic — Paystack today, more later)
-// ─────────────────────────────────────────────
-enum PaymentProvider {
-  PAYSTACK
-  // To add another provider:
-  //   1) Add its enum value here
-  //   2) Create app/api/<provider>/webhook/route.ts following the Paystack pattern
-  //   3) Have it write rows to this same Payment table
-  // The admin UI is provider-agnostic and will pick it up automatically.
+model OrderItem {
+  id               String  @id @default(cuid())
+  orderId          String
+  productId        String?
+  variantId        String?
+  studioDesignId   String?
+  productName      String // captured at order time
+  size             Size
+  color            String
+  quantity         Int
+  unitPricePesewas Int
+  lineTotalPesewas Int
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+  variant Variant? @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
 }
 
-enum PaymentStatus {
-  PENDING     // initiated, awaiting confirmation
-  SUCCESS     // confirmed via webhook + verification
-  FAILED      // provider returned a definitive failure
-  REFUNDED    // refunded after success
-  CANCELLED   // explicitly cancelled before capture
+// Audit trail: every status change, with who made it.
+model OrderEvent {
+  id         String       @id @default(cuid())
+  orderId    String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  actor      String // "system", "customer:<id>", "admin:<cognito sub>", "paystack"
+  note       String?
+  createdAt  DateTime     @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_events")
 }
 
-enum PaymentMethod {
-  CARD
-  MOMO
-  BANK_TRANSFER
-  USSD
-  QR
-  OTHER
-}
+// ── Payments ─────────────────────────────────────────────────────────────────
 
 model Payment {
-  id                String          @id @default(cuid())
-  orderId           String?                              // null for orphan/test payments
-  provider          PaymentProvider
-  providerReference String          @unique              // Paystack reference, Stripe pi_*, etc.
-  status            PaymentStatus   @default(PENDING)
-  method            PaymentMethod?
-  amount            Float                                // in major units (GHS)
-  currency          String          @default("GHS")
-  fee               Float?                               // provider fee if reported
-  channel           String?                              // raw channel string from provider
-  customerEmail     String?
-  rawMetadata       Json?                                // truncated raw payload for debugging
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  paidAt            DateTime?                            // set when status transitions to SUCCESS
+  id                String        @id @default(cuid())
+  orderId           String
+  provider          String        @default("paystack")
+  providerReference String        @unique
+  status            PaymentStatus @default(PENDING)
+  amountPesewas     Int
+  currency          String        @default("GHS")
+  feePesewas        Int?
+  channel           String?
+  rawStatus         String?
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  order             Order? @relation(fields: [orderId], references: [id])
+  order   Order    @relation(fields: [orderId], references: [id])
+  refunds Refund[]
 
-  @@index([provider, status, createdAt])
-  @@index([status, createdAt])
   @@index([orderId])
+  @@index([status, createdAt])
   @@map("payments")
 }
 
-// ─────────────────────────────────────────────
-// SETTINGS  (key-value store for admin config)
-// ─────────────────────────────────────────────
-model Settings {
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  ABANDONED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model Refund {
+  id               String       @id @default(cuid())
+  paymentId        String
+  providerRefundId String?      @unique
+  amountPesewas    Int
+  status           RefundStatus @default(PENDING)
+  requestedBy      String // admin:<cognito sub>
+  createdAt        DateTime     @default(now())
+  processedAt      DateTime?
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@map("refunds")
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+// Every Paystack webhook delivery, keyed so a repeat is spotted at once.
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String    @default("paystack")
+  eventKey    String    @unique // event name + reference (+ refund id)
+  eventType   String
+  reference   String?
+  payload     Json
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  attempts    Int       @default(0)
+  lastError   String?
+
+  @@index([processedAt])
+  @@map("webhook_events")
+}
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+
+model AdminAudit {
+  id         String   @id @default(cuid())
+  adminSub   String
+  adminEmail String
+  action     String // e.g. "product.update", "order.refund"
+  target     String // e.g. "product:<id>"
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([adminSub, createdAt])
+  @@map("admin_audit")
+}
+
+model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
@@ -256,62 +302,49 @@ model Settings {
   @@map("settings")
 }
 
-// ─────────────────────────────────────────────
-// ANALYTICS  (anonymous product interaction events)
-// ─────────────────────────────────────────────
-enum EventType {
-  VIEW              // product page mounted
-  TIME_SPENT        // product page unmounted with duration
-  WISHLIST_ADD
-  WISHLIST_REMOVE
-  CART_ADD
-  CART_REMOVE
-}
+// ── Studio and newsletter ────────────────────────────────────────────────────
 
-model ProductEvent {
-  id          String    @id @default(cuid())
-  productId   String?                    // null for custom-studio items
-  eventType   EventType
-  sessionId   String                     // anonymous client-side UUID, persists per browser
-  durationSec Int?                       // only set for TIME_SPENT
-  metadata    Json?                      // optional: size, color, source page
-  createdAt   DateTime  @default(now())
-
-  @@index([eventType, createdAt])
-  @@index([productId, eventType, createdAt])
-  @@index([sessionId])
-  @@index([createdAt])
-  @@map("product_events")
-}
-
-// ─────────────────────────────────────────────
-// SUBSCRIBERS  (newsletter / mailing list)
-// ─────────────────────────────────────────────
-model Subscriber {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  source       String?                  // e.g. "newsletter", "checkout", "footer"
-  unsubscribed Boolean  @default(false) // soft-delete: keep history but exclude from sends
-  createdAt    DateTime @default(now())
-
-  @@index([createdAt])
-  @@index([unsubscribed])
-  @@map("subscribers")
-}
-
-// ─────────────────────────────────────────────
-// STUDIO DESIGNS  (uploadable graphics for the custom studio)
-// ─────────────────────────────────────────────
 model StudioDesign {
   id        String   @id @default(cuid())
   name      String
-  imageUrl  String                          // S3 URL — must be transparent PNG
-  category  String?                         // optional grouping label
+  imageKey  String // S3 key in the products bucket, transparent PNG
+  category  String?
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  savedDesigns SavedDesign[]
+
   @@map("studio_designs")
+}
+
+model SavedDesign {
+  id             String   @id @default(cuid())
+  customerId     String
+  studioDesignId String
+  shirtColor     String   @default("#FFFFFF")
+  shirtSize      Size     @default(M)
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  studioDesign StudioDesign @relation(fields: [studioDesignId], references: [id], onDelete: Cascade)
+
+  @@map("saved_designs")
+}
+
+model Subscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String?
+  source         String?
+  // Double opt-in: only confirmed subscribers are ever mailed.
+  confirmToken   String?   @unique
+  confirmedAt    DateTime?
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([confirmedAt])
+  @@map("subscribers")
 }
