@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ADMIN_SESSION_COOKIE } from "@/lib/auth/cookies";
+import { refreshShopSession } from "@/lib/auth/refresh";
 import { isAdminPath, requestHost, siteForHost } from "@/lib/site";
 
 // Host routing between the shop and the admin panel. This is routing, not
 // security: every admin page and API also verifies the admin session on the
 // server (lib/auth/admin.ts).
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = requestHost(request.headers);
   const site = siteForHost(host);
@@ -16,7 +17,7 @@ export function proxy(request: NextRequest) {
   if (site === "shop") {
     // The shop host never serves anything admin.
     if (isAdminPath(pathname)) return notFound();
-    return NextResponse.next();
+    return refreshShopSession(request);
   }
 
   // Admin host: only the admin API and the admin pages.

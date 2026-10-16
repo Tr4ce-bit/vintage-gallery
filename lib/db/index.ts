@@ -8,10 +8,11 @@ import { databaseUrl } from "./url";
 // db.t4g.micro well under its connection limit.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+// Created on first use, not at import, so `next build` can load pages
+// without database settings.
+export function db(): PrismaClient {
+  globalForPrisma.prisma ??= new PrismaClient({
     adapter: new PrismaPg({ connectionString: databaseUrl(), max: 2 }),
   });
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+  return globalForPrisma.prisma;
+}
