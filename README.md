@@ -8,7 +8,8 @@ The shop at **vintagegallery.store** and its admin panel at **admin.vintagegalle
 | --- | --- |
 | Shop, API and admin panel | One Next.js app (`app/`), deployed with SST to Lambda behind CloudFront |
 | Shop vs admin | `proxy.ts` routes by host name. `admin.*` serves `app/admin`, and the shop host returns 404 for anything admin. |
-| Admin access | A separate Cognito user pool with no self sign-up and MFA required, checked on the server (`lib/auth/admin.ts`) |
+| Admin access | A separate Cognito user pool with no self sign-up and an authenticator app required, checked on the server (`lib/auth/admin.ts`). First sign-in asks for a new password and sets up the authenticator. |
+| Shopper accounts | Sign-in, sign-up with an emailed code and password reset, all done by the server against the shop user pool (`app/(shop)/auth-actions.ts`). Tokens live only in httpOnly cookies; `proxy.ts` renews the 1-hour session from a 30-day refresh token. |
 | Database | Postgres 17 on RDS in private subnets, TLS required (`sst.config.ts`) |
 | Schema | `prisma/schema.prisma`. Money is whole pesewas, and stock lives in `Variant` rows. |
 | Migrations | Files in `prisma/migrations`, applied in AWS by `functions/migrate.ts` before each app update |
